@@ -8,7 +8,6 @@ import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import Dashboard3DBackground from '@/components/Dashboard3DBackground';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
 import { format, subDays } from 'date-fns';
 
 interface Overview {
@@ -77,7 +76,6 @@ function KPICard({ label, value, unit, delta, icon: Icon, color = '#00d4ff' }: K
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [usageData, setUsageData] = useState<UsageDataItem[]>([]);
   const [threats, setThreats] = useState<Threat[]>([]);
@@ -85,24 +83,23 @@ export default function DashboardPage() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [tokenChecked, setTokenChecked] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      // Double-check localStorage directly — context might still be bootstrapping
-      const token = typeof window !== 'undefined' ? localStorage.getItem('mv_access_token') : null;
-      if (!token) {
-        router.replace('/auth/login?reason=unauthenticated');
-      }
+    // Check token directly from localStorage — no AuthContext race condition
+    const token = typeof window !== 'undefined' ? localStorage.getItem('mv_access_token') : null;
+    if (!token) {
+      router.replace('/auth/login?reason=unauthenticated');
       return;
     }
+    setTokenChecked(true);
     loadData();
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, isAuthenticated, authLoading]);
+  }, []);
 
-  if (authLoading) {
+  if (!tokenChecked) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
