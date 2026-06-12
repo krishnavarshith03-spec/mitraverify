@@ -89,7 +89,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
-      router.replace('/auth/login?reason=unauthenticated');
+      // Double-check localStorage directly — context might still be bootstrapping
+      const token = typeof window !== 'undefined' ? localStorage.getItem('mv_access_token') : null;
+      if (!token) {
+        router.replace('/auth/login?reason=unauthenticated');
+      }
       return;
     }
     loadData();

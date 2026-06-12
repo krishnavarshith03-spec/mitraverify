@@ -78,14 +78,8 @@ export default function LoginPage() {
       login(token, userDetails);
       setSuccess('Sign in successful! Redirecting...');
 
-      console.log("[Auth] Sign-in successful. Redirecting to /dashboard");
-      setTimeout(() => {
-        try {
-          router.replace('/dashboard');
-        } catch {
-          window.location.href = '/dashboard';
-        }
-      }, 100);
+      // Hard redirect — ensures AuthProvider re-bootstraps cleanly from localStorage
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { detail?: string } } };
       setError(apiErr?.response?.data?.detail || 'Login failed. Check your credentials.');
