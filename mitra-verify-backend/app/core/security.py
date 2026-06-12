@@ -9,11 +9,15 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+def _prehash(password: str) -> str:
+    """SHA-256 pre-hash so bcrypt never sees more than 64 bytes."""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_prehash(plain_password), hashed_password)
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_prehash(password))
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
