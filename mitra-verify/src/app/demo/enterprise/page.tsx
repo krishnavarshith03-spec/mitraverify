@@ -937,10 +937,11 @@ export default function EnterpriseDemoPage() {
         }
         handleFrameInvalid(data);
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Frame processing failed', err);
       setModelStatus("Failed");
-      setError("Failed to connect to backend biometric services.");
+      const errorMsg = err.response ? `Backend returned status ${err.response.status}: ${JSON.stringify(err.response.data)}` : (err.message || 'Unknown network error');
+      setError(`Failed to connect to backend biometric services. Reason: ${errorMsg}`);
       handleFrameInvalid(null);
     } finally {
       setIsProcessing(false);
@@ -1078,9 +1079,10 @@ export default function EnterpriseDemoPage() {
       setChallengePassed(new Array(sessionRes.data.challenges.length).fill(false));
       setCurrentChallenge(0);
       setChallengeTimer(30);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to start session on backend", e);
-      setError('Failed to initialize secure verification session with backend.');
+      const errorMsg = e.response ? `Backend returned status ${e.response.status}: ${JSON.stringify(e.response.data)}` : (e.message || 'Unknown network error');
+      setError(`Failed to initialize secure verification session with backend. Reason: ${errorMsg}`);
       setModelStatus('Failed');
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);

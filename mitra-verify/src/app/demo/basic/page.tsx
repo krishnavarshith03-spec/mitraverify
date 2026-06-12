@@ -478,7 +478,8 @@ export default function BasicDemoPage() {
     } catch (err: any) {
       console.error('Frame processing failed', err);
       setModelStatus("Failed");
-      setError("Failed to connect to backend biometric services.");
+      const errorMsg = err.response ? `Backend returned status ${err.response.status}: ${JSON.stringify(err.response.data)}` : (err.message || 'Unknown network error');
+      setError(`Failed to connect to backend biometric services. Reason: ${errorMsg}`);
     } finally {
       setIsProcessing(false);
     }
