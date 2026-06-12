@@ -11,9 +11,20 @@ class Settings(BaseSettings):
     def __init__(self, **values):
         import os
         super().__init__(**values)
+        
+        # Read standard DATABASE_URL and translate postgres prefix for asyncpg
+        db_url = os.getenv("DATABASE_URL")
+        if db_url:
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif db_url.startswith("postgresql://"):
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            self.DATABASE_URL = db_url
+            
         async_db_url = os.getenv("DATABASE_URL_ASYNC")
         if async_db_url:
             self.DATABASE_URL = async_db_url
+            
     CORS_ORIGINS: str = "http://localhost:3005,http://127.0.0.1:3005"
     ENVIRONMENT: str = "development"
 
