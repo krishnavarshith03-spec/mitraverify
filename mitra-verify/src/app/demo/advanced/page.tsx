@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft, Camera, Shield, RotateCcw, Terminal, Users, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { livenessAPI, checkHealth, API_BASE } from '@/lib/api';
+import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { processHeadPose } from '@/lib/headPose';
 
 const CHALLENGE_POOL = [
@@ -82,7 +82,7 @@ export default function AdvancedDemoPage() {
 
   // Debug HUD overlay additions
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
-  const [diagnosticInfo, setDiagnosticInfo] = useState<{ url: string; status: number | string; body: string } | null>(null);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{ url: string; status: number | string; body: string; reason?: string } | null>(null);
 
   useEffect(() => {
     async function performHealthCheck() {
@@ -95,7 +95,8 @@ export default function AdvancedDemoPage() {
           setDiagnosticInfo({
             url: `${API_BASE}/health`,
             status: res.status || 'unknown',
-            body: JSON.stringify(res.data)
+            body: JSON.stringify(res.data),
+            reason: 'Health endpoint returned non-ok status'
           });
         }
       } catch (err: any) {
@@ -104,7 +105,8 @@ export default function AdvancedDemoPage() {
         setDiagnosticInfo({
           url: `${API_BASE}/health`,
           status: err.response?.status || 'network_error',
-          body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused')
+          body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused'),
+          reason: parseNetworkError(err, `${API_BASE}/health`)
         });
       }
     }
@@ -764,6 +766,11 @@ export default function AdvancedDemoPage() {
                   <div><strong>URL:</strong> {diagnosticInfo?.url}</div>
                   <div><strong>HTTP Status:</strong> {diagnosticInfo?.status}</div>
                   <div><strong>Response:</strong> {diagnosticInfo?.body}</div>
+                  {diagnosticInfo?.reason && (
+                    <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6, color: '#fca5a5', whiteSpace: 'pre-wrap' }}>
+                      <strong>Parsed Reason:</strong><br/>{diagnosticInfo.reason}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

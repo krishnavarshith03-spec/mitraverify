@@ -11,22 +11,28 @@ console.log(`[MITRA VERIFY STARTUP] Active API URL: ${API_BASE || 'MISSING'}`);
 
 // Add request/response logging interceptors to global axios
 axios.interceptors.request.use(config => {
-  console.log(`[AXIOS REQUEST] ${config.method?.toUpperCase()} ${config.url}`);
+  const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+  const payload = config.data ? JSON.stringify(config.data) : 'None';
+  console.log(`[AXIOS REQUEST START] Method: ${config.method?.toUpperCase()} | URL: ${fullUrl} | Payload: ${payload}`);
   return config;
 }, error => {
-  console.error(`[AXIOS REQUEST ERROR]`, error);
+  console.error(`[AXIOS REQUEST BOOT ERROR]`, error);
   return Promise.reject(error);
 });
 
 // Automatic retry with exponential backoff interceptor on global axios
 axios.interceptors.response.use(
   response => {
-    console.log(`[AXIOS RESPONSE SUCCESS] ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
+    const fullUrl = response.config.baseURL ? `${response.config.baseURL}${response.config.url}` : response.config.url;
+    console.log(`[AXIOS RESPONSE SUCCESS] Method: ${response.config.method?.toUpperCase()} | URL: ${fullUrl} | Status: ${response.status}`);
     return response;
   },
   async error => {
     const config = error.config;
-    if (!config) return Promise.reject(error);
+    if (!config) {
+      console.error(`[AXIOS RESPONSE CRITICAL ERROR]`, error);
+      return Promise.reject(error);
+    }
 
     // Track retries
     config.__retryCount = config.__retryCount || 0;
@@ -38,7 +44,8 @@ axios.interceptors.response.use(
       return axios(config);
     }
 
-    console.error(`[AXIOS RESPONSE ERROR] ${config.method?.toUpperCase()} ${config.url} - ${error.message}`);
+    const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+    console.error(`[AXIOS RESPONSE ERROR] URL: ${fullUrl} | Status: ${error.response?.status || 'network_error'} | Error Type: ${error.message} | Stack: ${error.stack}`);
     return Promise.reject(error);
   }
 );
@@ -54,7 +61,9 @@ const api = axios.create({
 
 // Auth token injection and request logging
 api.interceptors.request.use(config => {
-  console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+  const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+  const payload = config.data ? JSON.stringify(config.data) : 'None';
+  console.log(`[API REQUEST START] Method: ${config.method?.toUpperCase()} | URL: ${fullUrl} | Payload: ${payload}`);
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('mv_access_token');
     if (token) {
@@ -67,14 +76,15 @@ api.interceptors.request.use(config => {
   }
   return config;
 }, error => {
-  console.error(`[API REQUEST ERROR]`, error);
+  console.error(`[API REQUEST BOOT ERROR]`, error);
   return Promise.reject(error);
 });
 
 // Token refresh on 401, detailed logging, and automatic retry with backoff on api instance
 api.interceptors.response.use(
   res => {
-    console.log(`[API RESPONSE SUCCESS] Endpoint: ${res.config.url}, Status: ${res.status}, Body:`, JSON.stringify(res.data));
+    const fullUrl = res.config.baseURL ? `${res.config.baseURL}${res.config.url}` : res.config.url;
+    console.log(`[API RESPONSE SUCCESS] URL: ${fullUrl}, Status: ${res.status}, Body:`, JSON.stringify(res.data));
     return res;
   },
   async err => {
@@ -90,10 +100,11 @@ api.interceptors.response.use(
       }
     }
 
+    const fullUrl = config?.baseURL ? `${config.baseURL}${config?.url}` : (config?.url || 'unknown');
     if (err.response) {
-      console.error(`[API RESPONSE ERROR] Endpoint: ${err.config?.url}, Status: ${err.response.status}, Body:`, JSON.stringify(err.response.data));
+      console.error(`[API RESPONSE ERROR] URL: ${fullUrl} | Status: ${err.response.status} | Error Type: ${err.message} | Body:`, JSON.stringify(err.response.data), `| Stack: ${err.stack}`);
     } else {
-      console.error(`[API NETWORK/TIMEOUT ERROR] Endpoint: ${err.config?.url}, Message: ${err.message}`);
+      console.error(`[API NETWORK/TIMEOUT ERROR] URL: ${fullUrl} | Status: network_error | Error Type: ${err.message} | Stack: ${err.stack}`);
     }
 
     if (err.response?.status === 401 && typeof window !== 'undefined') {
@@ -171,5 +182,44 @@ export const adminAPI = {
 
 export { API_BASE };
 export const checkHealth = () => api.get('/health');
+
+export function parseNetworkError(error: any, targetUrl: string): string {
+  if (!error) return "Unknown Connection Error";
+
+  // 1. Timeout
+  if (error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('timeout of')) {
+    return `Connection Timeout: The backend took too long to respond (limit: 5000ms).`;
+  }
+
+  // 2. Offline
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return `Offline: Your device is not connected to the internet.`;
+  }
+
+  // 3. Axios network error (status is undefined or 0)
+  if (error.message === 'Network Error' || !error.response) {
+    const urlLower = targetUrl.toLowerCase();
+    
+    // Check if target is secure HTTPS but calling HTTP (mixed content blocker)
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && urlLower.startsWith('http:')) {
+      return `Mixed Content Blocked: HTTPS frontend cannot call an insecure HTTP backend (${targetUrl}).`;
+    }
+
+    // Heuristics for connection refused vs CORS/SSL/DNS
+    if (urlLower.includes('localhost') || urlLower.includes('127.0.0.1')) {
+      return `Connection Refused: Local server is not running on ${targetUrl} or port is closed.`;
+    }
+
+    return `Network/Security Error (CORS, SSL, or DNS Failure):
+- CORS: Backend origin does not allow cross-origin requests from ${typeof window !== 'undefined' ? window.location.origin : 'origin'}
+- SSL/TLS: The HTTPS certificate is invalid, self-signed, expired, or domain mismatch
+- DNS: Failed to resolve the hostname in ${targetUrl}`;
+  }
+
+  // 4. HTTP Errors
+  const status = error.response.status;
+  const body = error.response.data ? JSON.stringify(error.response.data) : 'No response body';
+  return `HTTP Error ${status}: ${error.message}. Response: ${body}`;
+}
 
 export default api;

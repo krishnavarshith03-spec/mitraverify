@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Camera, Fingerprint, AlertTriangle, Users, Brain, Activity, RotateCcw, CheckCircle, Terminal, Lock, XCircle, Shield, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { livenessAPI, checkHealth, API_BASE } from '@/lib/api';
+import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { processHeadPose } from '@/lib/headPose';
 import dynamic from 'next/dynamic';
@@ -280,7 +280,7 @@ export default function EnterpriseDemoPage() {
 
   // Debug HUD overlay additions
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
-  const [diagnosticInfo, setDiagnosticInfo] = useState<{ url: string; status: number | string; body: string } | null>(null);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{ url: string; status: number | string; body: string; reason?: string } | null>(null);
 
   useEffect(() => {
     console.log("NEXT_PUBLIC_API_URL =", process.env.NEXT_PUBLIC_API_URL);
@@ -294,7 +294,8 @@ export default function EnterpriseDemoPage() {
           setDiagnosticInfo({
             url: `${API_BASE}/health`,
             status: res.status || 'unknown',
-            body: JSON.stringify(res.data)
+            body: JSON.stringify(res.data),
+            reason: 'Health endpoint returned non-ok status'
           });
         }
       } catch (err: any) {
@@ -303,7 +304,8 @@ export default function EnterpriseDemoPage() {
         setDiagnosticInfo({
           url: `${API_BASE}/health`,
           status: err.response?.status || 'network_error',
-          body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused')
+          body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused'),
+          reason: parseNetworkError(err, `${API_BASE}/health`)
         });
       }
     }
@@ -1731,6 +1733,11 @@ export default function EnterpriseDemoPage() {
                   <div><strong>URL:</strong> {diagnosticInfo?.url}</div>
                   <div><strong>HTTP Status:</strong> {diagnosticInfo?.status}</div>
                   <div><strong>Response:</strong> {diagnosticInfo?.body}</div>
+                  {diagnosticInfo?.reason && (
+                    <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6, color: '#fca5a5', whiteSpace: 'pre-wrap' }}>
+                      <strong>Parsed Reason:</strong><br/>{diagnosticInfo.reason}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
