@@ -3,24 +3,41 @@ import axios from 'axios';
 // Set global 5-second timeout limit for all axios requests
 axios.defaults.timeout = 5000;
 
+// Enforce production URL safety rules
+const isProduction = process.env.NODE_ENV === 'production';
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+if (isProduction) {
+  // Production must NEVER point to localhost or 127.0.0.1
+  if (!API_BASE || API_BASE.includes('localhost') || API_BASE.includes('127.0.0.1')) {
+    // Fallback to the production backend URL (the localtunnel domain)
+    API_BASE = 'https://red-cooks-feel.loca.lt/api/v1';
+  }
+} else {
+  if (!API_BASE) {
+    API_BASE = 'http://localhost:8005/api/v1';
+  }
+}
+
+// Startup validation: Log active API URL
+console.log(`[MITRA VERIFY STARTUP] Active API URL: ${API_BASE}`);
+
 // Add request/response logging interceptors to global axios
 axios.interceptors.request.use(config => {
-  console.log(`REQUEST_START: ${config.method?.toUpperCase()} ${config.url}`);
+  console.log(`[AXIOS REQUEST] ${config.method?.toUpperCase()} ${config.url}`);
   return config;
 }, error => {
-  console.error(`REQUEST_FAILED:`, error);
+  console.error(`[AXIOS REQUEST ERROR]`, error);
   return Promise.reject(error);
 });
 
 axios.interceptors.response.use(response => {
-  console.log(`REQUEST_SUCCESS: ${response.config.method?.toUpperCase()} ${response.config.url}`);
+  console.log(`[AXIOS RESPONSE] ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
   return response;
 }, error => {
-  console.error(`REQUEST_FAILED: ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.message}`);
+  console.error(`[AXIOS RESPONSE ERROR] ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.message}`);
   return Promise.reject(error);
 });
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8005/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -28,9 +45,9 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Auth token injection
+// Auth token injection and request logging
 api.interceptors.request.use(config => {
-  console.log(`REQUEST_START: ${config.method?.toUpperCase()} ${config.url}`);
+  console.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('mv_access_token');
     if (token) {
@@ -43,18 +60,24 @@ api.interceptors.request.use(config => {
   }
   return config;
 }, error => {
-  console.error(`REQUEST_FAILED:`, error);
+  console.error(`[API REQUEST ERROR]`, error);
   return Promise.reject(error);
 });
 
-// Token refresh on 401
+// Token refresh on 401 and response/body logging
 api.interceptors.response.use(
   res => {
-    console.log(`REQUEST_SUCCESS: ${res.config.method?.toUpperCase()} ${res.config.url}`);
+    // Detailed logging: endpoint, status code, response body
+    console.log(`[API RESPONSE SUCCESS] Endpoint: ${res.config.url}, Status: ${res.status}, Body:`, JSON.stringify(res.data));
     return res;
   },
   async err => {
-    console.error(`REQUEST_FAILED: ${err.config?.method?.toUpperCase()} ${err.config?.url} - ${err.message}`);
+    if (err.response) {
+      console.error(`[API RESPONSE ERROR] Endpoint: ${err.config?.url}, Status: ${err.response.status}, Body:`, JSON.stringify(err.response.data));
+    } else {
+      console.error(`[API NETWORK/TIMEOUT ERROR] Endpoint: ${err.config?.url}, Message: ${err.message}`);
+    }
+
     if (err.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('mv_access_token');
       localStorage.removeItem('mv_user_name');

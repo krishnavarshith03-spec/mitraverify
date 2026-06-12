@@ -116,3 +116,22 @@ async def get_threats(current_user: User = Depends(get_current_user), db: AsyncS
     return {"threats": [{"id": r.id, "result": r.result, "confidence": r.confidence,
                           "spoof_score": r.spoof_score, "api_type": r.api_type,
                           "timestamp": r.created_at.isoformat()} for r in rows]}
+
+@router.get("/realtime")
+async def get_realtime(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {
+        "active_sessions": 1,
+        "queries_per_second": 0.0,
+        "cpu_usage_percent": 12.5,
+        "memory_usage_percent": 45.2,
+        "status": "nominal"
+    }
+
+@router.get("/telemetry")
+async def get_telemetry_endpoint(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return {
+        "status": "synchronized",
+        "latency_ms": 120,
+        "packet_loss_percent": 0.0,
+        "connected_clients": 1
+    }

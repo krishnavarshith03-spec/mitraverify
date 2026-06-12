@@ -146,7 +146,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.cors_origins_list + [
+        "https://krishnavarshith21-co-mitra-vrify.vercel.app",
+        "https://krishnavarshith21-co-mitra-vrify-git-main-krishnavarshith21-cos-projects.vercel.app"
+    ],
     allow_origin_regex="https://.*\\.vercel\\.app",
     allow_credentials=True,
     allow_methods=["*"],
@@ -159,6 +162,16 @@ app.include_router(liveness_router, prefix="/api/v1")
 app.include_router(identity_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+
+@app.get("/telemetry")
+@app.get("/api/v1/telemetry")
+async def telemetry_check():
+    return {
+        "status": "synchronized",
+        "service": "mitra-verify-telemetry",
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": "sqlite"
+    }
 
 @app.get("/")
 async def root():

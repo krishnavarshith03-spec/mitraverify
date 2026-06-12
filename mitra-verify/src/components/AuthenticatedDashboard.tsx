@@ -90,6 +90,7 @@ export default function AuthenticatedDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -135,9 +136,46 @@ export default function AuthenticatedDashboard() {
       })));
       setLastRefresh(new Date());
       setError(null);
+      setIsDemoMode(false);
     } catch (err: unknown) {
-      console.error('Failed to load dashboard statistics', err);
-      setError('Failed to load biometric telemetry. The server may be offline or the request timed out.');
+      console.warn('Telemetry API unavailable. Falling back to demo statistics.', err);
+      // Load demo statistics
+      const demoOverview = {
+        total_requests: 12450,
+        successful_verifications: 12180,
+        spoof_attempts: 185,
+        identity_matches: 9840,
+        success_rate: 97.83,
+        avg_processing_time: 142.0,
+        active_api_keys: 3
+      };
+      setOverview(demoOverview);
+
+      const demoThreats = [
+        { id: '1', result: 'spoof', confidence: 0.98, spoof_score: 0.98, api_type: 'basic', timestamp: new Date(Date.now() - 3600000).toISOString() },
+        { id: '2', result: 'fail', confidence: 0.45, spoof_score: 0.12, api_type: 'enterprise', timestamp: new Date(Date.now() - 7200000).toISOString() },
+        { id: '3', result: 'spoof', confidence: 0.94, spoof_score: 0.94, api_type: 'advanced', timestamp: new Date(Date.now() - 14400000).toISOString() }
+      ];
+      setThreats(demoThreats);
+
+      const demoUsageData = [];
+      for (let i = 29; i >= 0; i--) {
+        const dateStr = format(subDays(new Date(), i), 'MMM d');
+        const pass = Math.floor(Math.random() * 100) + 150;
+        const spoof = Math.floor(Math.random() * 5);
+        const fail = Math.floor(Math.random() * 10);
+        demoUsageData.push({
+          date: dateStr,
+          pass,
+          spoof,
+          fail,
+          total: pass + spoof + fail
+        });
+      }
+      setUsageData(demoUsageData);
+      setLastRefresh(new Date());
+      setIsDemoMode(true);
+      setError(null); // Do not show the fatal telemetry error screen
     } finally {
       setLoading(false);
     }
@@ -164,8 +202,24 @@ export default function AuthenticatedDashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {isDemoMode && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#ffb800',
+              background: 'rgba(255, 184, 0, 0.1)',
+              border: '1px solid rgba(255, 184, 0, 0.3)',
+              padding: '4px 10px',
+              borderRadius: 20,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4
+            }}>
+              ⚠️ Demo Mode (Server Offline)
+            </span>
+          )}
           <span style={{ fontSize: 12, color: '#475569', marginRight: 4 }}>
-            Syncs automatically every 30s (last check {format(lastRefresh, 'HH:mm:ss')})
+            {isDemoMode ? 'Showing cached demo statistics' : `Syncs automatically every 30s (last check ${format(lastRefresh, 'HH:mm:ss')})`}
           </span>
           <button onClick={loadData} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40 }}>
             <RefreshCw size={14} /> Sync Metrics
