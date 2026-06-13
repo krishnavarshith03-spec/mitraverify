@@ -240,7 +240,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {loading || authLoading ? (
+        {loading ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
               <RefreshCw size={32} color="#00d4ff" />

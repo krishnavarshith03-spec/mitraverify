@@ -1,11 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI, livenessAPI } from '@/lib/api';
+import { authAPI } from '@/lib/api';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface User {
   name: string;
@@ -20,178 +18,152 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  error?: string;
-  /** Called after a successful credentials login from the FastAPI backend. */
   login: (token: string, userDetails: User) => void;
-  logout: (callbackUrl?: string) => Promise<void>;
+  logout: (callbackUrl?: string) => void;
   refreshUser: () => Promise<void>;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Context
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Storage helpers ───────────────────────────────────────────────────────────
+
+const KEYS = {
+  token: 'mv_access_token',
+  name: 'mv_user_name',
+  email: 'mv_user_email',
+  avatar: 'mv_user_avatar',
+  provider: 'mv_user_provider',
+  enrolled: 'mv_user_has_enrolled_face',
+};
+
+function saveUser(token: string, user: User) {
+  localStorage.setItem(KEYS.token, token);
+  localStorage.setItem(KEYS.name, user.name);
+  localStorage.setItem(KEYS.email, user.email);
+  localStorage.setItem(KEYS.avatar, user.avatar);
+  localStorage.setItem(KEYS.provider, user.provider);
+  localStorage.setItem(KEYS.enrolled, String(!!user.hasEnrolledFace));
+}
+
+function loadUserFromStorage(): User | null {
+  const name = localStorage.getItem(KEYS.name);
+  const email = localStorage.getItem(KEYS.email);
+  if (!name || !email) return null;
+  return {
+    name,
+    email,
+    avatar: localStorage.getItem(KEYS.avatar) || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+    provider: localStorage.getItem(KEYS.provider) || 'credentials',
+    hasEnrolledFace: localStorage.getItem(KEYS.enrolled) === 'true',
+  };
+}
+
+function clearStorage() {
+  Object.values(KEYS).forEach(k => localStorage.removeItem(k));
+  localStorage.removeItem('enrolledEmbedding');
+  localStorage.removeItem('mv_enrolled_signature');
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Local credentials user (covers email/password FastAPI login)
-  const [credentialsUser, setCredentialsUser] = useState<User | null>(null);
-  const [credentialsLoading, setCredentialsLoading] = useState(true);
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  // loading = true only during the INITIAL app-boot check
+  const [loading, setLoading] = useState(true);
 
-  // ── Bootstrap credentials session on mount ────────────────────────────────
+  // ── Boot: restore session from localStorage ───────────────────────────────
   const refreshUser = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('mv_access_token') : null;
-    // Set a 5‑second timeout to avoid hanging UI
-    const timeoutId = setTimeout(() => {
-      console.warn('[Session] Verification timed out after 5s');
-      setSessionError('Session verification timed out. Please try again.');
-      setCredentialsLoading(false);
-    }, 5000);
+    const token = typeof window !== 'undefined' ? localStorage.getItem(KEYS.token) : null;
 
     if (!token) {
-      clearTimeout(timeoutId);
-      setCredentialsUser(null);
-      setCredentialsLoading(false);
+      console.log('[Auth] No token found — unauthenticated');
+      setUser(null);
+      setLoading(false);
       return;
     }
 
-    // Optimistic: paint immediately from localStorage cache
-    const localName = localStorage.getItem('mv_user_name');
-    const localEmail = localStorage.getItem('mv_user_email');
-    const localAvatar = localStorage.getItem('mv_user_avatar');
-    const localProvider = localStorage.getItem('mv_user_provider') || 'credentials';
-    const localHasEnrolled = localStorage.getItem('mv_user_has_enrolled_face') === 'true';
-
-    if (localName && localEmail) {
-      setCredentialsUser({
-        name: localName,
-        email: localEmail,
-        avatar: localAvatar || '',
-        provider: localProvider,
-        hasEnrolledFace: localHasEnrolled,
-      });
+    // Step 1: Paint immediately from cached localStorage data (zero network wait)
+    const cached = loadUserFromStorage();
+    if (cached) {
+      console.log('[Auth] Restored session from cache:', cached.email);
+      setUser(cached);
+      setLoading(false); // ← loading done as soon as we have cached user
     }
 
+    // Step 2: Silently verify token with backend (background refresh)
+    // If this fails it does NOT log the user out — it only updates the user object.
+    // Only a genuine 401 (token truly invalid/expired) will log them out.
     try {
-      console.log('[Session] Verifying token');
       const res = await authAPI.me();
       if (res.data) {
-        let hasEnrolledFace = false;
-        try {
-          const enrolledRes = await livenessAPI.getEnrolledFace();
-          hasEnrolledFace = !!enrolledRes.data?.enrolled;
-        } catch (err) {
-          console.error('[Face Enrollment] Failed to fetch face enrollment status on refresh', err);
-        }
-        const u: User = {
-          name: res.data.full_name || 'Developer',
-          email: res.data.email || '',
-          avatar:
-            localAvatar ||
-            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.data.full_name || 'Developer')}`,
-          provider: localProvider,
+        const updated: User = {
+          name: res.data.full_name || cached?.name || 'User',
+          email: res.data.email || cached?.email || '',
+          avatar: cached?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.data.full_name || 'User')}`,
+          provider: cached?.provider || 'credentials',
           role: res.data.role,
-          hasEnrolledFace,
+          hasEnrolledFace: cached?.hasEnrolledFace,
         };
-        setCredentialsUser(u);
-        localStorage.setItem('mv_user_name', u.name);
-        localStorage.setItem('mv_user_email', u.email);
-        localStorage.setItem('mv_user_avatar', u.avatar);
-        localStorage.setItem('mv_user_has_enrolled_face', String(hasEnrolledFace));
-        setSessionError(null);
+        setUser(updated);
+        // Sync back to localStorage
+        localStorage.setItem(KEYS.name, updated.name);
+        localStorage.setItem(KEYS.email, updated.email);
+        localStorage.setItem(KEYS.avatar, updated.avatar);
+        console.log('[Auth] Token verified with backend ✓');
       }
     } catch (err: unknown) {
-      const error = err as { response?: { status?: number } };
-      if (error?.response?.status === 401) {
-        console.warn('[Session] Token invalid or expired');
-        _clearCredentials();
-        setSessionError('Session expired. Please sign in again.');
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        // Token is genuinely invalid/expired — log out
+        console.warn('[Auth] Token rejected by backend (401) — clearing session');
+        clearStorage();
+        setUser(null);
       } else {
-        console.error('[Session] Verification error', err);
-        setSessionError('Unable to verify session. Please try again later.');
+        // Network error, timeout, 5xx etc — keep existing cached session
+        console.warn('[Auth] Backend unreachable during token verify — keeping cached session');
       }
     } finally {
-      clearTimeout(timeoutId);
-      setCredentialsLoading(false);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      refreshUser();
-    }, 0);
-    return () => clearTimeout(timer);
+    refreshUser();
   }, [refreshUser]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── login(): called immediately after successful API login ────────────────
+  const login = useCallback((token: string, userDetails: User) => {
+    console.log('[Auth] login() called for:', userDetails.email);
+    saveUser(token, userDetails);
+    setUser(userDetails);
+    setLoading(false);
+  }, []);
 
-  function _clearCredentials() {
-    localStorage.removeItem('mv_access_token');
-    localStorage.removeItem('mv_user_name');
-    localStorage.removeItem('mv_user_email');
-    localStorage.removeItem('mv_user_avatar');
-    localStorage.removeItem('mv_user_provider');
-    localStorage.removeItem('mv_user_has_enrolled_face');
-    setCredentialsUser(null);
-    setSessionError(null);
-  }
+  // ── logout() ──────────────────────────────────────────────────────────────
+  const logout = useCallback((callbackUrl?: string) => {
+    console.log('[Auth] logout()');
+    // Fire-and-forget server logout (already handled in authAPI.logout)
+    authAPI.logout();
+    clearStorage();
+    setUser(null);
+    window.location.href = callbackUrl || '/auth/login';
+  }, []);
 
-  const login = (token: string, userDetails: User) => {
-    localStorage.setItem('mv_access_token', token);
-    localStorage.setItem('mv_user_name', userDetails.name);
-    localStorage.setItem('mv_user_email', userDetails.email);
-    localStorage.setItem('mv_user_avatar', userDetails.avatar);
-    localStorage.setItem('mv_user_provider', userDetails.provider);
-    localStorage.setItem('mv_user_has_enrolled_face', String(!!userDetails.hasEnrolledFace));
-    // Directly set user — no refreshUser() to avoid race condition with dashboard auth guard
-    setCredentialsUser(userDetails);
-    setCredentialsLoading(false);
-  };
-
-  // ── logout() — clears credentials token ───────────────────────────────────
-  const logout = async (callbackUrl?: string) => {
-    // Clear FastAPI credentials
-    try {
-      if (localStorage.getItem('mv_access_token')) {
-        await authAPI.logout();
-      }
-    } catch {
-      // ignore
-    }
-    _clearCredentials();
-    if (typeof window !== 'undefined') {
-      window.location.href = callbackUrl || '/';
-    }
-  };
-
-  // ── Derive unified user from credentials session ──────────────────────────
-  const user = credentialsUser;
-  const loading = credentialsLoading;
   const isAuthenticated = !!user;
-  const error = sessionError ?? undefined;
 
   return (
-    <AuthContext.Provider
-      value={{ user, isAuthenticated, loading, error, login, logout, refreshUser }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Hook
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
