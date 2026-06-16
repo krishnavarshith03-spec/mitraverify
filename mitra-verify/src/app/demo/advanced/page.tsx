@@ -71,6 +71,11 @@ export default function AdvancedDemoPage() {
   const faceVisibleStartRef = useRef<number | null>(null);
   const [faceVisibleDuration, setFaceVisibleDuration] = useState(0);
   const [faceInsideGuide, setFaceInsideGuide] = useState(false);
+  const [faceDetected, setFaceDetected] = useState<boolean>(false);
+  const [lastFaceSeenTimestamp, setLastFaceSeenTimestamp] = useState<number | null>(null);
+  const lastFaceSeenTimestampRef = useRef<number | null>(null);
+  const [noFaceTimeoutError, setNoFaceTimeoutError] = useState<boolean>(false);
+  const [faceMissingCountdown, setFaceMissingCountdown] = useState<number>(5.0);
 
   // Flow control
   const [isProcessing, setIsProcessing] = useState(false);
@@ -141,10 +146,61 @@ export default function AdvancedDemoPage() {
 
   // Timers: 3-second auto-complete for Face Centered, 5-second max duration for other challenges
   useEffect(() => {
-    if (!streaming || overallResult || challenges.length === 0 || currentChallenge >= challenges.length) return;
+    if (!streaming || overallResult || challenges.length === 0 || currentChallenge >= challenges.length || noFaceTimeoutError) return;
     
     const interval = setInterval(() => {
       const now = Date.now();
+      
+      // Face detection timeout check (5 seconds continuous face loss)
+      if (lastFaceSeenTimestampRef.current !== null) {
+        const missingTime = now - lastFaceSeenTimestampRef.current;
+        if (missingTime > 5000) {
+          console.warn("[Face Loss] Face missing for > 5 seconds continuously. Terminating session.");
+          
+          // Stop camera stream
+          if (videoRef.current?.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+            videoRef.current.srcObject = null;
+          }
+          setStreaming(false);
+          setCameraStatus('Inactive');
+
+          // Mark verification as FAILED
+          setOverallResult('fail');
+          setNoFaceTimeoutError(true);
+
+          // Set spoofScore = 100%
+          setSpoofScore(1.0);
+          setReplayRisk(1.0);
+          setDeepfakeRisk(1.0);
+
+          // Stop active challenge processing, clear pending queue
+          setCurrentChallenge(0);
+          setIsFacePrepared(false);
+          setHasBlinked(false);
+          setHasMovedMouth(false);
+          setHasRotatedHead(false);
+          setHasRaisedEyebrows(false);
+          setEnrollmentSuccess(false);
+          setEnrolledEmbedding(null);
+          setBbox(null);
+          setConfidence(0);
+          setDetectedFaces(0);
+          setLandmarkCount(0);
+          setFaceInsideGuide(false);
+          faceVisibleStartRef.current = null;
+          setFaceVisibleDuration(0);
+          
+          setFaceDetected(false);
+          lastFaceSeenTimestampRef.current = null;
+          setLastFaceSeenTimestamp(null);
+          setFaceMissingCountdown(0.0);
+          return;
+        } else {
+          setFaceMissingCountdown(Math.max(0, 5.0 - missingTime / 1000));
+        }
+      }
+
       const elapsedInStep = (now - stepStartTimeRef.current) / 1000;
       
       if (currentChallenge === 0) {
@@ -243,6 +299,44 @@ export default function AdvancedDemoPage() {
 
       if (!data) return;
 
+      // Check backend face-loss timeout failure
+      if (data.status === "failed" && data.reason === "no_face_detected") {
+        console.warn("[Backend Face Loss] Received failed status from backend. Terminating session.");
+        if (videoRef.current?.srcObject) {
+          (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+          videoRef.current.srcObject = null;
+        }
+        setStreaming(false);
+        setCameraStatus('Inactive');
+        setOverallResult('fail');
+        setNoFaceTimeoutError(true);
+        setSpoofScore(1.0);
+        setReplayRisk(1.0);
+        setDeepfakeRisk(1.0);
+        
+        setCurrentChallenge(0);
+        setIsFacePrepared(false);
+        setHasBlinked(false);
+        setHasMovedMouth(false);
+        setHasRotatedHead(false);
+        setHasRaisedEyebrows(false);
+        setEnrollmentSuccess(false);
+        setEnrolledEmbedding(null);
+        setBbox(null);
+        setConfidence(0);
+        setDetectedFaces(0);
+        setLandmarkCount(0);
+        setFaceInsideGuide(false);
+        faceVisibleStartRef.current = null;
+        setFaceVisibleDuration(0);
+        
+        setFaceDetected(false);
+        lastFaceSeenTimestampRef.current = null;
+        setLastFaceSeenTimestamp(null);
+        setFaceMissingCountdown(0.0);
+        return;
+      }
+
       // Model loading checks
       if (data.status === "cv_engine_unavailable" || data.error?.includes("CV engine not available")) {
         setModelStatus("Failed");
@@ -259,6 +353,11 @@ export default function AdvancedDemoPage() {
         console.log("FACE_DETECTED: YES");
         console.log(`LANDMARKS_FOUND: count=${data.landmark_count}`);
         searchingForFaceStartRef.current = null;
+
+        setFaceDetected(true);
+        setLastFaceSeenTimestamp(Date.now());
+        lastFaceSeenTimestampRef.current = Date.now();
+        setFaceMissingCountdown(5.0);
 
         setDetectedFaces(data.detected_faces);
         if (data.detected_faces > 1) {
@@ -372,6 +471,8 @@ export default function AdvancedDemoPage() {
           searchingForFaceStartRef.current = Date.now(); // throttle logs
         }
 
+        setFaceDetected(false);
+
         setDetectedFaces(0);
         setLandmarkCount(0);
         setConfidence(0);
@@ -439,6 +540,11 @@ export default function AdvancedDemoPage() {
     faceVisibleStartRef.current = null;
     setFaceVisibleDuration(0);
     setChallengeTimer(30);
+    setFaceDetected(false);
+    setLastFaceSeenTimestamp(Date.now());
+    lastFaceSeenTimestampRef.current = Date.now();
+    setFaceMissingCountdown(5.0);
+    setNoFaceTimeoutError(false);
     setBlinkCount(0);
     setHasBlinked(false);
     setHasMovedMouth(false);
@@ -529,6 +635,11 @@ export default function AdvancedDemoPage() {
     setDetectedFaces(0);
     setConfidence(0);
     setBbox(null);
+    setFaceDetected(false);
+    setLastFaceSeenTimestamp(null);
+    lastFaceSeenTimestampRef.current = null;
+    setFaceMissingCountdown(5.0);
+    setNoFaceTimeoutError(false);
     setEnrollmentSuccess(false);
     setEnrolledEmbedding(null);
     setRawYaw(0);
@@ -670,7 +781,7 @@ export default function AdvancedDemoPage() {
                 />
               )}
 
-              {!streaming && (
+              {!streaming && !noFaceTimeoutError && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                   <div style={{ width: 80, height: 80, borderRadius: 24, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Shield size={32} color="#7c3aed" />
@@ -679,6 +790,58 @@ export default function AdvancedDemoPage() {
                   {error && <div style={{ color: '#ff3366', fontSize: 13 }}>{error}</div>}
                 </div>
               )}
+
+              {/* Face missing countdown overlay */}
+              {streaming && !faceDetected && lastFaceSeenTimestamp !== null && !overallResult && !noFaceTimeoutError && (
+                <div style={{
+                  position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
+                  padding: '10px 20px', borderRadius: 10,
+                  background: 'rgba(255, 51, 102, 0.95)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
+                  zIndex: 40, display: 'flex', alignItems: 'center', gap: 8,
+                  boxShadow: '0 4px 15px rgba(255, 51, 102, 0.4)'
+                }}>
+                  <AlertCircle size={16} />
+                  <span>Face missing: {faceMissingCountdown.toFixed(1)}s / 5s</span>
+                </div>
+              )}
+
+              {/* Full-screen NO FACE DETECTED overlay */}
+              <AnimatePresence>
+                {noFaceTimeoutError && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                      position: 'absolute', inset: 0, background: 'rgba(255,51,102,0.95)',
+                      backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', zIndex: 100
+                    }}
+                  >
+                    <div style={{ textAlign: 'center', padding: 24 }}>
+                      <AlertCircle size={64} color="#fff" style={{ margin: '0 auto 16px', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
+                      <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginBottom: 12 }}>NO FACE DETECTED</h2>
+                      <p style={{ fontSize: 15, color: '#fff', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px', lineHeight: 1.5 }}>
+                        No face was detected for more than 5 seconds. Verification has been terminated.
+                      </p>
+                      <div style={{
+                        display: 'inline-block', padding: '6px 16px', borderRadius: 20,
+                        background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 24,
+                        letterSpacing: '0.05em', textTransform: 'uppercase'
+                      }}>
+                        Spoof / Verification Failed
+                      </div>
+                      <div>
+                        <button onClick={startCamera} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+                          <Camera size={14} /> Restart Verification
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Multiple face detection warning overlay */}
               <AnimatePresence>

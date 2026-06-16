@@ -894,6 +894,16 @@ def process_demo_frame(
         results = face_mesh.process(rgb)
         
     if not results.multi_face_landmarks:
+        if session_id and session_id in SESSION_CACHE and api_type != "enterprise":
+            session = SESSION_CACHE[session_id]
+            if "last_face_seen" not in session:
+                session["last_face_seen"] = session.get("created_at", time.time())
+            if time.time() - session["last_face_seen"] > 5.0:
+                return {
+                    "status": "failed",
+                    "reason": "no_face_detected",
+                    "spoof_detected": True
+                }
         return {
             "face_present": False,
             "detected_faces": 0,
@@ -928,6 +938,8 @@ def process_demo_frame(
         
     print("FACE_DETECTED")
     print("LANDMARKS_FOUND")
+    if session_id and session_id in SESSION_CACHE:
+        SESSION_CACHE[session_id]["last_face_seen"] = time.time()
     detected_faces = len(results.multi_face_landmarks)
     
     if api_type == "enterprise" and detected_faces > 1:

@@ -211,7 +211,8 @@ async def start_session(data: SessionStartRequest):
         "challenges": challenges,
         "logged": False,
         "created_at": time.time(),
-        "last_active": time.time()
+        "last_active": time.time(),
+        "last_face_seen": time.time()
     }
     
     return {

@@ -95,6 +95,8 @@ export default function BasicDemoPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDebug, setShowDebug] = useState(true);
   const [apiResponse, setApiResponse] = useState<any>(null);
+  const [noFaceTimeoutError, setNoFaceTimeoutError] = useState<boolean>(false);
+  const [faceMissingCountdown, setFaceMissingCountdown] = useState<number>(5.0);
 
   const fpsCountRef = useRef(0);
   const lastFpsTime = useRef(0);
@@ -188,11 +190,63 @@ export default function BasicDemoPage() {
 
   // Timers: 3-second auto-complete for Face Centered, 5-second max duration for other challenges
   useEffect(() => {
-    if (!streaming || result === 'pass' || result === 'fail' || currentStep >= 4) return;
+    if (!streaming || result === 'pass' || result === 'fail' || currentStep >= 4 || noFaceTimeoutError) return;
     
     const interval = setInterval(() => {
       const now = Date.now();
       
+      // Face detection timeout check (5 seconds continuous face loss)
+      if (lastFaceSeenTimestampRef.current !== null) {
+        const missingTime = now - lastFaceSeenTimestampRef.current;
+        if (missingTime > 5000) {
+          console.warn("[Face Loss] Face missing for > 5 seconds continuously. Terminating session.");
+          
+          // Stop camera stream
+          if (videoRef.current?.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+            videoRef.current.srcObject = null;
+          }
+          setStreaming(false);
+          setCameraStatus('Inactive');
+
+          // Mark verification as FAILED
+          setResult('fail');
+          setNoFaceTimeoutError(true);
+
+          // Set spoofScore = 100%, livenessScore = 0%
+          setSpoofScore(1.0);
+          setLivenessScore(0.0);
+
+          // Stop active challenge processing, clear pending queue
+          setCurrentStep(0);
+          setIsFacePrepared(false);
+          setHasBlinked(false);
+          setHasMovedMouth(false);
+          setHasRotatedHead(false);
+          setEnrollmentSuccess(false);
+          setEnrolledEmbedding(null);
+          setBbox(null);
+          setConfidence(0);
+          setDetectedFaces(0);
+          setLandmarkCount(0);
+          setFaceInsideGuide(false);
+          faceVisibleStartRef.current = null;
+          setFaceVisibleDuration(0);
+          
+          setFaceDetected(false);
+          lastFaceSeenTimestampRef.current = null;
+          setLastFaceSeenTimestamp(null);
+          setTrackingState('NO_FACE');
+          faceContinuousDetectionStartRef.current = null;
+          activeStepTimeElapsedRef.current = 0;
+          lastFrameTimestampRef.current = 0;
+          setFaceMissingCountdown(0.0);
+          return;
+        } else {
+          setFaceMissingCountdown(Math.max(0, 5.0 - missingTime / 1000));
+        }
+      }
+
       // Rule 6: Reset incomplete challenge if face is lost for more than 2 seconds
       if (lastFaceSeenTimestampRef.current !== null && now - lastFaceSeenTimestampRef.current > 2000) {
         console.warn(`[Biometric Pipeline] Face lost for >2 seconds. Resetting current incomplete challenge ${currentStep + 1}.`);
@@ -308,6 +362,46 @@ export default function BasicDemoPage() {
 
       if (!data) return;
 
+      // Check backend face-loss timeout failure
+      if (data.status === "failed" && data.reason === "no_face_detected") {
+        console.warn("[Backend Face Loss] Received failed status from backend. Terminating session.");
+        if (videoRef.current?.srcObject) {
+          (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+          videoRef.current.srcObject = null;
+        }
+        setStreaming(false);
+        setCameraStatus('Inactive');
+        setResult('fail');
+        setNoFaceTimeoutError(true);
+        setSpoofScore(1.0);
+        setLivenessScore(0.0);
+        
+        setCurrentStep(0);
+        setIsFacePrepared(false);
+        setHasBlinked(false);
+        setHasMovedMouth(false);
+        setHasRotatedHead(false);
+        setEnrollmentSuccess(false);
+        setEnrolledEmbedding(null);
+        setBbox(null);
+        setConfidence(0);
+        setDetectedFaces(0);
+        setLandmarkCount(0);
+        setFaceInsideGuide(false);
+        faceVisibleStartRef.current = null;
+        setFaceVisibleDuration(0);
+        
+        setFaceDetected(false);
+        lastFaceSeenTimestampRef.current = null;
+        setLastFaceSeenTimestamp(null);
+        setTrackingState('NO_FACE');
+        faceContinuousDetectionStartRef.current = null;
+        activeStepTimeElapsedRef.current = 0;
+        lastFrameTimestampRef.current = 0;
+        setFaceMissingCountdown(0.0);
+        return;
+      }
+
       // Model loading checks
       if (data.status === "cv_engine_unavailable" || data.error?.includes("CV engine not available")) {
         setModelStatus("Failed");
@@ -330,6 +424,7 @@ export default function BasicDemoPage() {
         setFaceDetected(true);
         setLastFaceSeenTimestamp(Date.now());
         lastFaceSeenTimestampRef.current = Date.now();
+        setFaceMissingCountdown(5.0);
         setTrackingState('TRACKING');
 
         if (faceContinuousDetectionStartRef.current === null) {
@@ -589,6 +684,8 @@ export default function BasicDemoPage() {
     setFaceDetected(false);
     setLastFaceSeenTimestamp(Date.now());
     lastFaceSeenTimestampRef.current = Date.now();
+    setFaceMissingCountdown(5.0);
+    setNoFaceTimeoutError(false);
     setTrackingState('NO_FACE');
     faceContinuousDetectionStartRef.current = null;
     activeStepTimeElapsedRef.current = 0;
@@ -678,6 +775,8 @@ export default function BasicDemoPage() {
     setFaceDetected(false);
     setLastFaceSeenTimestamp(null);
     lastFaceSeenTimestampRef.current = null;
+    setFaceMissingCountdown(5.0);
+    setNoFaceTimeoutError(false);
     setTrackingState('NO_FACE');
     faceContinuousDetectionStartRef.current = null;
     activeStepTimeElapsedRef.current = 0;
@@ -829,7 +928,7 @@ export default function BasicDemoPage() {
                 />
               )}
 
-              {!streaming && (
+              {!streaming && !noFaceTimeoutError && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
                   <div style={{ width: 80, height: 80, borderRadius: 24, background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Camera size={32} color="#00d4ff" />
@@ -844,6 +943,58 @@ export default function BasicDemoPage() {
                   )}
                 </div>
               )}
+
+              {/* Face missing countdown overlay */}
+              {streaming && !faceDetected && lastFaceSeenTimestamp !== null && !result && !noFaceTimeoutError && (
+                <div style={{
+                  position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
+                  padding: '10px 20px', borderRadius: 10,
+                  background: 'rgba(255, 51, 102, 0.95)', border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace',
+                  zIndex: 40, display: 'flex', alignItems: 'center', gap: 8,
+                  boxShadow: '0 4px 15px rgba(255, 51, 102, 0.4)'
+                }}>
+                  <AlertCircle size={16} />
+                  <span>Face missing: {faceMissingCountdown.toFixed(1)}s / 5s</span>
+                </div>
+              )}
+
+              {/* Full-screen NO FACE DETECTED overlay */}
+              <AnimatePresence>
+                {noFaceTimeoutError && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                      position: 'absolute', inset: 0, background: 'rgba(255,51,102,0.95)',
+                      backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', zIndex: 100
+                    }}
+                  >
+                    <div style={{ textAlign: 'center', padding: 24 }}>
+                      <AlertCircle size={64} color="#fff" style={{ margin: '0 auto 16px', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
+                      <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginBottom: 12 }}>NO FACE DETECTED</h2>
+                      <p style={{ fontSize: 15, color: '#fff', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px', lineHeight: 1.5 }}>
+                        No face was detected for more than 5 seconds. Verification has been terminated.
+                      </p>
+                      <div style={{
+                        display: 'inline-block', padding: '6px 16px', borderRadius: 20,
+                        background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 24,
+                        letterSpacing: '0.05em', textTransform: 'uppercase'
+                      }}>
+                        Spoof / Verification Failed
+                      </div>
+                      <div>
+                        <button onClick={startCamera} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+                          <Camera size={14} /> Restart Verification
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Multiple face detection warning overlay */}
               <AnimatePresence>
