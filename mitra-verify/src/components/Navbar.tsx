@@ -106,15 +106,31 @@ export default function Navbar() {
                 <Link
                   href={link.href}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 4, padding: '8px 14px',
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
                     borderRadius: 8, textDecoration: 'none',
                     fontSize: 14, fontWeight: 500,
                     color: pathname === link.href ? '#00d4ff' : 'rgba(248,250,252,0.7)',
-                    transition: 'color 0.2s',
+                    transition: 'color 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    position: 'relative',
+                    zIndex: 1
                   }}
                   onMouseEnter={e => { if (!link.children) (e.target as HTMLElement).style.color = '#f8fafc'; }}
                   onMouseLeave={e => { if (!link.children) (e.target as HTMLElement).style.color = pathname === link.href ? '#00d4ff' : 'rgba(248,250,252,0.7)'; }}
                 >
+                  {pathname === link.href && (
+                    <motion.div
+                      layoutId="activeNavTab"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0, 212, 255, 0.08)',
+                        border: '1px solid rgba(0, 212, 255, 0.2)',
+                        borderRadius: 8,
+                        zIndex: -1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                   {link.label}
                   {link.children && <ChevronDown size={14} style={{ opacity: 0.6 }} />}
                 </Link>
@@ -123,26 +139,27 @@ export default function Navbar() {
                   <AnimatePresence>
                     {activeDropdown === link.label && (
                       <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                         style={{
                           position: 'absolute', top: '100%', left: 0, marginTop: 8,
-                          background: 'rgba(10, 15, 30, 0.95)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: 12, padding: 8, width: 220,
+                          background: 'rgba(10, 15, 30, 0.92)',
+                          border: '1px solid rgba(0, 212, 255, 0.15)',
+                          borderRadius: 12, padding: 8, width: 230,
                           backdropFilter: 'blur(20px)',
-                          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(0, 212, 255, 0.05)',
+                          zIndex: 100
                         }}
                       >
                         {link.children.map(child => (
                           <Link key={child.href} href={child.href} style={{
                             display: 'flex', alignItems: 'center', gap: 12,
                             padding: '10px 12px', borderRadius: 8, textDecoration: 'none',
-                            transition: 'background 0.15s',
+                            transition: 'background 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                           }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.06)')}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.08)')}
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
                             <div style={{

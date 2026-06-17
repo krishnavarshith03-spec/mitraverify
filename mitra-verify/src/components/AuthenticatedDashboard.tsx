@@ -15,6 +15,8 @@ import { useAuth } from '@/context/AuthContext';
 import { format, subDays } from 'date-fns';
 import Link from 'next/link';
 import Dashboard3DBackground from '@/components/Dashboard3DBackground';
+import TiltCard from '@/components/cyber/TiltCard';
+import AnimatedCounter from '@/components/cyber/AnimatedCounter';
 
 interface Overview {
   total_requests: number;
@@ -51,11 +53,7 @@ interface KPICardProps {
 
 function KPICard({ label, value, unit, icon: Icon, color = '#00d4ff' }: KPICardProps) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.01, y: -2 }}
-      className="glass card-hover"
-      style={{ padding: 24, borderRadius: 16 }}
-    >
+    <TiltCard style={{ padding: 24, borderRadius: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div style={{
           width: 40, height: 40, borderRadius: 10,
@@ -66,11 +64,11 @@ function KPICard({ label, value, unit, icon: Icon, color = '#00d4ff' }: KPICardP
         </div>
       </div>
       <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1 }}>
-        {typeof value === 'number' ? value.toLocaleString() : value}
+        <AnimatedCounter value={value} />
         {unit && <span style={{ fontSize: 16, color: '#475569', marginLeft: 4 }}>{unit}</span>}
       </div>
       <div style={{ fontSize: 13, color: '#475569', marginTop: 6 }}>{label}</div>
-    </motion.div>
+    </TiltCard>
   );
 }
 
@@ -335,8 +333,8 @@ export default function AuthenticatedDashboard() {
                     <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ background: '#0a0f1e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8 }} />
-                    <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad)" name="Pass" />
-                    <Area type="monotone" dataKey="spoof" stroke="#ff3366" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" />
+                    <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad)" name="Pass" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" />
+                    <Area type="monotone" dataKey="spoof" stroke="#ff3366" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
