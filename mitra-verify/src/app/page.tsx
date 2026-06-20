@@ -13,6 +13,12 @@ import AnimatedCounter from '@/components/cyber/AnimatedCounter';
 import ThreeGlobe from '@/components/cyber/ThreeGlobe';
 import PageTransition from '@/components/cyber/PageTransition';
 import { useAuth } from '@/context/AuthContext';
+import SecurityRadar from '@/components/dashboard/SecurityRadar';
+import VerificationFunnel from '@/components/dashboard/VerificationFunnel';
+import LiveActivityFeed from '@/components/dashboard/LiveActivityFeed';
+import AIInsightsPanel from '@/components/dashboard/AIInsightsPanel';
+import NeuralNetworkAnimation from '@/components/dashboard/NeuralNetworkAnimation';
+import Global3DBackground from '@/components/cyber/Global3DBackground';
 
 interface Overview {
   total_requests: number;
@@ -218,234 +224,189 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative' }}>
+      <div className="min-h-screen bg-[#030712] relative text-slate-300 font-sans selection:bg-[#00d4ff]/30">
         <Navbar />
-        <div style={{ width: '100%', maxWidth: 1440, margin: '0 auto', padding: '0 16px', paddingTop: 112, paddingBottom: 80, position: 'relative', zIndex: 10 }}>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        
+        {/* Abstract Particle / Neural Background */}
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          <Global3DBackground />
+          <NeuralNetworkAnimation />
+          {/* Subtle top gradient */}
+          <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-[#00d4ff]/[0.03] to-transparent" />
+        </div>
+
+        <main className="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
+          {/* Hero Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 animate-fade-up">
             <div>
-              <h1 className="heading-section" style={{ marginBottom: 4 }}>
-                {isAuthenticated && user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard'}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88] animate-pulse" />
+                <span className="text-[#00ff88] text-xs font-mono tracking-widest uppercase">System Online</span>
+              </div>
+              <h1 className="text-3xl md:text-5xl font-semibold text-white tracking-tight mb-2">
+                {isAuthenticated && user?.name ? `Welcome, ${user.name.split(' ')[0]}` : 'Command Center'}
               </h1>
-              <p style={{ color: '#475569', fontSize: 14 }}>
-                Last updated {lastRefresh ? format(lastRefresh, 'HH:mm:ss') : '--:--:--'} ·
-                <span style={{ color: '#00d4ff' }}> Auto-refreshes every 30s</span>
+              <p className="text-sm text-slate-400">
+                Live biometric telemetry and threat intelligence. Auto-refreshes every 30s.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
+            
+            <div className="flex flex-wrap gap-3 items-center">
               {isDemoMode && (
-                <span style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: '#ffb800',
-                  background: 'rgba(255, 184, 0, 0.1)',
-                  border: '1px solid rgba(255, 184, 0, 0.3)',
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}>
-                  ⚠️ Demo Mode (Server Offline)
+                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ffb800]/10 border border-[#ffb800]/20 text-[#ffb800] text-xs font-semibold">
+                  ⚠️ Demo Mode
                 </span>
               )}
-              <button onClick={loadData} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <RefreshCw size={14} /> Refresh
+              <button onClick={loadData} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-colors flex items-center gap-2 text-sm font-medium text-white">
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Sync
               </button>
-              <Link href="/developer" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Link href="/developer" className="px-4 py-2 rounded-lg bg-[#00d4ff]/10 hover:bg-[#00d4ff]/20 border border-[#00d4ff]/20 transition-colors flex items-center gap-2 text-sm font-medium text-[#00d4ff]">
                 <Zap size={14} /> API Keys
               </Link>
             </div>
           </div>
 
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: 80 }}>
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                <RefreshCw size={32} color="#00d4ff" />
-              </motion.div>
-              <p style={{ color: '#475569', marginTop: 16 }}>Loading analytics...</p>
+          {error && !isDemoMode && (
+             <div className="mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center backdrop-blur-md">
+               <AlertTriangle size={32} className="text-red-400 mx-auto mb-3" />
+               <h3 className="text-white font-medium mb-1">Telemetry Interrupted</h3>
+               <p className="text-red-200/70 text-sm mb-4">{error}</p>
+               <button onClick={loadData} className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-300 text-sm font-medium transition-colors">Retry Connection</button>
+             </div>
+          )}
+
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+            
+            {/* Top Row: AI Insights & Core KPIs */}
+            <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up animate-delay-1">
+              {/* Insights spans 1 */}
+              <div className="premium-glass spotlight-card col-span-1 md:col-span-2 lg:col-span-1">
+                <AIInsightsPanel overview={overview} />
+              </div>
+              
+              {/* Primary KPIs span 3 */}
+              <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="premium-glass spotlight-card p-5 flex flex-col justify-between">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 rounded-lg bg-[#00d4ff]/10"><Activity size={18} color="#00d4ff" /></div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white tracking-tight"><AnimatedCounter value={overview?.total_requests || 0} /></div>
+                    <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Total Requests</div>
+                  </div>
+                </div>
+
+                <div className="premium-glass spotlight-card p-5 flex flex-col justify-between">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 rounded-lg bg-[#00ff88]/10"><Shield size={18} color="#00ff88" /></div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white tracking-tight"><AnimatedCounter value={overview?.successful_verifications || 0} /></div>
+                    <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Passed</div>
+                  </div>
+                </div>
+
+                <div className="premium-glass spotlight-card p-5 flex flex-col justify-between">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 rounded-lg bg-[#ffb800]/10"><AlertTriangle size={18} color="#ffb800" /></div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white tracking-tight"><AnimatedCounter value={overview?.spoof_attempts || 0} /></div>
+                    <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Spoof Attempts</div>
+                  </div>
+                </div>
+
+                <div className="premium-glass spotlight-card p-5 flex flex-col justify-between">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 rounded-lg bg-[#7c3aed]/10"><TrendingUp size={18} color="#7c3aed" /></div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white tracking-tight">{(overview?.success_rate || 0).toFixed(1)}<span className="text-sm ml-1 text-slate-400">%</span></div>
+                    <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Success Rate</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : error ? (
-            <div className="glass" style={{ padding: 40, borderRadius: 16, textAlign: 'center', border: '1px solid rgba(255,51,102,0.2)' }}>
-              <AlertTriangle size={36} color="#ff3366" style={{ margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#f8fafc', marginBottom: 8 }}>Unable to Load Analytics</h3>
-              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>{error}</p>
-              <button onClick={loadData} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <RefreshCw size={14} /> Retry
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Primary KPI Grid */}
-              <div style={{ marginBottom: 'var(--space-2)' }}>
-                <h3 className="text-label" style={{ marginBottom: 'var(--space-2)' }}>Key Metrics</h3>
-                <div className="kpi-grid-primary">
-                  <KPICard label="Total Requests" value={overview?.total_requests || 0} icon={Activity} color="#00d4ff" />
-                  <KPICard label="Passed Verifications" value={overview?.successful_verifications || 0} icon={Eye} color="#00ff88" />
-                  <KPICard label="Failed Verifications" value={overview?.failed_verifications || 0} icon={AlertTriangle} color="#ff3366" />
-                  <KPICard label="No Face Detected" value={overview?.no_face_detected || 0} icon={Eye} color="#94a3b8" />
-                  <KPICard label="Spoof Attempts" value={overview?.spoof_attempts || 0} icon={Shield} color="#ffb800" />
-                  <KPICard label="Identity Matches" value={overview?.identity_matches || 0} icon={Fingerprint} color="#7c3aed" />
+
+            {/* Middle Row: Radar, Area Chart, Funnel */}
+            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-2">
+              
+              {/* Radar - spans 3 */}
+              <div className="premium-glass spotlight-card lg:col-span-3 p-6 flex flex-col">
+                <h3 className="text-sm font-semibold text-white mb-6 uppercase tracking-wider">Active Scanning</h3>
+                <div className="flex-1 flex items-center justify-center">
+                  <SecurityRadar />
                 </div>
               </div>
 
-              {/* Secondary KPI Grid */}
-              <div style={{ marginBottom: 'var(--space-4)' }}>
-                <div className="kpi-grid-secondary">
-                  <KPICard label="Success Rate" value={`${(overview?.success_rate || 0).toFixed(1)}`} unit="%" icon={TrendingUp} color="#00ff88" />
-                  <KPICard label="Avg Processing Time" value={`${(overview?.avg_processing_time || 0).toFixed(0)}`} unit="ms" icon={Clock} color="#ffb800" />
-                  <KPICard label="Active API Keys" value={overview?.active_api_keys || 0} icon={Zap} color="#00d4ff" />
-                </div>
-              </div>
-
-              {/* Charts row */}
-              <div className="chart-row" style={{ marginBottom: 'var(--space-4)' }}>
-                {/* Usage Area Chart */}
-                <TiltCard className="lg:col-span-1" style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
-                  <h3 className="heading-card" style={{ fontSize: 15, marginBottom: 'var(--space-3)' }}>Requests (Last 30 Days)</h3>
+              {/* Area Chart - spans 6 */}
+              <div className="premium-glass spotlight-card lg:col-span-6 p-6">
+                <h3 className="text-sm font-semibold text-white mb-6 uppercase tracking-wider">Volume & Velocity (30D)</h3>
+                <div className="h-[280px]">
                   {usageData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={usageData.slice(-15)}>
                         <defs>
-                          <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#00ff88" stopOpacity={0.3} />
+                          <linearGradient id="passGrad2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00ff88" stopOpacity={0.2} />
                             <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
                           </linearGradient>
-                          <linearGradient id="failGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ff3366" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="#ff3366" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="spoofGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ffb800" stopOpacity={0.3} />
+                          <linearGradient id="spoofGrad2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ffb800" stopOpacity={0.2} />
                             <stop offset="100%" stopColor="#ffb800" stopOpacity={0} />
                           </linearGradient>
-                          <linearGradient id="noFaceGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="#94a3b8" stopOpacity={0} />
-                          </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                         <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ background: 'rgba(10, 15, 30, 0.9)', border: '1px solid rgba(0, 212, 255, 0.15)', borderRadius: 8, backdropFilter: 'blur(12px)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
-                        <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad)" name="Pass" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#00ff88' }} />
-                        <Area type="monotone" dataKey="fail" stroke="#ff3366" strokeWidth={2} fill="url(#failGrad)" name="Fail" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ff3366' }} />
-                        <Area type="monotone" dataKey="spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ffb800' }} />
-                        <Area type="monotone" dataKey="noFace" stroke="#94a3b8" strokeWidth={2} fill="url(#noFaceGrad)" name="No Face" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#94a3b8' }} />
+                        <Tooltip contentStyle={{ background: 'rgba(10,15,30,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' }} itemStyle={{ fontSize: 13 }} labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 4 }} />
+                        <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad2)" />
+                        <Area type="monotone" dataKey="spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad2)" />
+                        <Area type="monotone" dataKey="fail" stroke="#ff3366" strokeWidth={2} fill="transparent" />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14 }}>
-                      No usage data yet. Start making API calls to see analytics.
-                    </div>
+                    <div className="h-full flex items-center justify-center text-slate-500 text-sm">Waiting for telemetry...</div>
                   )}
-                </TiltCard>
-
-                {/* Holographic 3D Globe Vector */}
-                <TiltCard style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column' as const }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Global Threat Vector</h3>
-                  <div style={{ flex: 1, width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ThreeGlobe />
-                  </div>
-                </TiltCard>
-
-                {/* Result Distribution */}
-                <TiltCard style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
-                  <h3 className="heading-card" style={{ fontSize: 15, marginBottom: 'var(--space-2)' }}>Result Distribution</h3>
-                  {pieData.length > 0 ? (
-                    <>
-                      <div style={{ position: 'relative', width: '100%', height: 130 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={56} paddingAngle={4} dataKey="value">
-                              {pieData.map((entry, i) => <Cell key={i} fill={entry.color} style={{ outline: 'none' }} />)}
-                            </Pie>
-                            <Tooltip contentStyle={{ background: 'rgba(10, 15, 30, 0.9)', border: '1px solid rgba(0, 212, 255, 0.15)', borderRadius: 8, backdropFilter: 'blur(12px)' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div style={{
-                          position: 'absolute', top: '50%', left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                          pointerEvents: 'none'
-                        }}>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                            {overview ? overview.total_requests.toLocaleString() : '0'}
-                          </span>
-                          <span style={{ fontSize: 8, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>
-                            Total
-                          </span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
-                        {pieData.map(d => (
-                          <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: d.color }} />
-                              <span style={{ fontSize: 12, color: '#94a3b8' }}>{d.name}</span>
-                            </div>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: d.color }}>{d.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13, textAlign: 'center' }}>
-                      Make API calls to see result distribution
-                    </div>
-                  )}
-                </TiltCard>
+                </div>
               </div>
 
-            {/* Threat Feed */}
-            <div className="glass" style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertTriangle size={16} color="#ffb800" />
-                  <h3 style={{ fontSize: 15, fontWeight: 600 }}>Threat Monitoring</h3>
-                </div>
-                <span style={{ fontSize: 12, color: '#475569' }}>{threats.length} detected events</span>
+              {/* Funnel - spans 3 */}
+              <div className="premium-glass spotlight-card lg:col-span-3 p-6 flex flex-col">
+                <h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider">Conversion Funnel</h3>
+                <VerificationFunnel overview={overview} />
               </div>
-              {threats.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#475569', fontSize: 14 }}>
-                  <Shield size={28} color="#00ff88" style={{ marginBottom: 12 }} />
-                  <div style={{ color: '#00ff88', fontWeight: 600, marginBottom: 4 }}>All Clear</div>
-                  No threats or spoof attempts detected
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {threats.slice(0, 10).map(threat => {
-                    const isSpoof = (threat.result || '').toLowerCase() === 'spoof' || (threat.result || '').toLowerCase() === 'spoof_detected';
-                    return (
-                      <div key={threat.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-xl" style={{
-                        background: isSpoof ? 'rgba(255,184,0,0.04)' : 'rgba(255,51,102,0.04)',
-                        border: `1px solid ${isSpoof ? 'rgba(255,184,0,0.15)' : 'rgba(255,51,102,0.12)'}`,
-                      }}>
-                        <div className="flex items-center gap-3 flex-1">
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSpoof ? '#ffb800' : '#ff3366', flexShrink: 0 }} />
-                          <span style={{ fontSize: 12, color: isSpoof ? '#ffb800' : '#ff3366', fontWeight: 600, width: 65 }}>
-                            {threat.result.toUpperCase().replace(/_/g, ' ')}
-                          </span>
-                          <span style={{ fontSize: 12, color: '#94a3b8' }}>{threat.api_type} API</span>
-                        </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-4">
-                          <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
-                            confidence: {(threat.confidence * 100).toFixed(0)}%
-                          </span>
-                          <span style={{ fontSize: 11, color: '#475569' }}>
-                            {format(new Date(threat.timestamp), 'MMM d HH:mm')}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          </>
-        )}
+
+            {/* Bottom Row: Live Feed & ThreeGlobe */}
+            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-3">
+              
+              {/* ThreeGlobe - spans 8 */}
+              <div className="premium-glass spotlight-card lg:col-span-8 p-6 relative overflow-hidden flex flex-col min-h-[400px]">
+                <h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider relative z-10">Global Threat Origins</h3>
+                <p className="text-xs text-slate-400 mb-4 relative z-10">Real-time geospatial mapping of spoofing attempts.</p>
+                <div className="absolute inset-0 top-16 flex items-center justify-center">
+                  <ThreeGlobe />
+                </div>
+              </div>
+
+              {/* Live Activity Feed - spans 4 */}
+              <div className="premium-glass spotlight-card lg:col-span-4 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00d4ff] shadow-[0_0_8px_#00d4ff] animate-pulse" />
+                    Live Activity
+                  </h3>
+                  <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-mono">WS Connected</span>
+                </div>
+                <LiveActivityFeed isDemoMode={isDemoMode} />
+              </div>
+
+            </div>
+          </div>
+        </main>
       </div>
-    </div>
     </PageTransition>
   );
 }
