@@ -13,7 +13,7 @@ from app.schemas.schemas import (
 )
 from app.api.v1.keys.router import get_api_key_from_header
 from app.api.v1.auth.router import get_current_user
-from app.services.cv.mediapipe_engine import run_identity_verify, process_demo_frame
+from app.services.cv.mediapipe_engine import run_identity_verify, process_demo_frame, map_verification_result
 
 router = APIRouter(prefix="/identity", tags=["Identity Verification"])
 
@@ -39,7 +39,7 @@ async def identity_verify(
         api_key_id=api_key.id,
         session_id=cv_result.get("session_id"),
         api_type="enterprise",
-        result=cv_result.get("result", "error"),
+        result=map_verification_result(cv_result, "enterprise"),
         confidence=cv_result.get("confidence", 0.0),
         processing_time=cv_result.get("processing_time", 0.0),
         checks_performed=cv_result.get("checks", {}),

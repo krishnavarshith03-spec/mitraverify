@@ -157,6 +157,9 @@ export default function AdvancedDemoPage() {
         if (missingTime > 5000) {
           console.warn("[Face Loss] Face missing for > 5 seconds continuously. Terminating session.");
           
+          // Log NO_FACE_DETECTED event to database
+          livenessAPI.logEvent(sessionId, 'NO_FACE_DETECTED', 'advanced').catch(console.error);
+
           // Stop camera stream
           if (videoRef.current?.srcObject) {
             (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
@@ -612,6 +615,9 @@ export default function AdvancedDemoPage() {
   }
 
   function reset() {
+    if (streaming && challenges.length > 0 && currentChallenge < challenges.length && !overallResult) {
+      livenessAPI.logEvent(sessionId, 'SESSION_TERMINATED', 'advanced').catch(console.error);
+    }
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;

@@ -22,31 +22,75 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
             deepfake_attempts=0, identity_matches=0, success_rate=0.0, avg_processing_time=0.0, active_api_keys=0
         )
 
-    total = await db.execute(
-        select(func.count(VerificationLog.id)).where(VerificationLog.api_key_id.in_(key_ids))
+    # Fetch counts grouped by result and api_type to apply exact formulas
+    stmt = (
+        select(VerificationLog.result, VerificationLog.api_type, func.count(VerificationLog.id))
+        .where(VerificationLog.api_key_id.in_(key_ids))
+        .group_by(VerificationLog.result, VerificationLog.api_type)
     )
-    total_requests = total.scalar() or 0
+    res = await db.execute(stmt)
+    rows = res.fetchall()
+    
+    # Initialize counts for formula components
+    counts = {
+        "SUCCESS": 0,
+        "FAILED": 0,
+        "NO_FACE_DETECTED": 0,
+        "SPOOF_DETECTED": 0,
+        "SESSION_TERMINATED": 0,
+        "IDENTITY_MATCH_SUCCESS": 0,
+        "IDENTITY_MISMATCH": 0,
+        "MULTIPLE_FACE": 0,
+        "CAMERA_LOST": 0
+    }
+    
+    # Process rows, mapping historical and new results
+    for result_val, api_type, count in rows:
+        norm_result = (result_val or "").upper()
+        
+        if norm_result in ("PASS", "SUCCESS"):
+            if api_type == "enterprise":
+                counts["IDENTITY_MATCH_SUCCESS"] += count
+            counts["SUCCESS"] += count
+        elif norm_result == "IDENTITY_MATCH_SUCCESS":
+            counts["IDENTITY_MATCH_SUCCESS"] += count
+            counts["SUCCESS"] += count
+        elif norm_result in ("FAIL", "FAILED"):
+            if api_type == "enterprise":
+                counts["IDENTITY_MISMATCH"] += count
+            counts["FAILED"] += count
+        elif norm_result == "IDENTITY_MISMATCH":
+            counts["IDENTITY_MISMATCH"] += count
+            counts["FAILED"] += count
+        elif norm_result in ("SPOOF", "SPOOF_DETECTED"):
+            counts["SPOOF_DETECTED"] += count
+        elif norm_result == "NO_FACE_DETECTED":
+            counts["NO_FACE_DETECTED"] += count
+        elif norm_result == "SESSION_TERMINATED":
+            counts["SESSION_TERMINATED"] += count
+        elif norm_result == "MULTIPLE_FACE":
+            counts["MULTIPLE_FACE"] += count
+            counts["FAILED"] += count
+        elif norm_result == "CAMERA_LOST":
+            counts["CAMERA_LOST"] += count
+            counts["FAILED"] += count
+        else:
+            # any other status (e.g. error) maps to FAILED for total requests
+            counts["FAILED"] += count
 
-    success = await db.execute(
-        select(func.count(VerificationLog.id)).where(
-            and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.result == "pass")
-        )
+    # Total Requests = SUCCESS + FAILED + NO_FACE_DETECTED + SPOOF_DETECTED + SESSION_TERMINATED
+    total_requests = (
+        counts["SUCCESS"] +
+        counts["FAILED"] +
+        counts["NO_FACE_DETECTED"] +
+        counts["SPOOF_DETECTED"] +
+        counts["SESSION_TERMINATED"]
     )
-    successful = success.scalar() or 0
-
-    failed = await db.execute(
-        select(func.count(VerificationLog.id)).where(
-            and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.result == "fail")
-        )
-    )
-    failed_verifications = failed.scalar() or 0
-
-    spoof = await db.execute(
-        select(func.count(VerificationLog.id)).where(
-            and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.result == "spoof")
-        )
-    )
-    spoof_attempts = spoof.scalar() or 0
+    
+    successful_verifications = counts["SUCCESS"]
+    failed_verifications = counts["FAILED"]
+    spoof_attempts = counts["SPOOF_DETECTED"]
+    identity_matches = counts["IDENTITY_MATCH_SUCCESS"]
 
     deepfake = await db.execute(
         select(func.count(VerificationLog.id)).where(
@@ -54,13 +98,6 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
         )
     )
     deepfake_attempts = deepfake.scalar() or 0
-
-    identity = await db.execute(
-        select(func.count(VerificationLog.id)).where(
-            and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.api_type == "enterprise", VerificationLog.result == "pass")
-        )
-    )
-    identity_matches = identity.scalar() or 0
 
     avg_time = await db.execute(
         select(func.avg(VerificationLog.processing_time)).where(VerificationLog.api_key_id.in_(key_ids))
@@ -72,11 +109,11 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
     )
     active_count = active_keys.scalar() or 0
 
-    success_rate = (successful / total_requests * 100) if total_requests > 0 else 0.0
+    success_rate = (successful_verifications / total_requests * 100) if total_requests > 0 else 0.0
 
     return AnalyticsOverview(
         total_requests=total_requests,
-        successful_verifications=successful,
+        successful_verifications=successful_verifications,
         failed_verifications=failed_verifications,
         spoof_attempts=spoof_attempts,
         deepfake_attempts=deepfake_attempts,
@@ -109,7 +146,10 @@ async def get_threats(current_user: User = Depends(get_current_user), db: AsyncS
         return {"threats": []}
     threats = await db.execute(
         select(VerificationLog).where(
-            and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.result.in_(["spoof", "fail"]))
+            and_(
+                VerificationLog.api_key_id.in_(key_ids),
+                VerificationLog.result.notin_(["SUCCESS", "pass", "IDENTITY_MATCH_SUCCESS"])
+            )
         ).order_by(VerificationLog.created_at.desc()).limit(50)
     )
     rows = threats.scalars().all()

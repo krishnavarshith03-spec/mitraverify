@@ -87,7 +87,7 @@ export default function ComparePage() {
               </ul>
             </div>
 
-            <Link href="/demo/basic" className="btn-ghost" style={{ width: '100%', display: 'flex', justifyContent: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13 }}>
+            <Link href="/demo/basic" className="btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, height: 40 }}>
               View Demo
             </Link>
           </motion.div>
@@ -136,7 +136,7 @@ export default function ComparePage() {
               </ul>
             </div>
 
-            <Link href="/demo/advanced" className="btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13 }}>
+            <Link href="/demo/advanced" className="btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, height: 40 }}>
               View Demo
             </Link>
           </motion.div>
@@ -185,7 +185,7 @@ export default function ComparePage() {
               </ul>
             </div>
 
-            <Link href="/demo/enterprise" className="btn-ghost" style={{ width: '100%', display: 'flex', justifyContent: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13 }}>
+            <Link href="/demo/enterprise" className="btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', textDecoration: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, height: 40 }}>
               View Demo
             </Link>
           </motion.div>

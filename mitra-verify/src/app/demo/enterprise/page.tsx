@@ -522,6 +522,23 @@ export default function EnterpriseDemoPage() {
     setTerminationReason(reason);
     setOverallResult('fail');
     
+    // Map reason to database event type
+    let eventType = 'SESSION_TERMINATED';
+    const normReason = reason.toLowerCase();
+    if (normReason.includes('face lost') || normReason.includes('no face') || normReason.includes('searching_for_face')) {
+      eventType = 'NO_FACE_DETECTED';
+    } else if (normReason.includes('multiple faces')) {
+      eventType = 'MULTIPLE_FACE';
+    } else if (normReason.includes('spoof') || normReason.includes('replay') || normReason.includes('deepfake')) {
+      eventType = 'SPOOF_DETECTED';
+    } else if (normReason.includes('unauthorized') || normReason.includes('identity changed') || normReason.includes('mismatch')) {
+      eventType = 'IDENTITY_MISMATCH';
+    } else if (normReason.includes('frozen') || normReason.includes('camera lost') || normReason.includes('camera feed frozen')) {
+      eventType = 'CAMERA_LOST';
+    }
+    
+    livenessAPI.logEvent(sessionId, eventType, 'enterprise').catch(console.error);
+
     // Stop camera
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
@@ -537,7 +554,7 @@ export default function EnterpriseDemoPage() {
         logout('/auth/login?reason=verification_lost');
       }, 3000);
     }
-  }, [logout]);
+  }, [logout, sessionId]);
 
   // Load enrollment signature from API or localStorage
   useEffect(() => {

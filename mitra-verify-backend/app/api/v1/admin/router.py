@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, delete
@@ -45,11 +46,11 @@ async def get_admin_stats(
         active_keys = (await db.execute(select(func.count(ApiKey.id)).where(ApiKey.is_active == True))).scalar() or 0
         
         # Verification counts
-        total_requests = (await db.execute(select(func.count(VerificationLog.id)))).scalar() or 0
-        passed_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result == "pass"))).scalar() or 0
-        failed_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result == "fail"))).scalar() or 0
-        spoof_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result == "spoof"))).scalar() or 0
-        error_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result == "error"))).scalar() or 0
+        passed_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result.in_(["SUCCESS", "pass", "IDENTITY_MATCH_SUCCESS"])))).scalar() or 0
+        failed_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result.in_(["FAILED", "fail", "IDENTITY_MISMATCH", "MULTIPLE_FACE", "CAMERA_LOST"])))).scalar() or 0
+        spoof_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result.in_(["SPOOF_DETECTED", "spoof"])))).scalar() or 0
+        error_requests = (await db.execute(select(func.count(VerificationLog.id)).where(VerificationLog.result.in_(["NO_FACE_DETECTED", "SESSION_TERMINATED", "error"])))).scalar() or 0
+        total_requests = passed_requests + failed_requests + spoof_requests + error_requests
         
         avg_processing_time = (await db.execute(select(func.avg(VerificationLog.processing_time)))).scalar() or 0.0
         

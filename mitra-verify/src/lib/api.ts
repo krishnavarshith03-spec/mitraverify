@@ -101,6 +101,8 @@ export const livenessAPI = {
   startSession: (apiType: string) => api.post('/liveness/session/start', { api_type: apiType }),
   processDemoFrame: (image: string, sessionId?: string, challengeType?: string, enrolledEmbedding?: number[], apiType?: string) =>
     api.post('/liveness/demo/process', { image, session_id: sessionId, challenge_type: challengeType, enrolled_embedding: enrolledEmbedding, api_type: apiType }),
+  logEvent: (sessionId: string, eventType: string, apiType: string) =>
+    api.post('/liveness/demo/log_event', { session_id: sessionId, event_type: eventType, api_type: apiType }),
   enrollFace: (image: string, subjectId?: string) => api.post('/identity/enroll', { image, subject_id: subjectId }),
   getEnrolledFace: () => api.get('/identity/enrolled'),
 };

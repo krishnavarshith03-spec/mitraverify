@@ -804,6 +804,47 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> float:
     return float(np.clip(val, 0.0, 1.0))
 
 
+def map_verification_result(cv_result: dict, api_type: str) -> str:
+    """Map CV processing status or raw result to standard database result strings."""
+    result = cv_result.get("result")
+    status = cv_result.get("status")
+    reason = cv_result.get("reason")
+    checks = cv_result.get("checks", {})
+    
+    # Check if face was not present/detected at all
+    face_present = checks.get("face_present", cv_result.get("face_present", True))
+    
+    # Check for specific terminal statuses first
+    if status == "MULTIPLE_FACES_DETECTED":
+        return "MULTIPLE_FACE"
+    if status in ("REPLAY_ATTACK_DETECTED", "DEEPFAKE_SUSPECTED") or result == "spoof":
+        return "SPOOF_DETECTED"
+    if status == "CAMERA_FEED_FROZEN":
+        return "CAMERA_LOST"
+    if status in ("UNAUTHORIZED_PERSON", "IDENTITY_CHANGED"):
+        return "IDENTITY_MISMATCH"
+    if status == "failed" and reason == "no_face_detected":
+        return "NO_FACE_DETECTED"
+    if status == "NO_FACE_DETECTED":
+        return "NO_FACE_DETECTED"
+    if not face_present or reason == "no_face_detected":
+        return "NO_FACE_DETECTED"
+        
+    # Standard pass/fail mapping
+    if result == "pass":
+        if api_type == "enterprise":
+            return "IDENTITY_MATCH_SUCCESS"
+        return "SUCCESS"
+    if result == "fail":
+        if api_type == "enterprise":
+            return "IDENTITY_MISMATCH"
+        return "FAILED"
+        
+    return "FAILED"
+
+
+
+
 def process_demo_frame(
     image_b64: str,
     session_id: Optional[str] = None,

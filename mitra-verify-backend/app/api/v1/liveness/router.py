@@ -5,12 +5,14 @@ from sqlalchemy import select, func
 from datetime import datetime
 import uuid
 from typing import Optional
+from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.models import ApiKey, VerificationLog, ApiUsage, User
 from app.schemas.schemas import BasicLivenessRequest, BasicLivenessResponse, AdvancedLivenessRequest, AdvancedLivenessResponse
 from app.api.v1.keys.router import get_api_key_from_header
 from app.api.v1.auth.router import get_current_user
-from app.services.cv.mediapipe_engine import run_basic_liveness, run_advanced_liveness
+from app.services.cv.mediapipe_engine import run_basic_liveness, run_advanced_liveness, map_verification_result, SESSION_CACHE
+
 
 router = APIRouter(prefix="/liveness", tags=["Liveness Detection"])
 
@@ -29,7 +31,7 @@ async def basic_liveness(
         api_key_id=api_key.id,
         session_id=cv_result.get("session_id"),
         api_type="basic",
-        result=cv_result.get("result", "error"),
+        result=map_verification_result(cv_result, "basic"),
         confidence=cv_result.get("confidence", 0.0),
         processing_time=cv_result.get("processing_time", 0.0),
         checks_performed=cv_result.get("checks", {}),
@@ -65,7 +67,7 @@ async def advanced_liveness(
         api_key_id=api_key.id,
         session_id=cv_result.get("session_id"),
         api_type="advanced",
-        result=cv_result.get("result", "error"),
+        result=map_verification_result(cv_result, "advanced"),
         confidence=cv_result.get("confidence", 0.0),
         processing_time=cv_result.get("processing_time", 0.0),
         checks_performed=cv_result.get("checks", {}),
@@ -104,7 +106,7 @@ async def enterprise_liveness(
         api_key_id=api_key.id,
         session_id=cv_result.get("session_id"),
         api_type="enterprise",
-        result=cv_result.get("result", "error"),
+        result=map_verification_result(cv_result, "enterprise"),
         confidence=cv_result.get("confidence", 0.0),
         processing_time=cv_result.get("processing_time", 0.0),
         checks_performed=cv_result.get("checks", {}),
@@ -242,31 +244,36 @@ async def demo_process(
         session = SESSION_CACHE.get(data.session_id)
         if session and not session.get("logged"):
             is_terminal = False
-            result_status = "fail"
+            result_status = "FAILED"
             
-            terminal_statuses = {
-                "MULTIPLE_FACES_DETECTED": "fail",
-                "REPLAY_ATTACK_DETECTED": "spoof",
-                "DEEPFAKE_SUSPECTED": "spoof",
-                "CAMERA_FEED_FROZEN": "spoof",
-                "UNAUTHORIZED_PERSON": "fail",
-                "IDENTITY_CHANGED": "fail",
-                "FACE_TOO_SMALL": "fail",
-                "FACE_TOO_LARGE": "fail",
-                "FACE_PARTIALLY_VISIBLE": "fail"
-            }
+            terminal_statuses = [
+                "MULTIPLE_FACES_DETECTED",
+                "REPLAY_ATTACK_DETECTED",
+                "DEEPFAKE_SUSPECTED",
+                "CAMERA_FEED_FROZEN",
+                "UNAUTHORIZED_PERSON",
+                "IDENTITY_CHANGED",
+                "FACE_TOO_SMALL",
+                "FACE_TOO_LARGE",
+                "FACE_PARTIALLY_VISIBLE",
+                "NO_FACE_DETECTED"
+            ]
             
             status = cv_result.get("status")
+            reason = cv_result.get("reason")
+            
             if status in terminal_statuses:
                 is_terminal = True
-                result_status = terminal_statuses[status]
+            elif status == "failed" and reason == "no_face_detected":
+                is_terminal = True
             
             challenges = session.get("challenges", [])
             if challenges and data.challenge_type == challenges[-1]["id"] and cv_result.get("challenge_passed"):
                 is_terminal = True
-                result_status = "pass"
                 
             if is_terminal:
+                result_status = map_verification_result(cv_result, data.api_type or "basic")
+                
                 stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
                 res = await db.execute(stmt)
                 api_key = res.scalars().first()
@@ -319,3 +326,69 @@ async def demo_process(
                     raise
                     
     return cv_result
+
+
+class LogEventRequest(BaseModel):
+    session_id: str
+    event_type: str
+    api_type: str
+
+@router.post("/demo/log_event", tags=["Demo"])
+async def log_demo_event(
+    data: LogEventRequest,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if not current_user:
+        return {"status": "ignored", "reason": "user_not_authenticated"}
+        
+    session_id = data.session_id
+    session = SESSION_CACHE.get(session_id)
+    if session and session.get("logged"):
+        return {"status": "ignored", "reason": "already_logged"}
+        
+    stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
+    res = await db.execute(stmt)
+    api_key = res.scalars().first()
+    if not api_key:
+        api_key = ApiKey(
+            id=str(uuid.uuid4()),
+            user_id=current_user.id,
+            name="Default Key",
+            key_prefix="mv_",
+            key_hash=str(uuid.uuid4()),
+            api_type="enterprise",
+            is_active=True
+        )
+        db.add(api_key)
+        try:
+            await db.commit()
+            await db.refresh(api_key)
+        except Exception:
+            await db.rollback()
+            raise
+            
+    log = VerificationLog(
+        id=str(uuid.uuid4()),
+        api_key_id=api_key.id,
+        session_id=session_id,
+        api_type=data.api_type or "basic",
+        result=data.event_type,
+        confidence=0.0,
+        processing_time=0.0,
+        checks_performed={"manual_event": data.event_type},
+        spoof_score=1.0 if data.event_type in ("SPOOF_DETECTED", "CAMERA_LOST") else 0.0,
+        deepfake_risk=0.0,
+        ip_address="127.0.0.1",
+        created_at=datetime.utcnow()
+    )
+    db.add(log)
+    try:
+        await db.commit()
+        if session:
+            session["logged"] = True
+        return {"status": "success", "log_id": log.id}
+    except Exception:
+        await db.rollback()
+        raise
+

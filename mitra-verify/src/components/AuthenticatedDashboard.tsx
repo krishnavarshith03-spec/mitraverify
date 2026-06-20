@@ -127,8 +127,9 @@ export default function AuthenticatedDashboard() {
       rawData.forEach(item => {
         const d = format(new Date(item.date), 'MMM d');
         if (buckets[d]) {
-          if (item.result === 'pass') buckets[d].pass++;
-          else if (item.result === 'spoof') buckets[d].spoof++;
+          const res = (item.result || '').toLowerCase();
+          if (res === 'pass' || res === 'success' || res === 'identity_match_success') buckets[d].pass++;
+          else if (res === 'spoof' || res === 'spoof_detected') buckets[d].spoof++;
           else buckets[d].fail++;
         }
       });
@@ -334,9 +335,13 @@ export default function AuthenticatedDashboard() {
                         <stop offset="0%" stopColor="#00ff88" stopOpacity={0.25} />
                         <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
                       </linearGradient>
-                      <linearGradient id="spoofGrad" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="failGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#ff3366" stopOpacity={0.25} />
                         <stop offset="100%" stopColor="#ff3366" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="spoofGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ffb800" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#ffb800" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -344,7 +349,8 @@ export default function AuthenticatedDashboard() {
                     <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ background: 'rgba(10, 15, 30, 0.9)', border: '1px solid rgba(0, 212, 255, 0.15)', borderRadius: 8, backdropFilter: 'blur(12px)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
                     <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad)" name="Pass" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#00ff88' }} />
-                    <Area type="monotone" dataKey="spoof" stroke="#ff3366" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ff3366' }} />
+                    <Area type="monotone" dataKey="fail" stroke="#ff3366" strokeWidth={2} fill="url(#failGrad)" name="Fail" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ff3366' }} />
+                    <Area type="monotone" dataKey="spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ffb800' }} />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -419,28 +425,31 @@ export default function AuthenticatedDashboard() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {threats.slice(0, 5).map(threat => (
-                  <div key={threat.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-xl" style={{
-                    background: threat.result === 'spoof' ? 'rgba(255,184,0,0.04)' : 'rgba(255,51,102,0.04)',
-                    border: `1px solid ${threat.result === 'spoof' ? 'rgba(255,184,0,0.15)' : 'rgba(255,51,102,0.12)'}`,
-                  }}>
-                    <div className="flex items-center gap-3 flex-1">
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: threat.result === 'spoof' ? '#ffb800' : '#ff3366', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: threat.result === 'spoof' ? '#ffb800' : '#ff3366', fontWeight: 600, width: 60 }}>
-                        {threat.result.toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{threat.api_type} API</span>
+                {threats.slice(0, 5).map(threat => {
+                  const isSpoof = (threat.result || '').toLowerCase() === 'spoof' || (threat.result || '').toLowerCase() === 'spoof_detected';
+                  return (
+                    <div key={threat.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-xl" style={{
+                      background: isSpoof ? 'rgba(255,184,0,0.04)' : 'rgba(255,51,102,0.04)',
+                      border: `1px solid ${isSpoof ? 'rgba(255,184,0,0.15)' : 'rgba(255,51,102,0.12)'}`,
+                    }}>
+                      <div className="flex items-center gap-3 flex-1">
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSpoof ? '#ffb800' : '#ff3366', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: isSpoof ? '#ffb800' : '#ff3366', fontWeight: 600, width: 65 }}>
+                          {threat.result.toUpperCase().replace(/_/g, ' ')}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>{threat.api_type} API</span>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4">
+                        <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
+                          confidence: {(threat.confidence * 100).toFixed(0)}%
+                        </span>
+                        <span style={{ fontSize: 11, color: '#475569' }}>
+                          {format(new Date(threat.timestamp), 'MMM d HH:mm')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-4">
-                      <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
-                        confidence: {(threat.confidence * 100).toFixed(0)}%
-                      </span>
-                      <span style={{ fontSize: 11, color: '#475569' }}>
-                        {format(new Date(threat.timestamp), 'MMM d HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
