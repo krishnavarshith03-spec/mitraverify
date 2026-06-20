@@ -12,6 +12,7 @@ import TiltCard from '@/components/cyber/TiltCard';
 import AnimatedCounter from '@/components/cyber/AnimatedCounter';
 import ThreeGlobe from '@/components/cyber/ThreeGlobe';
 import PageTransition from '@/components/cyber/PageTransition';
+import { useAuth } from '@/context/AuthContext';
 
 interface Overview {
   total_requests: number;
@@ -90,6 +91,7 @@ function KPICard({ label, value, unit, delta, icon: Icon, color = '#00d4ff' }: K
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [usageData, setUsageData] = useState<UsageDataItem[]>([]);
   const [threats, setThreats] = useState<Threat[]>([]);
@@ -222,7 +224,9 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="heading-section" style={{ marginBottom: 4 }}>Dashboard</h1>
+              <h1 className="heading-section" style={{ marginBottom: 4 }}>
+                {isAuthenticated && user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard'}
+              </h1>
               <p style={{ color: '#475569', fontSize: 14 }}>
                 Last updated {lastRefresh ? format(lastRefresh, 'HH:mm:ss') : '--:--:--'} ·
                 <span style={{ color: '#00d4ff' }}> Auto-refreshes every 30s</span>
