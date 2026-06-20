@@ -4,6 +4,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Global3DBackground from '@/components/cyber/Global3DBackground';
+import ClientLayout from '@/components/ClientLayout';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -73,7 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* ErrorBoundary catches render-time crashes */}
           <ErrorBoundary>
             <Global3DBackground />
-            {children}
+            <ClientLayout>
+              {children}
+            </ClientLayout>
           </ErrorBoundary>
         </AuthProvider>
       </body>

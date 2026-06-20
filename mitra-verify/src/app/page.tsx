@@ -215,7 +215,7 @@ export default function HomePage() {
       <motion.section
         ref={heroRef}
         style={mounted ? { opacity: heroOpacity } : {}}
-        className="grid-bg relative min-h-[100vh] flex items-center pt-24 pb-16 lg:pt-0 lg:pb-0 overflow-hidden"
+        className="grid-bg relative min-h-[100dvh] flex items-center pt-24 pb-24 md:pb-16 lg:pt-0 lg:pb-0 overflow-hidden"
       >
         {/* Gradient overlays */}
         <div style={{
@@ -265,7 +265,7 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontSize: 'var(--text-5xl)', fontWeight: 800,
+                  fontSize: 'clamp(2rem, 1.5rem + 3vw, var(--text-5xl))', fontWeight: 800,
                   letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 16,
                 }}
               >
@@ -280,7 +280,7 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                style={{ fontSize: 'var(--text-base)', color: '#94a3b8', lineHeight: 1.7, maxWidth: 520, marginBottom: 16 }}
+                style={{ fontSize: 'var(--text-base)', color: '#94a3b8', lineHeight: 1.7, maxWidth: 'min(520px, 100%)', marginBottom: 16 }}
               >
                 Production-ready biometric verification platform. Face liveness detection,
                 anti-spoof, and continuous identity authentication — all open source.
@@ -553,7 +553,7 @@ export default function HomePage() {
                     <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
                   ))}
                 </div>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 12 }}>
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: 12, overflowX: 'auto' }}>
                   <span className="comment"># Install and integrate MITRA VERIFY</span>{'\n'}
                   <span className="prompt">$ </span><span className="keyword">pip install</span> <span className="string">requests</span>{'\n\n'}
                   {CODE_EXAMPLE.split('\n').map((line, i) => (

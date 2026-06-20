@@ -210,7 +210,7 @@ export default function DocsPage() {
               >
                 {activeSection === 'getting-started' && (
                   <div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Getting Started</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Getting Started</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 32 }}>
                       Welcome to the MITRA VERIFY API documentation. Our platform provides state-of-the-art computer vision liveness and identity verification services. 
                       You can integrate our real-time biometric analysis endpoints into web, native mobile, or backend pipelines using our developer tools.
@@ -233,7 +233,7 @@ export default function DocsPage() {
 
                 {activeSection === 'authentication' && (
                   <div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Authentication</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Authentication</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 32 }}>
                       All REST API endpoints are protected and require a header-based API key validation. Authenticate requests by passing your key in the <code className="mono" style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4 }}>X-API-Key</code> header.
                     </p>
@@ -262,7 +262,7 @@ export default function DocsPage() {
                       <div style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(0,212,255,0.1)', color: '#00d4ff', fontSize: 12, fontWeight: 600 }}>POST</div>
                       <code className="mono" style={{ color: 'var(--text-secondary)', fontSize: 14 }}>/liveness/basic</code>
                     </div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Fast Liveness API</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Fast Liveness API</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
                       The Fast Liveness API performs passive checks to verify the presence of a live user without requiring interactive challenges. It validates basic facial landmarks, eye blinking state, and head movement.
                     </p>
@@ -356,7 +356,7 @@ export function LivenessChecker() {
                       <div style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(124,58,237,0.1)', color: '#7c3aed', fontSize: 12, fontWeight: 600 }}>POST</div>
                       <code className="mono" style={{ color: 'var(--text-secondary)', fontSize: 14 }}>/liveness/advanced</code>
                     </div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Advanced Anti-Spoof API</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Advanced Anti-Spoof API</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
                       The Advanced Anti-Spoof API utilizes deep texture frequency checks and active challenge-response protocols to defend against paper prints, screen replays, and deepfakes.
                     </p>
@@ -425,7 +425,7 @@ for step in challenges:
                       <div style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(0,255,136,0.1)', color: '#00ff88', fontSize: 12, fontWeight: 600 }}>POST / GET</div>
                       <code className="mono" style={{ color: 'var(--text-secondary)', fontSize: 14 }}>/identity/verify & /identity/enroll</code>
                     </div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Enterprise Identity API</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Enterprise Identity API</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
                       The high-security Enterprise suite binds active anti-spoof checks with biometric enrollment templates to continuously audit, authorize, and verify user sessions.
                     </p>
@@ -473,7 +473,7 @@ for step in challenges:
 
                 {activeSection === 'sdks' && (
                   <div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>SDKs & Libraries</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>SDKs & Libraries</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 32 }}>
                       Accelerate your integration workflows with our official open-source software development packages. We distribute modules for client browsers, mobile OS platforms, and backend runtime environments.
                     </p>
@@ -553,7 +553,7 @@ export function AuthScreen() {
 
                 {activeSection === 'errors' && (
                   <div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Error Codes</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Error Codes</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
                       MITRA VERIFY returns standard HTTP response status codes. The response bodies are JSON objects containing descriptive detail blocks to help you troubleshoot API requests.
                     </p>
@@ -618,7 +618,7 @@ export function AuthScreen() {
 
                 {activeSection === 'private-docs' && (
                   <div>
-                    <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Enterprise Private Docs</h1>
+                    <h1 style={{ fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Enterprise Private Docs</h1>
                     <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 32 }}>
                       Access secure developer resources, custom liveness mathematical weighting matrices, Docker deployment configurations, and premium compliance logs.
                     </p>

@@ -9,6 +9,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
+// Expose mobileOpen state for BottomTabBar coordination
+let _mobileMenuOpen = false;
+export function isMobileMenuOpen() { return _mobileMenuOpen; }
+
 const navLinks = [
   { label: 'Compare APIs', href: '/compare' },
   { label: 'Documentation', href: '/docs' },
@@ -28,7 +32,11 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, _setMobileOpen] = useState(false);
+  const setMobileOpen = useCallback((v: boolean) => {
+    _setMobileOpen(v);
+    _mobileMenuOpen = v;
+  }, []);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -158,7 +166,7 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop & Tablet Links */}
+          {/* Desktop & Tablet Links — visible only at 1024px+ */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -166,7 +174,7 @@ export default function Navbar() {
             flex: 1,
             justifyContent: 'center',
           }}
-            className="hidden md:flex"
+            className="hidden lg:flex"
           >
             {visibleLinks.map(link => {
               const isTertiary = link.label === 'Compare APIs' || link.label === 'Developer Portal';
@@ -496,32 +504,34 @@ export default function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link href="/auth/signup" className="btn-primary hidden md:inline-flex" style={{ padding: '0 20px', fontSize: 13, textDecoration: 'none', height: 36 }}>
-                  Get Started Free
+                <Link href="/auth/signup" className="btn-primary" style={{ padding: '0 16px', fontSize: 13, textDecoration: 'none', height: 36, whiteSpace: 'nowrap' }}>
+                  Get Started
                 </Link>
               </>
             )}
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Menu Toggle — visible below lg (1024px) */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="flex md:hidden"
+              className="flex lg:hidden"
               aria-label="Toggle navigation menu"
               style={{
-                background: 'none',
-                border: 'none',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 10,
                 color: '#f8fafc',
                 cursor: 'pointer',
                 padding: 8,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
+                transition: 'all 0.2s ease',
               }}
               id="mobile-menu-btn"
             >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
@@ -531,10 +541,10 @@ export default function Navbar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            initial={{ x: '100%', opacity: 0.5 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 280 }}
             className="mobile-nav-overlay"
             style={{ zIndex: 1050 }}
           >
@@ -604,9 +614,9 @@ export default function Navbar() {
                   return (
                     <motion.div
                       key={link.label}
-                      initial={{ opacity: 0, x: -24 }}
+                      initial={{ opacity: 0, x: 40 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.06, duration: 0.3 }}
+                      transition={{ delay: 0.08 + idx * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                       style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}
                     >
                       <div style={{
@@ -622,7 +632,7 @@ export default function Navbar() {
                       {link.children.map((child, childIdx) => (
                         <motion.div
                           key={child.href}
-                          initial={{ opacity: 0, x: -16 }}
+                          initial={{ opacity: 0, x: 24 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: (idx * 0.06) + (childIdx * 0.04) + 0.02, duration: 0.25 }}
                         >
@@ -651,9 +661,9 @@ export default function Navbar() {
                 return (
                   <motion.div
                     key={link.label}
-                    initial={{ opacity: 0, x: -24 }}
+                    initial={{ opacity: 0, x: 40 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.06, duration: 0.3 }}
+                    transition={{ delay: 0.08 + idx * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                   >
                     <Link
                       href={link.href}
