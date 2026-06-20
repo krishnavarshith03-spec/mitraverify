@@ -333,7 +333,7 @@ export default function DashboardPage() {
                 {/* Holographic 3D Globe Vector */}
                 <TiltCard style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column' as const }}>
                   <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Global Threat Vector</h3>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ flex: 1, width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ThreeGlobe />
                   </div>
                 </TiltCard>

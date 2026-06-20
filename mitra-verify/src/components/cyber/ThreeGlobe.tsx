@@ -86,8 +86,8 @@ export default function ThreeGlobe() {
     <div style={{ width: '100%', height: '100%', minHeight: 300, position: 'relative' }}>
       <Canvas
         camera={{ position: [0, 0, 5.5], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: 'transparent' }}
+        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: 'transparent', outline: 'none' }}
       >
         <ambientLight intensity={0.2} />
         <pointLight position={[10, 10, 10]} intensity={1.5} color="#00d4ff" />
