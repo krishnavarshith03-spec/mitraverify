@@ -21,7 +21,9 @@ import AnimatedCounter from '@/components/cyber/AnimatedCounter';
 interface Overview {
   total_requests: number;
   successful_verifications: number;
+  failed_verifications: number;
   spoof_attempts: number;
+  deepfake_attempts: number;
   identity_matches: number;
   success_rate: number;
   avg_processing_time: number;
@@ -153,6 +155,7 @@ export default function AuthenticatedDashboard() {
         failed_verifications: 50,
         no_face_detected: 35,
         spoof_attempts: 185,
+        deepfake_attempts: 12,
         identity_matches: 9840,
         success_rate: 97.83,
         avg_processing_time: 142.0,
