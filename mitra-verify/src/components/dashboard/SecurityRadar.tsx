@@ -6,18 +6,29 @@ export default function SecurityRadar() {
   const [blips, setBlips] = useState<{ id: number; x: number; y: number; type: string }[]>([]);
 
   useEffect(() => {
-    // Simulate random threat blips
-    const interval = setInterval(() => {
-      if (Math.random() > 0.6) {
-        const newBlip = {
-          id: Date.now(),
-          x: Math.random() * 80 + 10,
-          y: Math.random() * 80 + 10,
-          type: Math.random() > 0.8 ? 'high' : 'low'
-        };
-        setBlips(prev => [...prev.slice(-4), newBlip]);
+    const fetchRadarEvents = async () => {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Map real events to radar blips.
+          // x-axis based on confidence (0-1 mapped to 10-90%)
+          // y-axis based on processing time (0-5000ms mapped to 10-90%)
+          const newBlips = data.slice(0, 5).map((ev: any) => ({
+            id: ev.id,
+            x: Math.max(10, Math.min(90, ev.confidence * 100)),
+            y: Math.max(10, Math.min(90, (ev.processingTimeMs / 5000) * 100)),
+            type: ev.status === 'VERIFIED' ? 'low' : 'high',
+          }));
+          setBlips(newBlips);
+        }
+      } catch (err) {
+        console.error('Failed to fetch radar events', err);
       }
-    }, 2000);
+    };
+
+    fetchRadarEvents();
+    const interval = setInterval(fetchRadarEvents, 3000);
     return () => clearInterval(interval);
   }, []);
 

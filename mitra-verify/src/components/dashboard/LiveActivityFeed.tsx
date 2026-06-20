@@ -6,8 +6,8 @@ import { format } from 'date-fns';
 
 interface FeedItem {
   id: string;
-  timestamp: Date;
-  type: 'PASS' | 'SPOOF' | 'FAIL' | 'NO_FACE';
+  timestamp: string;
+  status: string;
   confidence: number;
   ip: string;
 }
@@ -16,27 +16,20 @@ export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean 
   const [feed, setFeed] = useState<FeedItem[]>([]);
 
   useEffect(() => {
-    // Simulate live feed data
-    const generateEvent = () => {
-      const types = ['PASS', 'PASS', 'PASS', 'SPOOF', 'FAIL', 'NO_FACE'];
-      const type = types[Math.floor(Math.random() * types.length)] as FeedItem['type'];
-      return {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: new Date(),
-        type,
-        confidence: type === 'PASS' ? 0.95 + Math.random() * 0.04 : 0.1 + Math.random() * 0.4,
-        ip: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
-      };
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setFeed(data.slice(0, 8)); // keep top 8
+        }
+      } catch (err) {
+        console.error('Failed to fetch live events', err);
+      }
     };
 
-    // Initial population
-    setFeed(Array.from({ length: 5 }).map(() => generateEvent()));
-
-    const interval = setInterval(() => {
-      if (Math.random() > 0.3) {
-        setFeed(prev => [generateEvent(), ...prev].slice(0, 8));
-      }
-    }, 1500);
+    fetchEvents();
+    const interval = setInterval(fetchEvents, 3000); // Polling every 3 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -54,9 +47,9 @@ export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean 
           let Icon = Shield;
           let label = 'VERIFIED';
           
-          if (item.type === 'SPOOF') { color = '#ffb800'; bg = 'rgba(255, 184, 0, 0.05)'; border = 'rgba(255, 184, 0, 0.15)'; Icon = AlertTriangle; label = 'SPOOF ATTACK'; }
-          else if (item.type === 'FAIL') { color = '#ff3366'; bg = 'rgba(255, 51, 102, 0.05)'; border = 'rgba(255, 51, 102, 0.15)'; Icon = AlertTriangle; label = 'FAILED'; }
-          else if (item.type === 'NO_FACE') { color = '#94a3b8'; bg = 'rgba(148, 163, 184, 0.05)'; border = 'rgba(148, 163, 184, 0.15)'; Icon = Eye; label = 'NO FACE'; }
+          if (item.status === 'SPOOF ATTEMPT') { color = '#ffb800'; bg = 'rgba(255, 184, 0, 0.05)'; border = 'rgba(255, 184, 0, 0.15)'; Icon = AlertTriangle; label = 'SPOOF ATTACK'; }
+          else if (item.status === 'FAILED') { color = '#ff3366'; bg = 'rgba(255, 51, 102, 0.05)'; border = 'rgba(255, 51, 102, 0.15)'; Icon = AlertTriangle; label = 'FAILED'; }
+          else if (item.status === 'NO FACE DETECTED') { color = '#94a3b8'; bg = 'rgba(148, 163, 184, 0.05)'; border = 'rgba(148, 163, 184, 0.15)'; Icon = Eye; label = 'NO FACE'; }
 
           return (
             <motion.div
@@ -77,7 +70,7 @@ export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean 
                     <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
                     <span className="text-xs font-bold tracking-wide" style={{ color }}>{label}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono tracking-widest">{format(item.timestamp, 'HH:mm:ss')}</span>
+                  <span className="text-[10px] text-slate-500 font-mono tracking-widest">{format(new Date(item.timestamp), 'HH:mm:ss')}</span>
                 </div>
                 <div className="flex justify-between items-baseline mt-0.5">
                   <span className="text-[10px] text-slate-400 font-mono">conf: {(item.confidence * 100).toFixed(1)}%</span>

@@ -107,11 +107,19 @@ export const livenessAPI = {
   getEnrolledFace: () => api.get('/identity/enrolled'),
 };
 
-// ── Analytics ─────────────────────────────────────────────────────────────────
+// ── Analytics (Single Source of Truth) ────────────────────────────────────────
 export const analyticsAPI = {
-  overview: () => api.get('/analytics/overview'),
-  usage: (days?: number) => api.get(`/analytics/usage?days=${days || 30}`),
-  threats: () => api.get('/analytics/threats'),
+  overview: () => axios.get('/api/analytics/overview'),
+  usage: (days?: number) => axios.get('/api/analytics/usage'),
+  logVerificationEvent: (data: {
+    apiType: string;
+    status: string;
+    confidence: number;
+    processingTimeMs: number;
+    spoofFlag: boolean;
+    faceDetectedFlag: boolean;
+    identityMatchedFlag: boolean;
+  }) => axios.post('/api/events', data),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

@@ -661,6 +661,27 @@ export default function BasicDemoPage() {
     }
   }, [currentStep, enrollmentSuccess, detectedFaces, streaming]);
 
+  // Single Source of Truth Analytics Logging
+  useEffect(() => {
+    if (result) {
+      import('@/lib/api').then(({ analyticsAPI }) => {
+        let status = result === 'pass' ? 'VERIFIED' : 'FAILED';
+        if (noFaceTimeoutError) status = 'NO FACE DETECTED';
+        else if (spoofScore > 0.5) status = 'SPOOF ATTEMPT';
+
+        analyticsAPI.logVerificationEvent({
+          apiType: 'Basic',
+          status,
+          confidence: confidence || 0.95,
+          processingTimeMs: processingTime || 450,
+          spoofFlag: spoofScore > 0.5,
+          faceDetectedFlag: faceDetected,
+          identityMatchedFlag: false,
+        }).catch(console.error);
+      });
+    }
+  }, [result]);
+
   async function startCamera() {
     setError(null);
     setResult(null);

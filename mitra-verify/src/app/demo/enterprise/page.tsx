@@ -1078,6 +1078,32 @@ export default function EnterpriseDemoPage() {
     }
   }, [detectedFaces, spoofScore, faceVisibleDuration, streaming, hasFaceEnrolled, overallResult, triggerSessionTermination]);
 
+  // Single Source of Truth Analytics Logging
+  useEffect(() => {
+    if (overallResult) {
+      import('@/lib/api').then(({ analyticsAPI }) => {
+        let status = overallResult === 'pass' ? 'VERIFIED' : 'FAILED';
+        if (terminationReason?.includes('Timeout') || terminationReason?.includes('Lost') || terminationReason === 'No face detected') {
+          status = 'NO FACE DETECTED';
+        } else if (spoofScore > 0.45) {
+          status = 'SPOOF ATTEMPT';
+        } else if (terminationReason?.includes('Mismatch')) {
+          status = 'FAILED';
+        }
+
+        analyticsAPI.logVerificationEvent({
+          apiType: 'Enterprise',
+          status,
+          confidence: confidence || 0.95,
+          processingTimeMs: sessionTime ? sessionTime * 1000 : 2500,
+          spoofFlag: spoofScore > 0.45,
+          faceDetectedFlag: faceTrackingState !== 'FACE_LOST',
+          identityMatchedFlag: overallResult === 'pass',
+        }).catch(console.error);
+      });
+    }
+  }, [overallResult]);
+
   async function startCamera() {
     setError(null);
     faceVisibleStartRef.current = null;

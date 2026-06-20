@@ -101,20 +101,21 @@ export default function DashboardPage() {
   }
 
   async function loadData() {
+    setLoading(true);
     try {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Biometric telemetry request timed out (5s)')), 5000)
       );
-      const [overviewRes, usageRes, threatsRes] = await Promise.race([
+      const [overviewRes, usageRes] = await Promise.race([
         Promise.all([
           analyticsAPI.overview(),
           analyticsAPI.usage(30),
-          analyticsAPI.threats(),
         ]),
         timeoutPromise
       ]) as any;
-      setOverview(overviewRes.data);
-      setThreats(threatsRes.data.threats || []);
+      
+      setOverview(overviewRes.data.data || overviewRes.data);
+      setThreats([]); // Removed threats entirely
 
       // Process usage data into daily buckets
       const rawData: Activity[] = usageRes.data.data || [];
@@ -138,53 +139,23 @@ export default function DashboardPage() {
       setError(null);
       setIsDemoMode(false);
     } catch (err: unknown) {
-      console.warn('Telemetry API unavailable. Falling back to demo statistics.', err);
-      // Load demo statistics
-      const demoOverview = {
-        total_requests: 12450,
-        successful_verifications: 12180,
-        failed_verifications: 85,
+      console.warn('Telemetry API unavailable or error occurred.', err);
+      setError('Unable to fetch live telemetry. Dashboard is empty.');
+      setIsDemoMode(false);
+      
+      // Default to empty state instead of random mock data
+      setOverview({
+        total_requests: 0,
+        successful_verifications: 0,
+        failed_verifications: 0,
         no_face_detected: 0,
-        spoof_attempts: 185,
-        identity_matches: 9840,
-        success_rate: 97.83,
-        avg_processing_time: 142.0,
-        active_api_keys: 3
-      };
-      setOverview(demoOverview);
-
-      const demoThreats = [
-        { id: '1', result: 'spoof', confidence: 0.98, spoof_score: 0.98, api_type: 'basic', timestamp: new Date(Date.now() - 3600000).toISOString() },
-        { id: '2', result: 'fail', confidence: 0.45, spoof_score: 0.12, api_type: 'enterprise', timestamp: new Date(Date.now() - 7200000).toISOString() },
-        { id: '3', result: 'spoof', confidence: 0.94, spoof_score: 0.94, api_type: 'advanced', timestamp: new Date(Date.now() - 14400000).toISOString() }
-      ];
-      setThreats(demoThreats);
-
-      const demoUsageData = [];
-      for (let i = 29; i >= 0; i--) {
-        const dateStr = format(subDays(new Date(), i), 'MMM d');
-        const pass = Math.floor(Math.random() * 100) + 150;
-        const spoof = Math.floor(Math.random() * 5);
-        const fail = Math.floor(Math.random() * 10);
-        const noFace = Math.floor(Math.random() * 2);
-        demoUsageData.push({
-          date: dateStr,
-          pass,
-          spoof,
-          fail,
-          noFace,
-          total: pass + spoof + fail + noFace
-        });
-      }
-      setUsageData(demoUsageData);
-      setLastRefresh(new Date());
-      setIsDemoMode(true);
-      setError(null); // Do not show the fatal telemetry error screen
-
-      const apiErr = err as { response?: { status?: number } };
-      if (apiErr?.response?.status === 401) {
-        localStorage.removeItem('mv_access_token');
-      }
+        spoof_attempts: 0,
+        identity_matches: 0,
+        success_rate: 0,
+        avg_processing_time: 0,
+        active_api_keys: 0
+      });
+      setUsageData([]);
     } finally {
       setLoading(false);
     }
@@ -344,30 +315,20 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Bottom Row: Live Feed & ThreeGlobe */}
+            {/* Bottom Row: Live Feed */}
             <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-3">
               
-              {/* ThreeGlobe - spans 8 */}
-              <div className="premium-glass spotlight-card lg:col-span-8 p-6 relative overflow-hidden flex flex-col min-h-[400px]">
-                <h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider relative z-10">Global Threat Origins</h3>
-                <p className="text-xs text-slate-400 mb-4 relative z-10">Real-time geospatial mapping of spoofing attempts.</p>
-                <div className="absolute inset-0 top-16 flex items-center justify-center">
-                  <ThreeGlobe />
-                </div>
-              </div>
-
-              {/* Live Activity Feed - spans 4 */}
-              <div className="premium-glass spotlight-card lg:col-span-4 p-6">
+              {/* Live Activity Feed - spans 12 */}
+              <div className="premium-glass spotlight-card lg:col-span-12 p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00d4ff] shadow-[0_0_8px_#00d4ff] animate-pulse" />
                     Live Activity
                   </h3>
-                  <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-mono">WS Connected</span>
+                  <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-mono">LIVE CONNECTED</span>
                 </div>
                 <LiveActivityFeed isDemoMode={isDemoMode} />
               </div>
-
             </div>
           </div>
         </main>
