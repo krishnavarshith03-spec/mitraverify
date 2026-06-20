@@ -168,7 +168,6 @@ export default function Navbar() {
 
           {/* Desktop Links — visible only at 768px+ */}
           <div style={{
-            display: 'flex',
             alignItems: 'center',
             gap: 2,
             flex: 1,
@@ -487,9 +486,9 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <>
+              <div className="hidden md:flex items-center gap-2">
                 <Link href="/auth/login"
-                  className="hidden sm:inline-flex"
+                  className="inline-flex"
                   style={{
                     padding: '8px 16px',
                     borderRadius: 8,
@@ -504,10 +503,10 @@ export default function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link href="/auth/signup" className="btn-primary hidden md:inline-flex" style={{ padding: '0 16px', fontSize: 13, textDecoration: 'none', height: 36, whiteSpace: 'nowrap' }}>
+                <Link href="/auth/signup" className="btn-primary" style={{ padding: '0 16px', fontSize: 13, textDecoration: 'none', height: 36, whiteSpace: 'nowrap' }}>
                   Get Started
                 </Link>
-              </>
+              </div>
             )}
 
             {/* Mobile Menu Toggle — visible below md (768px) */}
@@ -609,90 +608,50 @@ export default function Navbar() {
               padding: '32px 24px',
               gap: 4,
             }}>
-              {visibleLinks.map((link, idx) => {
-                if (link.children) {
-                  return (
-                    <motion.div
-                      key={link.label}
-                      initial={{ opacity: 0, x: 40 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.08 + idx * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}
-                    >
-                      <div style={{
-                        padding: '8px 24px',
-                        fontSize: 12,
-                        color: '#475569',
-                        fontWeight: 600,
-                        textTransform: 'uppercase' as const,
-                        letterSpacing: '0.08em',
-                      }}>
-                        {link.label}
-                      </div>
-                      {link.children.map((child, childIdx) => (
-                        <motion.div
-                          key={child.href}
-                          initial={{ opacity: 0, x: 24 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: (idx * 0.06) + (childIdx * 0.04) + 0.02, duration: 0.25 }}
-                        >
-                          <Link
-                            href={child.href}
-                            onClick={() => setMobileOpen(false)}
-                            className={`mobile-nav-link ${isActive(child.href) ? 'active' : ''}`}
-                            style={{
-                              paddingLeft: 32,
-                              fontSize: 16,
-                              ...(isActive(child.href) ? {
-                                color: '#00d4ff',
-                                background: 'rgba(0, 212, 255, 0.04)',
-                                border: '1px solid rgba(0, 212, 255, 0.1)',
-                              } : {}),
-                            }}
-                          >
-                            <child.icon size={16} color={isActive(child.href) ? '#00d4ff' : '#64748b'} />
-                            {child.label}
-                          </Link>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  );
-                }
-                return (
-                  <motion.div
-                    key={link.label}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.08 + idx * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              {/* Hardcoded Menu Items as Requested */}
+              {[
+                { label: 'Home', href: '/' },
+                { label: 'Compare APIs', href: '/compare' },
+                { label: 'Documentation', href: '/docs' },
+                { label: 'Demos', href: '/demo/basic' },
+                { label: 'Developer Portal', href: '/developer' },
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Admin Hub', href: '/admin' },
+                { label: 'Sign In', href: '/auth/login' },
+              ].map((link, idx) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.08 + idx * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <Link
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link ${isActive(link.href) ? 'active' : ''}`}
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 600,
+                      ...(isActive(link.href) ? {
+                        color: '#00d4ff',
+                        background: 'rgba(0, 212, 255, 0.04)',
+                        border: '1px solid rgba(0, 212, 255, 0.1)',
+                      } : {}),
+                    }}
                   >
-                    <Link
-                      href={link.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={`mobile-nav-link ${isActive(link.href) ? 'active' : ''}`}
-                      style={{
-                        fontSize: 20,
-                        fontWeight: 600,
-                        ...(isActive(link.href) ? {
-                          color: '#00d4ff',
-                          background: 'rgba(0, 212, 255, 0.04)',
-                          border: '1px solid rgba(0, 212, 255, 0.1)',
-                        } : {}),
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  </motion.div>
-                );
-              })}
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Footer */}
-            <div style={{
-              borderTop: '1px solid rgba(255,255,255,0.06)',
-              padding: '24px',
-              flexShrink: 0,
-            }}>
-              {isAuthenticated ? (
+            {/* Footer with User Info if logged in */}
+            {isAuthenticated && (
+              <div style={{
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                padding: '24px',
+                flexShrink: 0,
+              }}>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 8px' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -706,9 +665,7 @@ export default function Navbar() {
                       <span style={{ fontSize: 12, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'dev@mitraverify.com'}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginTop: 16 }}>
-                    <Link href="/developer" className="mobile-nav-link" onClick={() => setMobileOpen(false)} style={{ padding: '12px 16px' }}>Account Settings</Link>
-                    <Link href="/developer" className="mobile-nav-link" onClick={() => setMobileOpen(false)} style={{ padding: '12px 16px' }}>API Keys</Link>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginTop: 12 }}>
                     <button
                       onClick={() => { logout(); setMobileOpen(false); }}
                       className="btn-ghost"
@@ -724,17 +681,8 @@ export default function Navbar() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                  <Link href="/auth/login" style={{ textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>
-                    <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>Sign In</button>
-                  </Link>
-                  <Link href="/auth/signup" style={{ textDecoration: 'none' }} onClick={() => setMobileOpen(false)}>
-                    <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Get Started</button>
-                  </Link>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

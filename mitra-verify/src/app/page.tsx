@@ -215,7 +215,7 @@ export default function HomePage() {
       <motion.section
         ref={heroRef}
         style={mounted ? { opacity: heroOpacity } : {}}
-        className="grid-bg relative min-h-[100dvh] flex items-center pt-16 pb-16 md:pt-24 md:pb-16 lg:pt-0 lg:pb-0 overflow-hidden"
+        className="grid-bg relative min-h-[90dvh] lg:min-h-[100dvh] flex items-center pt-8 pb-8 md:pt-20 md:pb-16 lg:pt-0 lg:pb-0 overflow-hidden"
       >
         {/* Gradient overlays */}
         <div style={{
@@ -233,7 +233,7 @@ export default function HomePage() {
         <div className="section-container relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left: Text & Stats */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
+            <div className="lg:col-span-7 flex flex-col gap-4 lg:gap-6">
               {/* Open Source Badge */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -266,7 +266,7 @@ export default function HomePage() {
                 transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 style={{
                   fontSize: 'clamp(2rem, 1.5rem + 3vw, var(--text-5xl))', fontWeight: 800,
-                  letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 16,
+                  letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 8,
                 }}
               >
                 Enterprise
@@ -291,12 +291,12 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45 }}
-                  className="flex flex-col sm:flex-row gap-4 mb-4 w-full lg:w-auto"
+                  className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
                 >
-                  <Link href="/auth/signup" className="btn-primary w-full sm:w-auto text-center justify-center" style={{ textDecoration: 'none' }}>
+                  <Link href="/auth/signup" className="btn-primary w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
                     Start Building Free <ArrowRight size={16} className="ml-2" />
                   </Link>
-                  <Link href="/demo/basic" className="btn-ghost w-full sm:w-auto text-center justify-center" style={{ textDecoration: 'none' }}>
+                  <Link href="/demo/basic" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
                     <Eye size={16} className="mr-2" /> Try Live Demo
                   </Link>
                 </motion.div>
@@ -305,15 +305,15 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45 }}
-                  className="flex flex-col sm:flex-row gap-4 mb-4 w-full lg:w-auto"
+                  className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
                 >
-                  <Link href="/dashboard" className="btn-primary w-full sm:w-auto text-center justify-center" style={{ textDecoration: 'none' }}>
+                  <Link href="/dashboard" className="btn-primary w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
                     Go To Dashboard <ArrowRight size={16} className="ml-2" />
                   </Link>
-                  <Link href="/developer" className="btn-ghost w-full sm:w-auto text-center justify-center" style={{ textDecoration: 'none' }}>
+                  <Link href="/developer" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
                     Open API Console
                   </Link>
-                  <Link href="/docs" className="btn-ghost w-full sm:w-auto text-center justify-center" style={{ textDecoration: 'none' }}>
+                  <Link href="/docs" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
                     View Documentation
                   </Link>
                 </motion.div>
@@ -324,7 +324,7 @@ export default function HomePage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 w-full"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 lg:mt-6 w-full"
               >
                 {[
                   { value: '99%', label: 'Max Accuracy', color: '#00ff88' },
@@ -391,7 +391,7 @@ export default function HomePage() {
               </motion.div>
 
               {/* 3D Canvas Box */}
-              <div className="w-full h-[320px] sm:h-[380px] lg:h-[420px] relative">
+              <div className="w-full h-[240px] sm:h-[300px] lg:h-[420px] relative">
                 {mounted && (
                   <HeroSceneErrorBoundary>
                     <Suspense fallback={<div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,212,255,0.03), transparent)' }} />}>
