@@ -426,7 +426,7 @@ export default function DeveloperPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
           {[
             { href: '/docs', icon: BookOpen, label: 'Documentation', desc: 'API reference and guides' },
-            { href: '/dashboard', icon: Activity, label: 'Analytics', desc: 'Usage stats and metrics' },
+            { href: '/', icon: Activity, label: 'Analytics', desc: 'Usage stats and metrics' },
             { href: '/compare', icon: Zap, label: 'Compare APIs', desc: 'Speed & accuracy comparison' },
           ].map(({ href, icon: Icon, label, desc }) => (
             <Link key={href} href={href} style={{ textDecoration: 'none' }}>

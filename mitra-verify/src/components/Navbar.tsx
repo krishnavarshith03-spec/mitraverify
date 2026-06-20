@@ -26,7 +26,6 @@ const navLinks = [
   },
   { label: 'About', href: '/about' },
   { label: 'Developer Portal', href: '/developer' },
-  { label: 'Dashboard', href: '/dashboard' },
 ];
 
 export default function Navbar() {
@@ -90,7 +89,7 @@ export default function Navbar() {
   }, [handleKeyDown]);
 
   const visibleLinks = navLinks.filter(link => {
-    if (link.href === '/dashboard' || link.href === '/developer') {
+    if (link.href === '/developer') {
       return isAuthenticated;
     }
     return true;
@@ -617,7 +616,6 @@ export default function Navbar() {
                 { label: 'Demos', href: '/demo/basic' },
                 { label: 'About', href: '/about' },
                 { label: 'Developer Portal', href: '/developer' },
-                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Admin Hub', href: '/admin' },
                 { label: 'Sign In', href: '/auth/login' },
               ].map((link, idx) => (

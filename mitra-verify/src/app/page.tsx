@@ -1,674 +1,433 @@
 'use client';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useRef, useState, useEffect, Suspense, lazy, Component } from 'react';
-import Link from 'next/link';
-import {
-  Zap, Shield, Fingerprint, ArrowRight, CheckCircle, Code2,
-  Activity, Eye, Lock, Globe, Star, ChevronRight
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Activity, Shield, Eye, Zap, Fingerprint, AlertTriangle, TrendingUp, Clock, RefreshCw } from 'lucide-react';
+import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { analyticsAPI } from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import AuthenticatedDashboard from '@/components/AuthenticatedDashboard';
-import type { ScanPhase } from '@/components/3d/HeroScene';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { format, subDays } from 'date-fns';
+import TiltCard from '@/components/cyber/TiltCard';
+import AnimatedCounter from '@/components/cyber/AnimatedCounter';
+import ThreeGlobe from '@/components/cyber/ThreeGlobe';
+import PageTransition from '@/components/cyber/PageTransition';
 
-// Dynamically import 3D scene to avoid SSR issues
-const HeroScene = lazy(() => import('@/components/3d/HeroScene'));
-
-// Local error boundary that silently catches 3D / WebGL crashes
-// so the rest of the homepage is never blanked by a Three.js failure.
-class HeroSceneErrorBoundary extends Component<{ children: React.ReactNode }, { crashed: boolean }> {
-  state = { crashed: false };
-  static getDerivedStateFromError() { return { crashed: true }; }
-  componentDidCatch(error: Error) { console.warn('[HeroScene] 3D render failed silently:', error.message); }
-  render() {
-    if (this.state.crashed) {
-      // Graceful fallback: gradient background instead of blank
-      return (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,212,255,0.04), transparent)',
-        }} />
-      );
-    }
-    return this.props.children;
-  }
+interface Overview {
+  total_requests: number;
+  successful_verifications: number;
+  spoof_attempts: number;
+  identity_matches: number;
+  success_rate: number;
+  avg_processing_time: number;
+  active_api_keys: number;
 }
 
-const PHASES = [
-  { id: 'searching', label: 'Searching for Face', color: '#ffb800' },
-  { id: 'detected', label: 'Face Detected', color: '#00d4ff' },
-  { id: 'landmarks', label: 'Generating 478 Landmarks', color: '#00d4ff' },
-  { id: 'liveness', label: 'Liveness Verification', color: '#7c3aed' },
-  { id: 'identity', label: 'Identity Matching', color: '#0066ff' },
-  { id: 'granted', label: 'Access Granted', color: '#00ff88' },
-];
+interface Activity {
+  date: string;
+  result: string;
+  type: string;
+}
 
-const API_PRODUCTS = [
-  {
-    id: 'basic',
-    name: 'Fast Liveness API',
-    icon: Zap,
-    color: '#00d4ff',
-    gradient: 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,102,255,0.05))',
-    border: 'rgba(0,212,255,0.2)',
-    target: '< 1 second',
-    accuracy: '90%',
-    endpoint: 'POST /api/v1/liveness/basic',
-    checks: ['Blink Detection', 'Mouth Movement', 'Smile Detection', 'Head Rotation', 'Face Presence'],
-    useCase: 'Quick user verification, web logins',
-  },
-  {
-    id: 'advanced',
-    name: 'Advanced Anti-Spoof',
-    icon: Shield,
-    color: '#7c3aed',
-    gradient: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,212,255,0.05))',
-    border: 'rgba(124,58,237,0.2)',
-    target: '2–4 seconds',
-    accuracy: '97%',
-    endpoint: 'POST /api/v1/liveness/advanced',
-    checks: ['Challenge Response', 'Replay Attack Detection', 'Video Spoof Detection', 'Deepfake Risk', 'Lighting Analysis'],
-    useCase: 'Banking, KYC, high-security apps',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise Identity',
-    icon: Fingerprint,
-    color: '#00ff88',
-    gradient: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,102,255,0.05))',
-    border: 'rgba(0,255,136,0.2)',
-    target: '3–6 seconds',
-    accuracy: '99%',
-    endpoint: 'POST /api/v1/identity/verify',
-    checks: ['Face Recognition', 'Eye Tracking', 'Continuous Verification', 'Multiple Face Detection', 'Deepfake Detection'],
-    useCase: 'Enterprise security, continuous auth',
-  },
-];
+interface Threat {
+  id: string;
+  result: string;
+  confidence: number;
+  spoof_score: number;
+  api_type: string;
+  timestamp: string;
+}
 
-const FEATURES = [
-  { icon: Lock, title: 'API Key Auth', desc: 'Secure SHA-256 hashed API keys with rate limiting and per-key analytics.' },
-  { icon: Activity, title: 'Real-Time Analytics', desc: 'Full request logs, spoof detection rates, and identity matching metrics.' },
-  { icon: Code2, title: 'Multi-Language SDKs', desc: 'JavaScript, TypeScript, Python, Node.js, React, and cURL examples.' },
-  { icon: Globe, title: 'Open Source', desc: 'Fully open source under MIT license. Self-host, contribute, and extend.' },
-  { icon: Shield, title: 'Anti-Spoof Engine', desc: 'Detects print attacks, video replays, deepfakes, and screen spoofs.' },
-  { icon: Eye, title: 'MediaPipe Powered', desc: '478 facial landmarks, iris tracking, and head pose estimation.' },
-];
+interface KPICardProps {
+  label: string;
+  value: string | number;
+  unit?: string;
+  delta?: number;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  color?: string;
+}
 
-const CODE_EXAMPLE = `import requests
+interface UsageDataItem {
+  date: string;
+  pass: number;
+  fail: number;
+  spoof: number;
+  total: number;
+}
 
-# Initialize with your API key
-api_key = "mv_basic_xxxxxxxxxxxxx"
-
-# Send image for liveness check
-response = requests.post(
-  "http://localhost:8005/api/v1/liveness/basic",
-  headers={"X-API-Key": api_key},
-  json={"image": "<base64_image>"}
-)
-
-result = response.json()
-print(f"Result: {result['result']}")
-print(f"Confidence: {result['confidence']:.2%}")
-print(f"Liveness: {result['liveness_score']:.2%}")
-# Output:
-# Result: pass
-# Confidence: 93.45%
-# Liveness: 91.20%`;
-
-function PhaseIndicator({ currentPhase }: { currentPhase: number }) {
+function KPICard({ label, value, unit, delta, icon: Icon, color = '#00d4ff' }: KPICardProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {PHASES.map((phase, i) => (
-        <div key={phase.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <motion.div
-            animate={{
-              background: i === currentPhase ? phase.color : i < currentPhase ? '#00ff88' : 'rgba(255,255,255,0.1)',
-              scale: i === currentPhase ? 1.2 : 1,
-            }}
-            transition={{ duration: 0.3 }}
-            style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }}
-          />
-          <motion.span
-            animate={{
-              color: i === currentPhase ? phase.color : i < currentPhase ? '#94a3b8' : '#475569',
-              fontWeight: i === currentPhase ? 600 : 400,
-            }}
-            style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}
-          >
-            {phase.label}
-          </motion.span>
-          {i === currentPhase && (
-            <motion.div
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-              style={{ width: 20, height: 1, background: phase.color }}
-            />
-          )}
+    <TiltCard style={{ padding: 'var(--space-2)', borderRadius: 'var(--radius-md)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 'var(--radius-sm)',
+          background: `${color}12`, border: `1px solid ${color}25`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          <Icon size={16} color={color} />
         </div>
-      ))}
-    </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {delta !== undefined && (
+            <span style={{ fontSize: 11, color: delta >= 0 ? '#00ff88' : '#ff3366', fontWeight: 600 }}>
+              {delta >= 0 ? '+' : ''}{delta}%
+            </span>
+          )}
+          <span className="live-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
+        </div>
+      </div>
+      <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1 }}>
+        <AnimatedCounter value={value} />
+        {unit && <span style={{ fontSize: 'var(--text-sm)', color: '#475569', marginLeft: 3 }}>{unit}</span>}
+      </div>
+      <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: 6 }}>{label}</div>
+    </TiltCard>
   );
 }
 
-export default function HomePage() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const [currentPhase, setCurrentPhase] = useState(0);
-  const [mounted, setMounted] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
-
-  // ── Scroll tracking: track viewport scroll directly without target ref ──────
-  // This completely avoids the Framer Motion "Target ref is defined but not hydrated" error.
-  const { scrollY } = useScroll();
-  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+export default function DashboardPage() {
+  const router = useRouter();
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [usageData, setUsageData] = useState<UsageDataItem[]>([]);
+  const [threats, setThreats] = useState<Threat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [tokenChecked, setTokenChecked] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
-    const interval = setInterval(() => {
-      setCurrentPhase(p => (p + 1) % PHASES.length);
-    }, 2500);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
+    setTokenChecked(true);
+    loadData();
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
+  if (!tokenChecked) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'var(--bg-primary)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: 16
-      }}>
-        <Navbar />
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(0, 212, 255, 0.1)', borderTopColor: '#00d4ff' }}
-        />
-        <p style={{ color: '#475569', fontSize: 14, fontFamily: 'monospace' }}>Verifying session...</p>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+          <RefreshCw size={32} color="#00d4ff" />
+        </motion.div>
       </div>
     );
   }
 
-  if (isAuthenticated) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
-        <Navbar />
-        <AuthenticatedDashboard />
-      </div>
-    );
+  async function loadData() {
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Biometric telemetry request timed out (5s)')), 5000)
+      );
+      const [overviewRes, usageRes, threatsRes] = await Promise.race([
+        Promise.all([
+          analyticsAPI.overview(),
+          analyticsAPI.usage(30),
+          analyticsAPI.threats(),
+        ]),
+        timeoutPromise
+      ]) as any;
+      setOverview(overviewRes.data);
+      setThreats(threatsRes.data.threats || []);
+
+      // Process usage data into daily buckets
+      const rawData: Activity[] = usageRes.data.data || [];
+      const buckets: Record<string, { pass: number; fail: number; spoof: number }> = {};
+      for (let i = 29; i >= 0; i--) {
+        const d = format(subDays(new Date(), i), 'MMM d');
+        buckets[d] = { pass: 0, fail: 0, spoof: 0 };
+      }
+      rawData.forEach(item => {
+        const d = format(new Date(item.date), 'MMM d');
+        if (buckets[d]) {
+          const res = (item.result || '').toLowerCase();
+          if (res === 'pass' || res === 'success' || res === 'identity_match_success') buckets[d].pass++;
+          else if (res === 'spoof' || res === 'spoof_detected') buckets[d].spoof++;
+          else buckets[d].fail++;
+        }
+      });
+      setUsageData(Object.entries(buckets).map(([date, counts]) => ({ date, ...counts, total: counts.pass + counts.fail + counts.spoof })));
+      setLastRefresh(new Date());
+      setError(null);
+      setIsDemoMode(false);
+    } catch (err: unknown) {
+      console.warn('Telemetry API unavailable. Falling back to demo statistics.', err);
+      // Load demo statistics
+      const demoOverview = {
+        total_requests: 12450,
+        successful_verifications: 12180,
+        spoof_attempts: 185,
+        identity_matches: 9840,
+        success_rate: 97.83,
+        avg_processing_time: 142.0,
+        active_api_keys: 3
+      };
+      setOverview(demoOverview);
+
+      const demoThreats = [
+        { id: '1', result: 'spoof', confidence: 0.98, spoof_score: 0.98, api_type: 'basic', timestamp: new Date(Date.now() - 3600000).toISOString() },
+        { id: '2', result: 'fail', confidence: 0.45, spoof_score: 0.12, api_type: 'enterprise', timestamp: new Date(Date.now() - 7200000).toISOString() },
+        { id: '3', result: 'spoof', confidence: 0.94, spoof_score: 0.94, api_type: 'advanced', timestamp: new Date(Date.now() - 14400000).toISOString() }
+      ];
+      setThreats(demoThreats);
+
+      const demoUsageData = [];
+      for (let i = 29; i >= 0; i--) {
+        const dateStr = format(subDays(new Date(), i), 'MMM d');
+        const pass = Math.floor(Math.random() * 100) + 150;
+        const spoof = Math.floor(Math.random() * 5);
+        const fail = Math.floor(Math.random() * 10);
+        demoUsageData.push({
+          date: dateStr,
+          pass,
+          spoof,
+          fail,
+          total: pass + spoof + fail
+        });
+      }
+      setUsageData(demoUsageData);
+      setLastRefresh(new Date());
+      setIsDemoMode(true);
+      setError(null); // Do not show the fatal telemetry error screen
+
+      const apiErr = err as { response?: { status?: number } };
+      if (apiErr?.response?.status === 401) {
+        localStorage.removeItem('mv_access_token');
+      }
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const pieData = overview ? [
+    { name: 'Pass', value: overview.successful_verifications, color: '#00ff88' },
+    { name: 'Fail', value: overview.total_requests - overview.successful_verifications - overview.spoof_attempts, color: '#ff3366' },
+    { name: 'Spoof', value: overview.spoof_attempts, color: '#ffb800' },
+  ].filter(d => d.value > 0) : [];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      <Navbar />
-
-      {/* ── HERO ──────────────────────────────────────────── */}
-      <motion.section
-        ref={heroRef}
-        style={mounted ? { opacity: heroOpacity } : {}}
-        className="grid-bg relative min-h-[90dvh] lg:min-h-[100dvh] flex items-center pt-8 pb-8 md:pt-20 md:pb-16 lg:pt-0 lg:pb-0 overflow-hidden"
-      >
-        {/* Gradient overlays */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, transparent, rgba(3,7,18,0.7))',
-          zIndex: 1, pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 200,
-          background: 'linear-gradient(to bottom, transparent, var(--bg-primary))',
-          zIndex: 2, pointerEvents: 'none',
-        }} />
-
-        {/* Hero Content */}
-        <div className="section-container relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Left: Text & Stats */}
-            <div className="lg:col-span-7 flex flex-col gap-4 lg:gap-6">
-              {/* Open Source Badge */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                style={{ marginBottom: 8 }}
-              >
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '6px 14px 6px 8px', borderRadius: 20,
-                    background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
-                    textDecoration: 'none',
-                  }}>
-                  <span style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    fontSize: 11, background: 'rgba(0,212,255,0.15)', color: '#00d4ff',
-                    padding: '2px 8px', borderRadius: 20, fontWeight: 600,
-                  }}>
-                    <Star size={10} fill="#00d4ff" /> Open Source
-                  </span>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>Free forever · MIT License</span>
-                  <ArrowRight size={12} color="#94a3b8" />
-                </a>
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  fontSize: 'clamp(2rem, 1.5rem + 3vw, var(--text-5xl))', fontWeight: 800,
-                  letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: 8,
-                }}
-              >
-                Enterprise
-                <br />
-                <span className="gradient-text-cyan glow-cyan">Face Liveness</span>
-                <br />
-                & Identity APIs
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                style={{ fontSize: 'var(--text-base)', color: '#94a3b8', lineHeight: 1.7, maxWidth: 'min(520px, 100%)', marginBottom: 16 }}
-              >
-                Production-ready biometric verification platform. Face liveness detection,
-                anti-spoof, and continuous identity authentication — all open source.
-              </motion.p>
-
-               {!isAuthenticated ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 }}
-                  className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
-                >
-                  <Link href="/auth/signup" className="btn-primary w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    Start Building Free <ArrowRight size={16} className="ml-2" />
-                  </Link>
-                  <Link href="/demo/basic" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    <Eye size={16} className="mr-2" /> Try Live Demo
-                  </Link>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 }}
-                  className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
-                >
-                  <Link href="/dashboard" className="btn-primary w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    Go To Dashboard <ArrowRight size={16} className="ml-2" />
-                  </Link>
-                  <Link href="/developer" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    Open API Console
-                  </Link>
-                  <Link href="/docs" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    View Documentation
-                  </Link>
-                </motion.div>
-              )}
-
-              {/* Stats row */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 lg:mt-6 w-full"
-              >
-                {[
-                  { value: '99%', label: 'Max Accuracy', color: '#00ff88' },
-                  { value: '< 1s', label: 'Fast Mode', color: '#00d4ff' },
-                  { value: '3 APIs', label: 'Products', color: '#7c3aed' },
-                  { value: 'MIT', label: 'License', color: '#ffb800' },
-                ].map(stat => (
-                  <div key={stat.label} className="glass card-hover" style={{ padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', textAlign: 'left' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span className="live-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: stat.color, boxShadow: `0 0 6px ${stat.color}` }} />
-                    </div>
-                    <div className="text-xl sm:text-2xl font-bold text-white tracking-tight" style={{ lineHeight: 1 }}>
-                      {stat.value}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500 }}>{stat.label}</div>
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Right: HUD & Globe Animation */}
-            <div className="lg:col-span-5 flex flex-col gap-6 items-center">
-              {/* HUD Panel */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="glass scan-line w-full"
-                style={{
-                  padding: 24, borderRadius: 16,
-                  border: '1px solid rgba(0,212,255,0.15)',
-                  background: 'rgba(3,7,18,0.7)',
-                }}
-              >
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#475569', fontFamily: 'monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    BIOMETRIC SCAN
-                  </span>
-                  <motion.span
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    style={{ fontSize: 10, color: '#00ff88', fontFamily: 'monospace' }}
-                  >
-                    ● LIVE
-                  </motion.span>
-                </div>
-                <PhaseIndicator currentPhase={currentPhase} />
-                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                  <motion.div
-                    key={currentPhase}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{
-                      fontSize: 11, color: PHASES[currentPhase].color,
-                      fontFamily: 'monospace',
-                      padding: '8px 12px', borderRadius: 6,
-                      background: `${PHASES[currentPhase].color}11`,
-                      border: `1px solid ${PHASES[currentPhase].color}22`,
-                    }}
-                  >
-                    STATUS: {PHASES[currentPhase].label.toUpperCase()}
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              {/* 3D Canvas Box */}
-              <div className="w-full h-[240px] sm:h-[300px] lg:h-[420px] relative">
-                {mounted && (
-                  <HeroSceneErrorBoundary>
-                    <Suspense fallback={<div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,212,255,0.03), transparent)' }} />}>
-                      <HeroScene phase={PHASES[currentPhase].id as ScanPhase} />
-                    </Suspense>
-                  </HeroSceneErrorBoundary>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* ── API PRODUCTS ─────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-secondary)' }} className="section-padding">
-        <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}
-          >
-            <span className="text-label" style={{ color: '#00d4ff', display: 'block', marginBottom: 'var(--space-2)' }}>
-              THREE POWERFUL APIs
-            </span>
-            <h2 className="heading-section" style={{ marginBottom: 'var(--space-2)' }}>
-              Choose Your Verification Level
-            </h2>
-            <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 560, margin: '0 auto' }}>
-              From fast 1-second liveness checks to enterprise-grade continuous authentication
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {API_PRODUCTS.map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="card-hover"
-                style={{
-                  padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)',
-                  background: product.gradient,
-                  border: `1px solid ${product.border}`,
-                  cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column' as const, height: '100%',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14,
-                    background: `${product.color}15`,
-                    border: `1px solid ${product.color}30`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <product.icon size={22} color={product.color} />
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: product.color }}>{product.accuracy}</div>
-                    <div style={{ fontSize: 11, color: '#475569' }}>Accuracy</div>
-                  </div>
-                </div>
-
-                <h3 style={{ fontSize: 20, fontWeight: 700, color: '#f8fafc', marginBottom: 8 }}>{product.name}</h3>
-
-                <div style={{
-                  fontFamily: 'monospace', fontSize: 11, color: product.color,
-                  background: `${product.color}0d`, padding: '6px 10px', borderRadius: 6,
-                  marginBottom: 'var(--space-2)', display: 'inline-block',
-                }}>
-                  {product.endpoint}
-                </div>
-
-                <div style={{ marginBottom: 'var(--space-3)' }}>
-                  {product.checks.map(check => (
-                    <div key={check} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <CheckCircle size={13} color={product.color} />
-                      <span style={{ fontSize: 13, color: '#94a3b8' }}>{check}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>Target Speed</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#f8fafc' }}>{product.target}</div>
-                  </div>
-                  <Link href={`/demo/${product.id === 'basic' ? 'basic' : product.id === 'advanced' ? 'advanced' : 'enterprise'}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      fontSize: 13, color: product.color, textDecoration: 'none', fontWeight: 600,
-                    }}>
-                    Try Demo <ChevronRight size={14} />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-5)' }}>
-            <Link href="/compare" className="btn-ghost" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              Full API Comparison <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CODE EXAMPLE ─────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-primary)' }} className="section-padding">
-        <div className="section-container">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span style={{ fontSize: 12, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4ff', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                DEVELOPER FIRST
-              </span>
-              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 24 }}>
-                Integrate in
-                <br />
-                <span className="gradient-text-green">minutes, not days</span>
-              </h2>
-              <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32 }}>
-                One API call. Real MediaPipe-powered face analysis. Instant structured responses
-                with confidence scores, landmark data, and spoof detection.
+    <PageTransition>
+      <div style={{ minHeight: '100vh', background: 'transparent', position: 'relative' }}>
+        <Navbar />
+        <div style={{ width: '100%', maxWidth: 1440, margin: '0 auto', padding: '0 16px', paddingTop: 112, paddingBottom: 80, position: 'relative', zIndex: 10 }}>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+              <h1 className="heading-section" style={{ marginBottom: 4 }}>Dashboard</h1>
+              <p style={{ color: '#475569', fontSize: 14 }}>
+                Last updated {lastRefresh ? format(lastRefresh, 'HH:mm:ss') : '--:--:--'} ·
+                <span style={{ color: '#00d4ff' }}> Auto-refreshes every 30s</span>
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-                {[
-                  'JavaScript, TypeScript, Python, Node SDKs',
-                  'OpenAPI / Swagger documentation included',
-                  'Real response with confidence scores',
-                  'Full request logging and audit trails',
-                ].map(item => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CheckCircle size={11} color="#00ff88" />
-                    </div>
-                    <span style={{ fontSize: 14, color: '#94a3b8' }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/docs" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Code2 size={16} /> View Documentation
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="terminal">
-                <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-                  {['#ff5f57', '#febc2e', '#28c840'].map(c => (
-                    <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
-                  ))}
-                </div>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: 12, overflowX: 'auto' }}>
-                  <span className="comment"># Install and integrate MITRA VERIFY</span>{'\n'}
-                  <span className="prompt">$ </span><span className="keyword">pip install</span> <span className="string">requests</span>{'\n\n'}
-                  {CODE_EXAMPLE.split('\n').map((line, i) => (
-                    <span key={i}>
-                      {line.startsWith('#') ? <span className="comment">{line}</span>
-                        : line.includes('"') ? line.replace(/"([^"]+)"/g, '<q>"$1"</q>').includes('<q>') ? line : line
-                        : line}
-                      {'\n'}
-                    </span>
-                  ))}
-                </pre>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES GRID ────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-secondary)' }} className="section-padding">
-        <div className="section-container">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            style={{ textAlign: 'center', marginBottom: 48 }}
-          >
-            <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>
-              Everything You Need
-            </h2>
-            <p style={{ fontSize: 16, color: '#94a3b8' }}>
-              Production-ready platform with zero compromises
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="glass card-hover"
-                style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', height: '100%' }}
-              >
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  background: 'rgba(0,212,255,0.08)',
-                  border: '1px solid rgba(0,212,255,0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-                }}>
-                  <feature.icon size={20} color="#00d4ff" />
-                </div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f8fafc', marginBottom: 8 }}>{feature.title}</h3>
-                <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>{feature.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────── */}
-      <section className="section-padding">
-        <div className="section-container" style={{ maxWidth: 720, textAlign: 'center' }}>
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="glass-bright px-6 py-12 md:px-12 md:py-16 rounded-3xl"
-          >
-            <div style={{
-              width: 64, height: 64, borderRadius: 20, margin: '0 auto 24px',
-              background: 'linear-gradient(135deg, #00d4ff, #0066ff)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 40px rgba(0,212,255,0.3)',
-            }}>
-              <Eye size={28} color="#fff" />
             </div>
-            {!isAuthenticated ? (
-              <>
-                <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>
-                  Open Source & Free Forever
-                </h2>
-                <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 40, maxWidth: 500, margin: '0 auto 40px' }}>
-                  No subscriptions. No hidden fees. No rate limit walls. Fork it, self-host it, contribute to it.
-                  Enterprise biometrics for everyone.
-                </p>
-                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Link href="/auth/signup" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
-                    Create Free Account <ArrowRight size={16} />
-                  </Link>
+            <div className="flex flex-wrap gap-2 items-center">
+              {isDemoMode && (
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#ffb800',
+                  background: 'rgba(255, 184, 0, 0.1)',
+                  border: '1px solid rgba(255, 184, 0, 0.3)',
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}>
+                  ⚠️ Demo Mode (Server Offline)
+                </span>
+              )}
+              <button onClick={loadData} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <RefreshCw size={14} /> Refresh
+              </button>
+              <Link href="/developer" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={14} /> API Keys
+              </Link>
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 80 }}>
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                <RefreshCw size={32} color="#00d4ff" />
+              </motion.div>
+              <p style={{ color: '#475569', marginTop: 16 }}>Loading analytics...</p>
+            </div>
+          ) : error ? (
+            <div className="glass" style={{ padding: 40, borderRadius: 16, textAlign: 'center', border: '1px solid rgba(255,51,102,0.2)' }}>
+              <AlertTriangle size={36} color="#ff3366" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#f8fafc', marginBottom: 8 }}>Unable to Load Analytics</h3>
+              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>{error}</p>
+              <button onClick={loadData} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <RefreshCw size={14} /> Retry
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Primary KPI Grid */}
+              <div style={{ marginBottom: 'var(--space-2)' }}>
+                <h3 className="text-label" style={{ marginBottom: 'var(--space-2)' }}>Key Metrics</h3>
+                <div className="kpi-grid-primary">
+                  <KPICard label="Total Requests" value={overview?.total_requests || 0} icon={Activity} color="#00d4ff" />
+                  <KPICard label="Passed Verifications" value={overview?.successful_verifications || 0} icon={Eye} color="#00ff88" />
+                  <KPICard label="Failed Verifications" value={overview?.failed_verifications || 0} icon={AlertTriangle} color="#ff3366" />
+                  <KPICard label="No Face Detected" value={overview?.no_face_detected || 0} icon={Eye} color="#94a3b8" />
+                  <KPICard label="Spoof Attempts" value={overview?.spoof_attempts || 0} icon={Shield} color="#ffb800" />
+                  <KPICard label="Identity Matches" value={overview?.identity_matches || 0} icon={Fingerprint} color="#7c3aed" />
                 </div>
-              </>
-            ) : (
-              <>
-                <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>
-                  Welcome Back, {user?.name || 'Developer'}
-                </h2>
-                <p style={{ fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 40, maxWidth: 500, margin: '0 auto 40px' }}>
-                  You are authenticated. Access your dashboard, configure API keys, and launch verification sessions.
-                </p>
-                <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Link href="/dashboard" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
-                    Open Dashboard <ArrowRight size={16} />
-                  </Link>
-                  <Link href="/developer" className="btn-ghost" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
-                    Developer Portal
-                  </Link>
-                  <Link href="/developer" className="btn-ghost" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15 }}>
-                    Manage API Keys
-                  </Link>
+              </div>
+
+              {/* Secondary KPI Grid */}
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <div className="kpi-grid-secondary">
+                  <KPICard label="Success Rate" value={`${(overview?.success_rate || 0).toFixed(1)}`} unit="%" icon={TrendingUp} color="#00ff88" />
+                  <KPICard label="Avg Processing Time" value={`${(overview?.avg_processing_time || 0).toFixed(0)}`} unit="ms" icon={Clock} color="#ffb800" />
+                  <KPICard label="Active API Keys" value={overview?.active_api_keys || 0} icon={Zap} color="#00d4ff" />
                 </div>
-              </>
-            )}
-          </motion.div>
-        </div>
-      </section>
+              </div>
+
+              {/* Charts row */}
+              <div className="chart-row" style={{ marginBottom: 'var(--space-4)' }}>
+                {/* Usage Area Chart */}
+                <TiltCard className="lg:col-span-1" style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
+                  <h3 className="heading-card" style={{ fontSize: 15, marginBottom: 'var(--space-3)' }}>Requests (Last 30 Days)</h3>
+                  {usageData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={usageData.slice(-15)}>
+                        <defs>
+                          <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00ff88" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="failGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ff3366" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#ff3366" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="spoofGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ffb800" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#ffb800" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ background: 'rgba(10, 15, 30, 0.9)', border: '1px solid rgba(0, 212, 255, 0.15)', borderRadius: 8, backdropFilter: 'blur(12px)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+                        <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad)" name="Pass" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#00ff88' }} />
+                        <Area type="monotone" dataKey="fail" stroke="#ff3366" strokeWidth={2} fill="url(#failGrad)" name="Fail" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ff3366' }} />
+                        <Area type="monotone" dataKey="spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad)" name="Spoof" isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" activeDot={{ r: 4, strokeWidth: 0, fill: '#ffb800' }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14 }}>
+                      No usage data yet. Start making API calls to see analytics.
+                    </div>
+                  )}
+                </TiltCard>
+
+                {/* Holographic 3D Globe Vector */}
+                <TiltCard style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column' as const }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Global Threat Vector</h3>
+                  <div style={{ flex: 1, width: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ThreeGlobe />
+                  </div>
+                </TiltCard>
+
+                {/* Result Distribution */}
+                <TiltCard style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
+                  <h3 className="heading-card" style={{ fontSize: 15, marginBottom: 'var(--space-2)' }}>Result Distribution</h3>
+                  {pieData.length > 0 ? (
+                    <>
+                      <div style={{ position: 'relative', width: '100%', height: 130 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={56} paddingAngle={4} dataKey="value">
+                              {pieData.map((entry, i) => <Cell key={i} fill={entry.color} style={{ outline: 'none' }} />)}
+                            </Pie>
+                            <Tooltip contentStyle={{ background: 'rgba(10, 15, 30, 0.9)', border: '1px solid rgba(0, 212, 255, 0.15)', borderRadius: 8, backdropFilter: 'blur(12px)' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div style={{
+                          position: 'absolute', top: '50%', left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          pointerEvents: 'none'
+                        }}>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                            {overview ? overview.total_requests.toLocaleString() : '0'}
+                          </span>
+                          <span style={{ fontSize: 8, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>
+                            Total
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+                        {pieData.map(d => (
+                          <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: d.color }} />
+                              <span style={{ fontSize: 12, color: '#94a3b8' }}>{d.name}</span>
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: d.color }}>{d.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13, textAlign: 'center' }}>
+                      Make API calls to see result distribution
+                    </div>
+                  )}
+                </TiltCard>
+              </div>
+
+            {/* Threat Feed */}
+            <div className="glass" style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle size={16} color="#ffb800" />
+                  <h3 style={{ fontSize: 15, fontWeight: 600 }}>Threat Monitoring</h3>
+                </div>
+                <span style={{ fontSize: 12, color: '#475569' }}>{threats.length} detected events</span>
+              </div>
+              {threats.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#475569', fontSize: 14 }}>
+                  <Shield size={28} color="#00ff88" style={{ marginBottom: 12 }} />
+                  <div style={{ color: '#00ff88', fontWeight: 600, marginBottom: 4 }}>All Clear</div>
+                  No threats or spoof attempts detected
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {threats.slice(0, 10).map(threat => {
+                    const isSpoof = (threat.result || '').toLowerCase() === 'spoof' || (threat.result || '').toLowerCase() === 'spoof_detected';
+                    return (
+                      <div key={threat.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-xl" style={{
+                        background: isSpoof ? 'rgba(255,184,0,0.04)' : 'rgba(255,51,102,0.04)',
+                        border: `1px solid ${isSpoof ? 'rgba(255,184,0,0.15)' : 'rgba(255,51,102,0.12)'}`,
+                      }}>
+                        <div className="flex items-center gap-3 flex-1">
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSpoof ? '#ffb800' : '#ff3366', flexShrink: 0 }} />
+                          <span style={{ fontSize: 12, color: isSpoof ? '#ffb800' : '#ff3366', fontWeight: 600, width: 65 }}>
+                            {threat.result.toUpperCase().replace(/_/g, ' ')}
+                          </span>
+                          <span style={{ fontSize: 12, color: '#94a3b8' }}>{threat.api_type} API</span>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-4">
+                          <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
+                            confidence: {(threat.confidence * 100).toFixed(0)}%
+                          </span>
+                          <span style={{ fontSize: 11, color: '#475569' }}>
+                            {format(new Date(threat.timestamp), 'MMM d HH:mm')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
+    </PageTransition>
   );
 }

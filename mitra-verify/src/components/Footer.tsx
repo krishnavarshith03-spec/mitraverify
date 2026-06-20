@@ -8,7 +8,6 @@ const QUICK_LINKS = [
   { label: 'Compare APIs', href: '/compare' },
   { label: 'Documentation', href: '/docs' },
   { label: 'Developer Portal', href: '/developer' },
-  { label: 'Dashboard', href: '/dashboard' },
 ];
 
 const TECH_STACK = [
