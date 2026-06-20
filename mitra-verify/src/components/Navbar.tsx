@@ -615,6 +615,7 @@ export default function Navbar() {
                 { label: 'Compare APIs', href: '/compare' },
                 { label: 'Documentation', href: '/docs' },
                 { label: 'Demos', href: '/demo/basic' },
+                { label: 'About', href: '/about' },
                 { label: 'Developer Portal', href: '/developer' },
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Admin Hub', href: '/admin' },
