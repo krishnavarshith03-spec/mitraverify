@@ -54,7 +54,7 @@ function phaseColor(phase: ScanPhase): THREE.Color {
 }
 
 // ─── Facial Landmark Mesh ───────────────────────────────────────────────────
-function FaceLandmarks({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
+function FaceLandmarks({ phase }: { phase: ScanPhase }) {
   const meshRef = useRef<THREE.Points>(null!);
   const COUNT = 478;
 
@@ -118,16 +118,16 @@ function FaceLandmarks({ phase, isMobile }: { phase: ScanPhase; isMobile: boolea
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
-    currentColor.current.lerp(targetColor, delta * 2);
+    currentColor.current.lerp(targetColor, delta * 1.5); // Slower color transition
     const mat = meshRef.current.material as THREE.PointsMaterial;
     mat.color.copy(currentColor.current);
     
     if (phase === 'searching') {
-        meshRef.current.rotation.y += delta * 0.5;
-        mat.opacity = 0.2;
+        meshRef.current.rotation.y += delta * 0.25; // Slower rotation
+        mat.opacity = 0.1;
     } else {
-        meshRef.current.rotation.y += delta * 0.08;
-        mat.opacity = 0.9;
+        meshRef.current.rotation.y += delta * 0.05; // Slower rotation
+        mat.opacity = 0.8;
     }
   });
 
@@ -139,24 +139,24 @@ function FaceLandmarks({ phase, isMobile }: { phase: ScanPhase; isMobile: boolea
           <bufferAttribute attach="attributes-color" args={[colors, 3]} />
         </bufferGeometry>
         <pointsMaterial
-          size={0.03}
+          size={0.02}
           vertexColors
           transparent
-          opacity={0.9}
+          opacity={0.8}
           sizeAttenuation
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </points>
-      {/* Increased wireframe sphere size by 30% to wrap the face better */}
+      {/* Clean minimal wireframe sphere wrapper */}
       {phase !== 'searching' && (
         <mesh>
-          <sphereGeometry args={[1.3, 24, 24]} />
+          <sphereGeometry args={[1.0, 16, 16]} />
           <meshBasicMaterial 
             color={PHASE_COLORS[phase]} 
             wireframe 
             transparent 
-            opacity={0.08} 
+            opacity={0.05} 
             depthWrite={false} 
             blending={THREE.AdditiveBlending}
           />
@@ -166,68 +166,58 @@ function FaceLandmarks({ phase, isMobile }: { phase: ScanPhase; isMobile: boolea
   );
 }
 
-// ─── Holographic Overlay HUDs ───────────────────────────────────────────────
-function HolographicHUDs({ phase }: { phase: ScanPhase }) {
+// ─── Compact Holographic Overlay HUD ──────────────────────────────────────────
+function HolographicHUD({ phase }: { phase: ScanPhase }) {
   if (phase === 'searching') return null;
 
+  const getConfidence = () => {
+    switch(phase) {
+      case 'detected':
+      case 'landmarks':
+      case 'liveness': return 'PENDING';
+      case 'identity': return 'MATCHING...';
+      case 'granted': return '99.2%';
+      default: return '---';
+    }
+  };
+
+  const getLiveness = () => {
+    switch(phase) {
+      case 'liveness':
+      case 'identity':
+      case 'granted': return 'PASS';
+      default: return 'PENDING';
+    }
+  };
+
   return (
-    <>
-      {/* Top Left: 478 Landmarks & Status */}
-      <Html position={[-1.8, 1.2, 0]} center className="pointer-events-none">
-        <div className="flex flex-col gap-1 p-3 bg-black/50 backdrop-blur-md border border-white/10 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] min-w-[140px] transform transition-all duration-300">
-          <div className="flex justify-between items-center border-b border-white/10 pb-1 mb-1">
-            <span className="text-[9px] font-mono tracking-widest text-slate-400">STATUS</span>
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PHASE_COLORS[phase], boxShadow: `0 0 5px ${PHASE_COLORS[phase]}` }} />
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono text-white">
-            <span className="text-slate-500">DETECTED</span>
-            <span className="text-[#00d4ff] font-bold">YES</span>
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono text-white mt-0.5">
-            <span className="text-slate-500">LANDMARKS</span>
-            <span className="text-[#00d4ff] font-bold">478 PTS</span>
-          </div>
+    <Html position={[1.4, 0.5, 0]} center className="pointer-events-none">
+      <div className="flex flex-col gap-1 p-4 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg min-w-[160px] transform transition-all duration-500">
+        <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-1">
+          <span className="text-[9px] font-mono tracking-widest text-slate-400">STATUS</span>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PHASE_COLORS[phase], boxShadow: `0 0 5px ${PHASE_COLORS[phase]}` }} />
         </div>
-      </Html>
+        
+        <div className="flex justify-between items-center text-[10px] font-mono">
+          <span className="text-slate-400">LIVENESS</span>
+          <span className={`font-medium ${getLiveness() === 'PASS' ? 'text-[#10b981]' : 'text-slate-400'}`}>
+            {getLiveness()}
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center text-[10px] font-mono mt-0.5">
+          <span className="text-slate-400">LANDMARKS</span>
+          <span className="font-medium text-white">478</span>
+        </div>
 
-      {/* Top Right: Telemetry */}
-      <Html position={[1.8, 1.0, 0]} center className="pointer-events-none">
-        <div className="flex flex-col gap-1 p-3 bg-black/50 backdrop-blur-md border border-white/10 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] min-w-[130px] transform transition-all duration-300">
-          <div className="text-[9px] font-mono tracking-widest text-slate-400 border-b border-white/10 pb-1 mb-1">
-            TELEMETRY
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono">
-            <span className="text-slate-500">PITCH</span>
-            <span className="font-medium text-white">-4.2°</span>
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono mt-0.5">
-            <span className="text-slate-500">YAW</span>
-            <span className="font-medium text-white">+1.8°</span>
-          </div>
+        <div className="flex justify-between items-center text-[10px] font-mono mt-0.5">
+          <span className="text-slate-400">CONFIDENCE</span>
+          <span className={`font-medium ${phase === 'granted' ? 'text-[#00d4ff]' : 'text-slate-400'}`}>
+            {getConfidence()}
+          </span>
         </div>
-      </Html>
-
-      {/* Bottom Right: Match / Liveness */}
-      <Html position={[1.8, -1.0, 0]} center className="pointer-events-none">
-        <div className="flex flex-col gap-1 p-3 bg-black/50 backdrop-blur-md border border-white/10 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] min-w-[150px] transform transition-all duration-300">
-          <div className="text-[9px] font-mono tracking-widest text-slate-400 border-b border-white/10 pb-1 mb-1">
-            SECURITY CHECKS
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono">
-            <span className="text-slate-500">LIVENESS</span>
-            <span className={`font-bold ${phase === 'liveness' || phase === 'identity' || phase === 'granted' ? 'text-[#10b981]' : 'text-slate-400'}`}>
-              {phase === 'liveness' || phase === 'identity' || phase === 'granted' ? 'PASS' : 'PENDING'}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-mono mt-0.5">
-            <span className="text-slate-500">CONFIDENCE</span>
-            <span className={`font-bold ${phase === 'granted' ? 'text-[#00d4ff]' : 'text-slate-400'}`}>
-              {phase === 'granted' ? '99.98%' : '---'}
-            </span>
-          </div>
-        </div>
-      </Html>
-    </>
+      </div>
+    </Html>
   );
 }
 
@@ -239,10 +229,10 @@ function GrantedPulse({ visible }: { visible: boolean }) {
   useFrame(({ clock }) => {
     if (!meshRef.current || !visible) return;
     const t = clock.getElapsedTime();
-    const scale = 1.3 + Math.sin(t * 3) * 0.08;
+    const scale = 1.0 + Math.sin(t * 2) * 0.05; // Reduced scale pulse
     meshRef.current.scale.setScalar(scale);
     if (matRef.current) {
-      matRef.current.opacity = 0.18 + Math.sin(t * 3) * 0.08;
+      matRef.current.opacity = 0.1 + Math.sin(t * 2) * 0.05; // Reduced opacity pulse
     }
   });
 
@@ -254,18 +244,17 @@ function GrantedPulse({ visible }: { visible: boolean }) {
         ref={matRef}
         color="#10b981"
         transparent
-        opacity={0.22}
+        opacity={0.15}
         depthWrite={false}
       />
     </mesh>
   );
 }
 
-// ─── Animated Scan Ring & Sweep ────────────────────────────────────────────────
+// ─── Clean Animated Scan Ring ─────────────────────────────────────────────────
 function ScanSystem({ phase }: { phase: ScanPhase }) {
   const groupRef = useRef<THREE.Group>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
-  const sweepRef = useRef<THREE.Mesh>(null!);
   const targetColor = useMemo(() => phaseColor(phase), [phase]);
   const currentColor = useRef(new THREE.Color(PHASE_COLORS['searching']));
 
@@ -273,104 +262,41 @@ function ScanSystem({ phase }: { phase: ScanPhase }) {
     if (!groupRef.current) return;
     const t = clock.getElapsedTime();
     
-    currentColor.current.lerp(targetColor, delta * 2);
-    groupRef.current.rotation.y += delta * 0.9;
-    groupRef.current.rotation.x = Math.sin(t * 0.4) * 0.3;
+    currentColor.current.lerp(targetColor, delta * 1.5);
+    groupRef.current.rotation.y += delta * 0.4; // Slower rotation
+    groupRef.current.rotation.x = Math.sin(t * 0.2) * 0.2; // Slower wobble
     
     if (ringRef.current) {
       const mat = ringRef.current.material as THREE.MeshBasicMaterial;
       mat.color.copy(currentColor.current);
     }
-
-    if (sweepRef.current) {
-      // Subtle sweep animation moving up and down the face
-      sweepRef.current.position.y = Math.sin(t * 1.5) * 1.3;
-      const mat = sweepRef.current.material as THREE.MeshBasicMaterial;
-      mat.color.copy(currentColor.current);
-    }
   });
-
-  return (
-    <group>
-      {/* Outer Orbit Rings */}
-      <group ref={groupRef}>
-        <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.7, 0.015, 16, 100]} />
-          <meshBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.8} blending={THREE.AdditiveBlending} />
-        </mesh>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.4, 0.005, 8, 60]} />
-          <meshBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.4} blending={THREE.AdditiveBlending} />
-        </mesh>
-        <Trail width={0.1} length={12} color={new THREE.Color(PHASE_COLORS[phase])} attenuation={(t) => t * t}>
-          <mesh position={[1.7, 0, 0]}>
-            <sphereGeometry args={[0.04]} />
-            <meshBasicMaterial color={PHASE_COLORS[phase]} />
-          </mesh>
-        </Trail>
-      </group>
-
-      {/* Subtle Horizontal Scanning Sweep */}
-      <mesh ref={sweepRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[3, 3]} />
-        <meshBasicMaterial 
-          color={PHASE_COLORS[phase]} 
-          transparent 
-          opacity={0.06} 
-          side={THREE.DoubleSide} 
-          depthWrite={false} 
-          blending={THREE.AdditiveBlending} 
-        />
-        <lineSegments>
-          <edgesGeometry args={[new THREE.PlaneGeometry(3, 3)]} />
-          <lineBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.3} blending={THREE.AdditiveBlending} />
-        </lineSegments>
-      </mesh>
-    </group>
-  );
-}
-
-// ─── Corner Brackets ─────────────────────────────────────────────────────────
-function CornerBrackets({ phase }: { phase: ScanPhase }) {
-  const groupRef = useRef<THREE.Group>(null!);
-  const targetColor = useMemo(() => phaseColor(phase), [phase]);
-  const currentColor = useRef(new THREE.Color(PHASE_COLORS['searching']));
-
-  useFrame(({ clock }, delta) => {
-    if (!groupRef.current) return;
-    currentColor.current.lerp(targetColor, delta * 2);
-    const s = 1.3 + Math.sin(clock.getElapsedTime() * 1.2) * 0.02; // Scaled up to 1.3
-    groupRef.current.scale.setScalar(s);
-  });
-
-  const corners = [
-    [1.1, 1.45],
-    [-1.1, 1.45],
-    [1.1, -1.45],
-    [-1.1, -1.45],
-  ] as [number, number][];
 
   return (
     <group ref={groupRef}>
-      {corners.map(([x, y], i) => (
-        <group key={i} position={[x, y, 0.3]}>
-          <mesh position={[x > 0 ? -0.08 : 0.08, 0, 0]}>
-            <boxGeometry args={[0.22, 0.015, 0.015]} />
-            <meshBasicMaterial color={PHASE_COLORS[phase]} />
-          </mesh>
-          <mesh position={[0, y > 0 ? -0.08 : 0.08, 0]}>
-            <boxGeometry args={[0.015, 0.22, 0.015]} />
-            <meshBasicMaterial color={PHASE_COLORS[phase]} />
-          </mesh>
-        </group>
-      ))}
+      <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+        {/* Reduced thickness by ~40% */}
+        <torusGeometry args={[1.3, 0.006, 16, 100]} />
+        <meshBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.6} blending={THREE.AdditiveBlending} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.1, 0.002, 8, 60]} />
+        <meshBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.3} blending={THREE.AdditiveBlending} />
+      </mesh>
+      {/* Slower trail */}
+      <Trail width={0.05} length={8} color={new THREE.Color(PHASE_COLORS[phase])} attenuation={(t) => t * t}>
+        <mesh position={[1.3, 0, 0]}>
+          <sphereGeometry args={[0.02]} />
+          <meshBasicMaterial color={PHASE_COLORS[phase]} />
+        </mesh>
+      </Trail>
     </group>
   );
 }
 
-// ─── Floating Ambient Particles ───────────────────────────────────────────────
+// ─── Minimal Ambient Particles ───────────────────────────────────────────────
 function AmbientParticles({ isMobile }: { isMobile: boolean }) {
-  const COUNT = isMobile ? 150 : 800; // Drastically increased particles
+  const COUNT = isMobile ? 30 : 80; // Drastically reduced for clean look
   const meshRef = useRef<THREE.Points>(null!);
 
   const { positions, speeds } = useMemo(() => {
@@ -385,7 +311,7 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
       pos[i * 3] = (lcg() - 0.5) * 16;
       pos[i * 3 + 1] = (lcg() - 0.5) * 12;
       pos[i * 3 + 2] = (lcg() - 0.5) * 10 - 2;
-      sp[i] = 0.1 + lcg() * 0.4;
+      sp[i] = 0.05 + lcg() * 0.2; // Slower speed
     }
     return { positions: pos, speeds: sp };
   }, [COUNT]);
@@ -395,11 +321,11 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
     const posAttr = meshRef.current.geometry.attributes.position as THREE.BufferAttribute;
     const t = clock.getElapsedTime();
     for (let i = 0; i < COUNT; i++) {
-      posAttr.array[i * 3 + 1] += speeds[i] * 0.005;
+      posAttr.array[i * 3 + 1] += speeds[i] * 0.003; // Slower rise
       if ((posAttr.array as Float32Array)[i * 3 + 1] > 6) {
         (posAttr.array as Float32Array)[i * 3 + 1] = -6;
       }
-      (posAttr.array as Float32Array)[i * 3] += Math.sin(t * speeds[i] + i) * 0.001;
+      (posAttr.array as Float32Array)[i * 3] += Math.sin(t * speeds[i] + i) * 0.0005;
     }
     posAttr.needsUpdate = true;
   });
@@ -410,10 +336,10 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.03}
-        color="#00d4ff"
+        size={0.02}
+        color="#ffffff" // Clean white particles instead of colored
         transparent
-        opacity={0.3}
+        opacity={0.15}
         sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
@@ -426,8 +352,9 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
 function MouseParallax() {
   const { camera, mouse } = useThree();
   useFrame(() => {
-    camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.05;
-    camera.position.y += (mouse.y * 1.5 - camera.position.y) * 0.05;
+    // Smoother, subtler parallax
+    camera.position.x += (mouse.x * 0.8 - camera.position.x) * 0.02;
+    camera.position.y += (mouse.y * 0.8 - camera.position.y) * 0.02;
     camera.lookAt(0, 0, 0);
   });
   return null;
@@ -465,48 +392,47 @@ function Scene({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
     <>
       <MouseParallax />
 
-      {/* Kept autoRotate to slowly turn the entire scene */}
+      {/* Slower rotation for elegance */}
       <OrbitControls
         enableZoom={false}
         enablePan={false}
         autoRotate
-        autoRotateSpeed={0.8}
+        autoRotateSpeed={0.3}
         maxPolarAngle={Math.PI / 1.6}
         minPolarAngle={Math.PI / 2.8}
       />
 
-      <Stars radius={60} depth={40} count={3000} factor={3} saturation={0} fade speed={0.5} />
+      <Stars radius={60} depth={40} count={1500} factor={2} saturation={0} fade speed={0.2} />
 
-      <ambientLight intensity={0.2} />
-      <pointLight position={[0, 4, 2]} intensity={2} color={PHASE_COLORS[phase]} />
-      <pointLight position={[-3, 0, 2]} intensity={1} color="#3b82f6" />
-      <pointLight position={[3, 0, 2]} intensity={1} color="#8b5cf6" />
+      <ambientLight intensity={0.1} />
+      <pointLight position={[0, 4, 2]} intensity={1.2} color={PHASE_COLORS[phase]} />
+      <pointLight position={[-3, 0, 2]} intensity={0.5} color="#3b82f6" />
+      <pointLight position={[3, 0, 2]} intensity={0.5} color="#8b5cf6" />
 
-      {/* Increased overall scale by 30% */}
-      <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.2}>
-        <group scale={1.3}>
-          <FaceLandmarks phase={phase} isMobile={isLowPerf} />
-          <HolographicHUDs phase={phase} />
+      {/* Scaled down to 0.9 (approx ~25-30% reduction from 1.3) */}
+      <Float speed={1.0} rotationIntensity={0.1} floatIntensity={0.1}>
+        <group scale={0.9}>
+          <FaceLandmarks phase={phase} />
+          <HolographicHUD phase={phase} />
           <GrantedPulse visible={phase === 'granted'} />
           <ScanSystem phase={phase} />
-          <CornerBrackets phase={phase} />
         </group>
       </Float>
 
       <AmbientParticles isMobile={isLowPerf} />
 
-      {/* Enhanced Bloom Settings */}
+      {/* Subtler Bloom Settings */}
       {!isLowPerf && (
         <EffectComposer multisampling={4}>
           <Bloom
-            luminanceThreshold={0.15}
-            luminanceSmoothing={0.9}
-            intensity={3.5}
+            luminanceThreshold={0.4}
+            luminanceSmoothing={0.8}
+            intensity={1.5}
             mipmapBlur
           />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.002, 0.002)}
+            offset={new THREE.Vector2(0.001, 0.001)}
             radialModulation={false}
             modulationOffset={0}
           />
@@ -522,12 +448,12 @@ export function PhaseLabel({ phase }: { phase: ScanPhase }) {
   const label = PHASE_LABELS[phase];
 
   return (
-    <div className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase select-none p-3 bg-black/50 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+    <div className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase select-none p-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg transition-colors duration-500">
       <span
-        className="inline-block w-2.5 h-2.5 rounded-full animate-pulse"
-        style={{ backgroundColor: color, boxShadow: `0 0 15px ${color}` }}
+        className="inline-block w-2 h-2 rounded-full animate-pulse"
+        style={{ backgroundColor: color, boxShadow: `0 0 10px ${color}` }}
       />
-      <span style={{ color }} className="font-bold">{label}</span>
+      <span style={{ color }} className="font-semibold">{label}</span>
     </div>
   );
 }
