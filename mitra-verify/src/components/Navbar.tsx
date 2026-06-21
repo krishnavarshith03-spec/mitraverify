@@ -24,8 +24,8 @@ const navLinks = [
       { label: 'Identity', href: '/demo/enterprise', icon: Fingerprint, desc: '99% accuracy' },
     ]
   },
-  { label: 'About', href: '/about' },
   { label: 'Developer Portal', href: '/developer' },
+  { label: 'About', href: '/about' },
 ];
 
 export default function Navbar() {
@@ -614,8 +614,8 @@ export default function Navbar() {
                 { label: 'Compare APIs', href: '/compare' },
                 { label: 'Documentation', href: '/docs' },
                 { label: 'Demos', href: '/demo/basic' },
-                { label: 'About', href: '/about' },
                 { label: 'Developer Portal', href: '/developer' },
+                { label: 'About', href: '/about' },
                 { label: 'Admin Hub', href: '/admin' },
                 { label: 'Sign In', href: '/signin' },
               ].map((link, idx) => (
