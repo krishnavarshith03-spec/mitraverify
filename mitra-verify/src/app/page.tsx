@@ -698,34 +698,60 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── API COMPARISON / PRICING ─────────────────────────── */}
+      {/* ── VERIFICATION SOLUTIONS ─────────────────────────── */}
       <section className="py-24 lg:py-32 relative z-10 bg-[#030712] border-t border-white/5">
         <div className="max-w-[1400px] mx-auto px-6">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#00d4ff] mb-4 block">FLEXIBLE INFRASTRUCTURE</span>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Simple Enterprise Pricing</h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">Scale securely from your first 10,000 verifications to global enterprise deployment.</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Verification Solutions</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">Scale securely with distinct capability tiers designed for every level of threat modeling.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {[
-              { id: 'starter', name: 'Starter', price: 'Free', limit: '10,000/mo', icon: Zap, color: '#00d4ff', features: ['Fast Liveness API', 'Basic Anti-Spoof', 'Community Support', '99.9% Uptime SLA'] },
-              { id: 'growth', name: 'Growth', price: '$499', limit: '100,000/mo', icon: Shield, color: '#7c3aed', features: ['Advanced Anti-Spoof', '1:N Identity Matching', 'Dashboard Analytics', 'Email Support'] },
-              { id: 'enterprise', name: 'Enterprise', price: 'Custom', limit: 'Unlimited', icon: Fingerprint, color: '#00ff88', features: ['Custom ML Models', 'On-Premise Deployment', 'Dedicated Account Manager', '99.99% Uptime SLA'] },
+              { 
+                id: 'fast-liveness', 
+                name: 'Fast Liveness API', 
+                latency: '< 1 second',
+                useCases: 'Student Exams, Login Authentication', 
+                icon: Zap, 
+                color: '#00d4ff', 
+                features: ['Blink Detection', 'Mouth Movement', 'Smile Detection', 'Head Rotation'],
+                demoLink: '/demo/basic'
+              },
+              { 
+                id: 'advanced-anti-spoof', 
+                name: 'Advanced Anti-Spoof', 
+                latency: '2–4 seconds',
+                useCases: 'Banking, FinTech, KYC Verification', 
+                icon: Shield, 
+                color: '#7c3aed', 
+                features: ['Challenge Response', 'Replay Detection', 'Deepfake Analysis', 'Lighting Consistency'],
+                demoLink: '/demo/advanced'
+              },
+              { 
+                id: 'enterprise-identity', 
+                name: 'Enterprise Identity', 
+                latency: '3–6 seconds',
+                useCases: 'Government, Healthcare, Corporate Access', 
+                icon: Fingerprint, 
+                color: '#00ff88', 
+                features: ['1:N Face Recognition', 'Continuous Verification', 'Multi-Face Detection', 'Behavioral Biometrics'],
+                demoLink: '/demo/enterprise'
+              },
             ].map((plan, i) => (
               <motion.div key={plan.id} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                 className="flex flex-col h-full bg-[#0a0f1e] p-8 rounded-2xl border border-white/5 hover:border-white/20 transition-colors group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-[0.03] transition-opacity" style={{ backgroundImage: `linear-gradient(to bottom, \${plan.color}, transparent)` }} />
+                <div className="absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-[0.03] transition-opacity" style={{ backgroundImage: `linear-gradient(to bottom, ${plan.color}, transparent)` }} />
                 <div className="relative z-10 flex flex-col h-full">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{ background: `\${plan.color}15`, border: `1px solid \${plan.color}30` }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{ background: `${plan.color}15`, border: `1px solid ${plan.color}30` }}>
                     <plan.icon size={24} color={plan.color} />
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{plan.name}</h3>
-                  <div className="flex items-end gap-2 mb-2">
-                    <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
-                    {plan.price !== 'Custom' && <span className="text-slate-500 mb-1">/ month</span>}
+                  <div className="flex flex-col gap-1 mb-8 pb-6 border-b border-white/10">
+                    <div className="text-sm text-slate-400"><span className="text-slate-500 font-mono">Use Cases:</span> {plan.useCases}</div>
+                    <div className="text-sm text-slate-400"><span className="text-slate-500 font-mono">Latency:</span> {plan.latency}</div>
                   </div>
-                  <div className="text-sm font-mono text-slate-400 mb-8 pb-8 border-b border-white/10">Verifications: {plan.limit}</div>
                   
                   <div className="space-y-4 flex-grow mb-8">
                     {plan.features.map(f => (
@@ -736,8 +762,8 @@ export default function HomePage() {
                     ))}
                   </div>
                   
-                  <Link href="/signup" className="block text-center py-3 rounded-xl font-bold transition-all border" style={{ borderColor: `\${plan.color}40`, color: plan.color }}>
-                    Get Started
+                  <Link href={plan.demoLink} className="block text-center py-3 rounded-xl font-bold transition-all border" style={{ borderColor: `${plan.color}40`, color: plan.color }}>
+                    Try Demo
                   </Link>
                 </div>
               </motion.div>
