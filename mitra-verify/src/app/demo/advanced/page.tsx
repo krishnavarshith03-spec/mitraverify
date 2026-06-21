@@ -7,8 +7,8 @@ import Navbar from '@/components/Navbar';
 import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { processHeadPose } from '@/lib/headPose';
 import PageTransition from '@/components/cyber/PageTransition';
-import TiltCard from '@/components/cyber/TiltCard';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const CHALLENGE_POOL = [
   { id: 'face_centered', label: 'Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },
@@ -675,6 +675,7 @@ export default function AdvancedDemoPage() {
   }
 
   return (
+    <ProtectedRoute>
     <PageTransition>
       <div style={{ minHeight: '100vh', background: 'transparent' }}>
       <Navbar />
@@ -1162,5 +1163,6 @@ export default function AdvancedDemoPage() {
       </div>
     </div>
     </PageTransition>
+    </ProtectedRoute>
   );
 }

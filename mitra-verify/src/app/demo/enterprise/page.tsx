@@ -10,8 +10,8 @@ import { useAuth } from '@/context/AuthContext';
 import { processHeadPose } from '@/lib/headPose';
 import dynamic from 'next/dynamic';
 import PageTransition from '@/components/cyber/PageTransition';
-import TiltCard from '@/components/cyber/TiltCard';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const Biometric3DOverlay = dynamic(() => import('@/components/Biometric3DOverlay'), { ssr: false });
 const HeadPose3DWidget = dynamic(() => import('@/components/HeadPose3DWidget'), { ssr: false });
@@ -1359,6 +1359,7 @@ export default function EnterpriseDemoPage() {
   }
 
   return (
+    <ProtectedRoute>
     <PageTransition>
       <div style={{ minHeight: '100vh', background: 'transparent' }}>
       <Navbar />
@@ -2120,5 +2121,6 @@ export default function EnterpriseDemoPage() {
       </div>
     </div>
     </PageTransition>
+    </ProtectedRoute>
   );
 }

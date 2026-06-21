@@ -9,6 +9,7 @@ import { processHeadPose } from '@/lib/headPose';
 import PageTransition from '@/components/cyber/PageTransition';
 import TiltCard from '@/components/cyber/TiltCard';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 
 
@@ -814,6 +815,7 @@ export default function BasicDemoPage() {
   // Duplicate variables/hooks removed.
   const challengeProgress = Math.min(100, Math.round((currentStep / 3) * 100));
   return (
+    <ProtectedRoute>
     <PageTransition>
       <div style={{ minHeight: '100vh', background: 'transparent' }}>
       <Navbar />
@@ -1243,5 +1245,6 @@ export default function BasicDemoPage() {
       </div>
     </div>
     </PageTransition>
+    </ProtectedRoute>
   );
 }

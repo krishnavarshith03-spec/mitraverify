@@ -28,12 +28,14 @@ export default function LoginPage() {
   // Auto-redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log("[Face Enrollment] User is already authenticated. Redirecting to /dashboard");
+      const params = new URLSearchParams(window.location.search);
+      const redirectPath = params.get('redirect') || '/dashboard';
+      console.log(`[Auth] User is already authenticated. Redirecting to ${redirectPath}`);
       try {
-        router.replace('/dashboard');
+        router.replace(redirectPath);
       } catch (err) {
-        console.error("[Face Enrollment] Router replace failed, falling back to window.location", err);
-        window.location.href = '/dashboard';
+        console.error("[Auth] Router replace failed, falling back to window.location", err);
+        window.location.href = redirectPath;
       }
     }
   }, [isAuthenticated, authLoading, router]);
@@ -80,7 +82,9 @@ export default function LoginPage() {
       setSuccess('Sign in successful! Redirecting...');
 
       // Hard redirect — ensures AuthProvider re-bootstraps cleanly from localStorage
-      window.location.href = '/dashboard';
+      const params = new URLSearchParams(window.location.search);
+      const redirectPath = params.get('redirect') || '/dashboard';
+      window.location.href = redirectPath;
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { detail?: string } } };
       setError(apiErr?.response?.data?.detail || 'Login failed. Check your credentials.');
@@ -250,10 +254,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Sign up link */}
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#475569' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" style={{ color: '#00d4ff', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href={`/signup${typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('redirect') ? `?redirect=${encodeURIComponent(new URLSearchParams(window.location.search).get('redirect')!)}` : ''}`} style={{ color: '#00d4ff', textDecoration: 'none', fontWeight: 600 }}>
             Create one free
           </Link>
         </p>

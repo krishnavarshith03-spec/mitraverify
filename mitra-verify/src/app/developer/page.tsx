@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import PageTransition from '@/components/cyber/PageTransition';
 import TiltCard from '@/components/cyber/TiltCard';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ApiKey {
   id: string;
@@ -72,11 +73,7 @@ export default function DeveloperPage() {
   const [codeTab, setCodeTab] = useState<'curl' | 'python' | 'javascript'>('curl');
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      router.replace('/signin?reason=unauthenticated');
-      return;
-    }
+    if (authLoading || !isAuthenticated) return;
     async function loadKeys() {
       try {
         const res = await keysAPI.list();
@@ -149,6 +146,7 @@ export default function DeveloperPage() {
   }
 
   return (
+    <ProtectedRoute>
     <PageTransition>
       <div style={{ minHeight: '100vh', background: 'transparent' }}>
       <Navbar />
@@ -446,5 +444,6 @@ export default function DeveloperPage() {
       </div>
     </div>
     </PageTransition>
+    </ProtectedRoute>
   );
 }

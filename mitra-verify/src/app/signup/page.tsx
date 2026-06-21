@@ -28,12 +28,14 @@ export default function SignupPage() {
   // Auto-redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log("[Face Enrollment] User is already authenticated. Redirecting to /dashboard");
+      const params = new URLSearchParams(window.location.search);
+      const redirectPath = params.get('redirect') || '/dashboard';
+      console.log(`[Auth] User is already authenticated. Redirecting to ${redirectPath}`);
       try {
-        router.replace('/dashboard');
+        router.replace(redirectPath);
       } catch (err) {
-        console.error("[Face Enrollment] Router replace failed, falling back to window.location", err);
-        window.location.href = '/dashboard';
+        console.error("[Auth] Router replace failed, falling back to window.location", err);
+        window.location.href = redirectPath;
       }
     }
   }, [isAuthenticated, authLoading, router]);
@@ -63,13 +65,15 @@ export default function SignupPage() {
       setSuccess('Account created successfully! Redirecting...');
       setLoading(true); // Keep loading state active during redirect
 
-      console.log("[Face Enrollment] Registration successful. Token retrieved. Redirecting to /dashboard");
+      console.log("[Auth] Registration successful. Token retrieved. Redirecting...");
       setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        const redirectPath = params.get('redirect') || '/dashboard';
         try {
-          router.replace('/dashboard');
+          router.replace(redirectPath);
         } catch (err) {
-          console.error("[Face Enrollment] Router replace redirect failed, falling back to window.location.href", err);
-          window.location.href = '/dashboard';
+          console.error("[Auth] Router replace redirect failed, falling back to window.location.href", err);
+          window.location.href = redirectPath;
         }
       }, 1000);
     } catch (err: unknown) {
@@ -245,7 +249,7 @@ export default function SignupPage() {
           <div style={{ textAlign: 'center', marginTop: 28, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <span style={{ fontSize: 14, color: '#475569' }}>
               Already have an account?{' '}
-              <Link href="/signin" style={{ color: '#00d4ff', textDecoration: 'none', fontWeight: 600 }}>
+              <Link href={`/signin${typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('redirect') ? `?redirect=${encodeURIComponent(new URLSearchParams(window.location.search).get('redirect')!)}` : ''}`} style={{ color: '#00d4ff', textDecoration: 'none', fontWeight: 600 }}>
                 Sign in
               </Link>
             </span>

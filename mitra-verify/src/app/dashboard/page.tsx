@@ -16,6 +16,7 @@ import Global3DBackground from '@/components/cyber/Global3DBackground';
 import LiveStatusIndicators from '@/components/dashboard/LiveStatusIndicators';
 import EnhancedKPICard from '@/components/dashboard/EnhancedKPICard';
 import PremiumBiometricGlobe from '@/components/dashboard/PremiumBiometricGlobe';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 
 interface Overview {
@@ -77,28 +78,14 @@ export default function DashboardPage() {
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      router.replace('/signin?reason=unauthenticated');
-      return;
-    }
+    if (authLoading || !isAuthenticated) return;
     loadData();
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated]);
 
-  if (authLoading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-          <RefreshCw size={32} color="#00d4ff" />
-        </motion.div>
-      </div>
-    );
-  }
 
-  if (!isAuthenticated) return null;
 
   async function loadData() {
     setLoading(true);
@@ -169,8 +156,9 @@ export default function DashboardPage() {
   ].filter(d => d.value > 0) : [];
 
   return (
-    <PageTransition>
-      <div className="min-h-screen bg-[#0a0f1e] relative text-slate-300 font-sans selection:bg-[#00d4ff]/30">
+    <ProtectedRoute>
+      <PageTransition>
+        <div className="min-h-screen bg-[#0a0f1e] relative text-slate-300 font-sans selection:bg-[#00d4ff]/30">
         <Navbar />
         
         {/* Abstract Particle / Neural Background */}
@@ -379,5 +367,6 @@ export default function DashboardPage() {
         </main>
       </div>
     </PageTransition>
+    </ProtectedRoute>
   );
 }
