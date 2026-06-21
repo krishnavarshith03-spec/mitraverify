@@ -13,10 +13,6 @@ import {
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import type { ScanPhase } from '@/components/3d/HeroScene';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
-} from 'recharts';
 
 // 3D Scene lazy load
 const HeroScene = lazy(() => import('@/components/3d/HeroScene'));
@@ -177,13 +173,6 @@ const COMPLIANCE_BADGES = [
   { name: 'OWASP', desc: 'Top 10 application security validated' },
 ];
 
-// Dashboard Mock Data
-const usageData = [
-  { time: '00:00', volume: 1200 }, { time: '04:00', volume: 800 },
-  { time: '08:00', volume: 3200 }, { time: '12:00', volume: 4500 },
-  { time: '16:00', volume: 3800 }, { time: '20:00', volume: 2900 },
-  { time: '24:00', volume: 1500 },
-];
 const threatData = [
   { type: 'Deepfake', count: 145 }, { type: 'Replay', count: 89 },
   { type: 'Mask', count: 34 }, { type: 'Photo', count: 210 },
@@ -459,124 +448,6 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── LIVE ANALYTICS DASHBOARD ─────────────────────── */}
-      <section className="py-24 lg:py-32 relative z-10 overflow-hidden bg-[#0a0f1e]">
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-[#00d4ff]/5 rounded-full blur-[150px] pointer-events-none" />
-        
-        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Enterprise Operations Center</h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              Monitor your security posture in real-time. Track verification success rates, block spoof attempts, and analyze global API usage from a single pane of glass.
-            </p>
-          </div>
-
-          <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative mx-auto max-w-[1100px]">
-            <div className="rounded-2xl border border-white/10 bg-[#030712] shadow-[0_30px_100px_-20px_rgba(0,212,255,0.2)] overflow-hidden relative">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
-                <div className="flex items-center gap-6">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-                    <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-                    <div className="w-3 h-3 rounded-full bg-[#28c840]" />
-                  </div>
-                  <div className="flex items-center gap-4 text-sm font-medium">
-                    <span className="text-white">Overview</span>
-                    <span className="text-slate-500">Logs</span>
-                    <span className="text-slate-500">API Keys</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/5 border border-white/10">
-                    <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
-                    <span className="text-xs font-mono text-slate-300">us-east-1</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00d4ff] to-[#7c3aed]" />
-                </div>
-              </div>
-              
-              <div className="p-6 md:p-8 bg-gradient-to-b from-[#030712] to-[#0a0f1e]">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-                  {[
-                    { label: 'API Calls', value: 345000, color: '#00d4ff' },
-                    { label: 'Passed', value: 342100, color: '#00ff88' },
-                    { label: 'Spoofs Blocked', value: 11240, color: '#ffb800' },
-                  ].map((kpi, i) => (
-                    <div key={i} className="p-5 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden">
-                      <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mb-2">{kpi.label}</div>
-                      <div className="text-3xl font-bold text-white tracking-tight">
-                        {mounted ? <AnimatedNumber value={kpi.value} /> : kpi.value}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="p-5 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden">
-                      <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mb-2">Avg Latency</div>
-                      <div className="text-3xl font-bold text-white tracking-tight">312<span className="text-lg text-slate-500 ml-1">ms</span></div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Real Recharts Volume */}
-                  <div className="lg:col-span-2 p-6 rounded-xl border border-white/5 bg-white/[0.01]">
-                    <div className="text-sm font-semibold text-white mb-6">Verification Volume</div>
-                    <div className="h-48 w-full">
-                      {mounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={usageData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="volColor" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#030712', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                            <Area type="monotone" dataKey="volume" stroke="#00d4ff" strokeWidth={2} fillOpacity={1} fill="url(#volColor)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Real Recharts Threats */}
-                  <div className="p-6 rounded-xl border border-white/5 bg-white/[0.01]">
-                    <div className="text-sm font-semibold text-white mb-6">Threat Vectors</div>
-                    <div className="h-48 w-full">
-                      {mounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={threatData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="type" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} width={60} />
-                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: '#030712', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                              {threatData.map((entry, index) => (
-                                <Cell key={`cell-\${index}`} fill={['#ff3366', '#ffb800', '#f59e0b', '#ef4444'][index % 4]} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 p-6 rounded-xl border border-white/5 bg-white/[0.01] flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-1">Global Regional Map</h3>
-                    <p className="text-xs text-slate-500">Live verification requests spanning 45 countries.</p>
-                  </div>
-                  <Globe size={40} className="text-[#00d4ff] opacity-20" />
-                </div>
-              </div>
-            </div>
-            <div className="absolute -inset-4 bg-gradient-to-b from-[#00d4ff]/10 to-transparent blur-3xl -z-10" />
-          </motion.div>
         </div>
       </section>
 
