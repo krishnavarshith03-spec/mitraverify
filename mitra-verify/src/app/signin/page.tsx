@@ -203,7 +203,7 @@ export default function LoginPage() {
                 <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#00d4ff', width: 15, height: 15 }} />
                 Remember Me
               </label>
-              <Link href="/auth/forgot" style={{ fontSize: 13, color: '#00d4ff', textDecoration: 'none', fontWeight: 500 }}
+              <Link href="/contact" style={{ fontSize: 13, color: '#00d4ff', textDecoration: 'none', fontWeight: 500 }}
                 onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
                 onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
                 Forgot Password?
@@ -232,7 +232,7 @@ export default function LoginPage() {
 
           {/* Bottom links */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <Link href="/auth/forgot" style={{ fontSize: 12, color: '#475569', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+            <Link href="/contact" style={{ fontSize: 12, color: '#475569', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
               onMouseEnter={e => e.currentTarget.style.color = '#94a3b8'}
               onMouseLeave={e => e.currentTarget.style.color = '#475569'}>
               <ShieldQuestion size={12} /> Forgot Password

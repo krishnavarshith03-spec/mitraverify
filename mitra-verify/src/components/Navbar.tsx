@@ -608,17 +608,8 @@ export default function Navbar() {
               padding: '32px 24px',
               gap: 4,
             }}>
-              {/* Hardcoded Menu Items as Requested */}
-              {[
-                { label: 'Home', href: '/' },
-                { label: 'Compare APIs', href: '/compare' },
-                { label: 'Documentation', href: '/docs' },
-                { label: 'Demos', href: '/demo/basic' },
-                { label: 'Developer Portal', href: '/developer' },
-                { label: 'About', href: '/about' },
-                { label: 'Admin Hub', href: '/admin' },
-                { label: 'Sign In', href: '/signin' },
-              ].map((link, idx) => (
+              {/* Dynamic Menu Items */}
+              {[{ label: 'Home', href: '/' }, ...visibleLinks].map((link, idx) => (
                 <motion.div
                   key={link.label}
                   initial={{ opacity: 0, x: 40 }}
@@ -643,6 +634,30 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              {!isAuthenticated && (
+                <motion.div
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.08 + visibleLinks.length * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <Link
+                    href="/signin"
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link ${isActive('/signin') ? 'active' : ''}`}
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 600,
+                      ...(isActive('/signin') ? {
+                        color: '#00d4ff',
+                        background: 'rgba(0, 212, 255, 0.04)',
+                        border: '1px solid rgba(0, 212, 255, 0.1)',
+                      } : {}),
+                    }}
+                  >
+                    Sign In
+                  </Link>
+                </motion.div>
+              )}
             </div>
 
             {/* Footer with User Info if logged in */}

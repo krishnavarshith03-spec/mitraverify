@@ -28,12 +28,12 @@ export default function SignupPage() {
   // Auto-redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log("[Face Enrollment] User is already authenticated. Redirecting to /");
+      console.log("[Face Enrollment] User is already authenticated. Redirecting to /dashboard");
       try {
-        router.replace('/');
+        router.replace('/dashboard');
       } catch (err) {
         console.error("[Face Enrollment] Router replace failed, falling back to window.location", err);
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       }
     }
   }, [isAuthenticated, authLoading, router]);
@@ -63,13 +63,13 @@ export default function SignupPage() {
       setSuccess('Account created successfully! Redirecting...');
       setLoading(true); // Keep loading state active during redirect
 
-      console.log("[Face Enrollment] Registration successful. Token retrieved. Redirecting to /");
+      console.log("[Face Enrollment] Registration successful. Token retrieved. Redirecting to /dashboard");
       setTimeout(() => {
         try {
-          router.replace('/');
+          router.replace('/dashboard');
         } catch (err) {
           console.error("[Face Enrollment] Router replace redirect failed, falling back to window.location.href", err);
-          window.location.href = '/';
+          window.location.href = '/dashboard';
         }
       }, 1000);
     } catch (err: unknown) {

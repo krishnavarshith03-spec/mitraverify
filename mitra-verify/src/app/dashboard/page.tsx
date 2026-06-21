@@ -271,7 +271,7 @@ export default function DashboardPage() {
                 />
                 <EnhancedKPICard 
                   label="Average Verification Time" 
-                  value={parseFloat(((overview?.avg_processing_time || 0) * 1000).toFixed(0))}
+                  value={parseFloat((overview?.avg_processing_time || 0).toFixed(0))}
                   unit="ms" 
                   icon={Clock} 
                   color="#00ff9d" 
