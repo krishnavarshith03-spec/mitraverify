@@ -2,6 +2,7 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState, useEffect, Suspense, lazy, Component } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Zap, Shield, Fingerprint, ArrowRight, CheckCircle, Code2,
   Activity, Eye, Lock, Globe, Star, ChevronRight
@@ -151,9 +152,16 @@ function PhaseIndicator({ currentPhase }: { currentPhase: number }) {
 
 export default function HomePage() {
   const { user, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
   const [currentPhase, setCurrentPhase] = useState(0);
   const [mounted, setMounted] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [loading, isAuthenticated, router]);
 
   // ── Scroll tracking: track viewport scroll directly without target ref ──────
   // This completely avoids the Framer Motion "Target ref is defined but not hydrated" error.
@@ -274,7 +282,6 @@ export default function HomePage() {
                 anti-spoof, and continuous identity authentication — all open source.
               </motion.p>
 
-               {!isAuthenticated ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -288,24 +295,6 @@ export default function HomePage() {
                     <Eye size={16} className="mr-2" /> Try Live Demo
                   </Link>
                 </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 }}
-                  className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto"
-                >
-                  <Link href="/dashboard" className="btn-primary w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    Go To Dashboard <ArrowRight size={16} className="ml-2" />
-                  </Link>
-                  <Link href="/developer" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    Open API Console
-                  </Link>
-                  <Link href="/docs" className="btn-ghost w-full sm:flex-1 flex items-center justify-center" style={{ textDecoration: 'none', height: 48, minHeight: 48 }}>
-                    View Documentation
-                  </Link>
-                </motion.div>
-              )}
 
               {/* Stats row */}
               <motion.div

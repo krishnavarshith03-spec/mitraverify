@@ -8,19 +8,14 @@ import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format, subDays } from 'date-fns';
-import TiltCard from '@/components/cyber/TiltCard';
-import AnimatedCounter from '@/components/cyber/AnimatedCounter';
-import ThreeGlobe from '@/components/cyber/ThreeGlobe';
 import PageTransition from '@/components/cyber/PageTransition';
 import { useAuth } from '@/context/AuthContext';
-import BiometricSecurityRadar from '@/components/dashboard/BiometricSecurityRadar';
-import VerificationFunnel from '@/components/dashboard/VerificationFunnel';
 import LiveActivityFeed from '@/components/dashboard/LiveActivityFeed';
-import AIInsightsPanel from '@/components/dashboard/AIInsightsPanel';
 import NeuralNetworkAnimation from '@/components/dashboard/NeuralNetworkAnimation';
 import Global3DBackground from '@/components/cyber/Global3DBackground';
 import LiveStatusIndicators from '@/components/dashboard/LiveStatusIndicators';
 import EnhancedKPICard from '@/components/dashboard/EnhancedKPICard';
+import PremiumBiometricGlobe from '@/components/dashboard/PremiumBiometricGlobe';
 
 
 interface Overview {
@@ -175,7 +170,7 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-[#030712] relative text-slate-300 font-sans selection:bg-[#00d4ff]/30">
+      <div className="min-h-screen bg-[#0a0f1e] relative text-slate-300 font-sans selection:bg-[#00d4ff]/30">
         <Navbar />
         
         {/* Abstract Particle / Neural Background */}
@@ -183,34 +178,29 @@ export default function DashboardPage() {
           <Global3DBackground />
           <NeuralNetworkAnimation />
           {/* Subtle top gradient */}
-          <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-[#00d4ff]/[0.03] to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-[#00d4ff]/[0.05] to-transparent" />
         </div>
 
         <main className="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           {/* Hero Section */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 animate-fade-up">
             <div>
-              <h1 className="text-3xl md:text-5xl font-semibold text-white tracking-tight mb-2">
-                Security Operations Center
+              <h2 className="text-[#00d4ff] font-mono text-sm font-semibold tracking-widest mb-1 uppercase">
+                WELCOME BACK, {user?.name?.toUpperCase() || 'ADMINISTRATOR'}
+              </h2>
+              <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-3">
+                Enterprise Biometric Security Center
               </h1>
-              <p className="text-sm text-slate-400">
-                Live biometric telemetry and threat intelligence. Auto-refreshes every 30s.
+              <p className="text-sm text-slate-400 max-w-2xl">
+                Real-time monitoring of face liveness, anti-spoof protection, identity verification, and API activity. Auto-refreshes every 30s.
               </p>
               <LiveStatusIndicators />
             </div>
             
             <div className="flex flex-wrap gap-3 items-center">
-              {isDemoMode && (
-                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ffb800]/10 border border-[#ffb800]/20 text-[#ffb800] text-xs font-semibold">
-                  ⚠️ Demo Mode
-                </span>
-              )}
-              <button onClick={loadData} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-colors flex items-center gap-2 text-sm font-medium text-white">
+              <button onClick={loadData} className="px-4 py-2 rounded-lg bg-[#0a0f1e]/50 backdrop-blur-md hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-sm font-medium text-white shadow-[0_0_15px_rgba(0,212,255,0.1)]">
                 <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Sync
               </button>
-              <Link href="/developer" className="px-4 py-2 rounded-lg bg-[#00d4ff]/10 hover:bg-[#00d4ff]/20 border border-[#00d4ff]/20 transition-colors flex items-center gap-2 text-sm font-medium text-[#00d4ff]">
-                <Zap size={14} /> API Keys
-              </Link>
             </div>
           </div>
 
@@ -226,85 +216,117 @@ export default function DashboardPage() {
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
             
-            {/* Top Row: AI Insights & Core KPIs */}
-            <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up animate-delay-1">
-              {/* Insights spans 1 */}
-              <div className="premium-glass spotlight-card col-span-1 md:col-span-2 lg:col-span-1">
-                <AIInsightsPanel overview={overview} />
-              </div>
+            {/* Top Row: KPIs and Globe */}
+            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-1">
               
-              {/* Primary KPIs span 3 */}
-              <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Primary KPIs span 8 */}
+              <div className="col-span-1 lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <EnhancedKPICard 
-                  label="Total Requests" 
+                  label="Total API Requests" 
                   value={overview?.total_requests || 0} 
                   icon={Activity} 
                   color="#00d4ff" 
-                  delta={+12.4}
                   sparklineData={usageData.map(d => d.total)}
                 />
                 <EnhancedKPICard 
-                  label="Passed" 
+                  label="Successful Verifications" 
                   value={overview?.successful_verifications || 0} 
                   icon={Shield} 
-                  color="#00ff88" 
-                  delta={+8.2}
+                  color="#00ff9d" 
                   sparklineData={usageData.map(d => d.pass)}
+                />
+                <EnhancedKPICard 
+                  label="Failed Verifications" 
+                  value={overview?.failed_verifications || 0} 
+                  icon={AlertTriangle} 
+                  color="#ff3366" 
+                  sparklineData={usageData.map(d => d.fail)}
+                />
+                <EnhancedKPICard 
+                  label="No Face Detected" 
+                  value={overview?.no_face_detected || 0} 
+                  icon={Eye} 
+                  color="#94a3b8" 
+                  sparklineData={usageData.map(d => d.noFace)}
                 />
                 <EnhancedKPICard 
                   label="Spoof Attempts" 
                   value={overview?.spoof_attempts || 0} 
                   icon={AlertTriangle} 
                   color="#ffb800" 
-                  delta={-15.3}
                   sparklineData={usageData.map(d => d.spoof)}
+                />
+                <EnhancedKPICard 
+                  label="Identity Matches" 
+                  value={overview?.identity_matches || 0} 
+                  icon={Fingerprint} 
+                  color="#007BFF" 
                 />
                 <EnhancedKPICard 
                   label="Success Rate" 
                   value={parseFloat((overview?.success_rate || 0).toFixed(1))}
                   unit="%" 
                   icon={TrendingUp} 
-                  color="#7c3aed" 
-                  delta={+2.1}
+                  color="#00d4ff" 
+                />
+                <EnhancedKPICard 
+                  label="Average Verification Time" 
+                  value={parseFloat(((overview?.avg_processing_time || 0) * 1000).toFixed(0))}
+                  unit="ms" 
+                  icon={Clock} 
+                  color="#00ff9d" 
                 />
               </div>
-            </div>
 
-            {/* Middle Row: Radar, Area Chart, Funnel */}
-            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-2">
-              
-              {/* Radar - spans 3 */}
-              <div className="premium-glass spotlight-card lg:col-span-3 p-6 flex flex-col">
-                <h3 className="text-sm font-semibold text-white mb-6 uppercase tracking-wider">Biometric Radar</h3>
-                <div className="flex-1 flex items-center justify-center">
-                  <BiometricSecurityRadar />
+              {/* Globe spans 4 */}
+              <div className="premium-glass spotlight-card col-span-1 lg:col-span-4 p-6 relative overflow-hidden flex flex-col justify-center min-h-[400px]">
+                <div className="absolute inset-0 z-0 opacity-50">
+                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#00d4ff]/10 via-[#0a0f1e]/80 to-[#0a0f1e]" />
+                </div>
+                <div className="absolute inset-0 z-10 pointer-events-auto">
+                  <PremiumBiometricGlobe />
+                </div>
+                <div className="relative z-20 pointer-events-none mt-auto">
+                  <h3 className="text-xs font-semibold text-[#00d4ff] mb-1 uppercase tracking-widest">Global Telemetry Node</h3>
+                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00ff9d] shadow-[0_0_8px_#00ff9d] animate-pulse" /> Live Monitoring Active
+                  </div>
                 </div>
               </div>
 
-              {/* Area Chart - spans 6 */}
-              <div className="premium-glass spotlight-card lg:col-span-6 p-6">
-                <h3 className="text-sm font-semibold text-white mb-6 uppercase tracking-wider">Volume & Velocity (30D)</h3>
+            </div>
+
+            {/* Middle Row: Area Chart, Funnel */}
+            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-2">
+              
+              {/* Area Chart - spans 8 */}
+              <div className="premium-glass spotlight-card lg:col-span-8 p-6">
+                <h3 className="text-sm font-semibold text-white mb-6 uppercase tracking-wider">Verification Trend & Volume (30D)</h3>
                 <div className="h-[280px]">
                   {usageData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={usageData.slice(-15)}>
                         <defs>
-                          <linearGradient id="passGrad2" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#00ff88" stopOpacity={0.2} />
-                            <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
+                          <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00ff9d" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#00ff9d" stopOpacity={0} />
                           </linearGradient>
-                          <linearGradient id="spoofGrad2" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ffb800" stopOpacity={0.2} />
+                          <linearGradient id="spoofGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ffb800" stopOpacity={0.3} />
                             <stop offset="100%" stopColor="#ffb800" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="failGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ff3366" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#ff3366" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                         <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={{ background: 'rgba(10,15,30,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' }} itemStyle={{ fontSize: 13 }} labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 4 }} />
-                        <Area type="monotone" dataKey="pass" stroke="#00ff88" strokeWidth={2} fill="url(#passGrad2)" />
-                        <Area type="monotone" dataKey="spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad2)" />
-                        <Area type="monotone" dataKey="fail" stroke="#ff3366" strokeWidth={2} fill="transparent" />
+                        <Area type="monotone" dataKey="pass" name="Passed" stroke="#00ff9d" strokeWidth={2} fill="url(#passGrad)" />
+                        <Area type="monotone" dataKey="spoof" name="Spoof" stroke="#ffb800" strokeWidth={2} fill="url(#spoofGrad)" />
+                        <Area type="monotone" dataKey="fail" name="Failed" stroke="#ff3366" strokeWidth={2} fill="url(#failGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
@@ -313,24 +335,42 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Funnel - spans 3 */}
-              <div className="premium-glass spotlight-card lg:col-span-3 p-6 flex flex-col">
-                <h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider">Conversion Funnel</h3>
-                <VerificationFunnel overview={overview} />
+              {/* Pass vs Fail Ratio (PieChart) - spans 4 */}
+              <div className="premium-glass spotlight-card lg:col-span-4 p-6 flex flex-col">
+                <h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider">Pass vs Fail Ratio</h3>
+                <div className="flex-1 min-h-[250px]">
+                   <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={5}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: 'rgba(10,15,30,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ fontSize: 13, color: '#fff' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
             {/* Bottom Row: Live Feed */}
             <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-up animate-delay-3">
-              
-              {/* Live Activity Feed - spans 12 */}
               <div className="premium-glass spotlight-card lg:col-span-12 p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00d4ff] shadow-[0_0_8px_#00d4ff] animate-pulse" />
-                    Live Activity
+                    Realtime Activity Timeline
                   </h3>
-                  <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-mono">LIVE CONNECTED</span>
+                  <span className="text-[10px] bg-[#00d4ff]/10 border border-[#00d4ff]/20 px-2 py-0.5 rounded text-[#00d4ff] font-mono shadow-[0_0_10px_rgba(0,212,255,0.2)]">LIVE</span>
                 </div>
                 <LiveActivityFeed isDemoMode={isDemoMode} />
               </div>

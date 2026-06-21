@@ -28,12 +28,12 @@ export default function LoginPage() {
   // Auto-redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      console.log("[Face Enrollment] User is already authenticated. Redirecting to /");
+      console.log("[Face Enrollment] User is already authenticated. Redirecting to /dashboard");
       try {
-        router.replace('/');
+        router.replace('/dashboard');
       } catch (err) {
         console.error("[Face Enrollment] Router replace failed, falling back to window.location", err);
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       }
     }
   }, [isAuthenticated, authLoading, router]);
@@ -80,7 +80,7 @@ export default function LoginPage() {
       setSuccess('Sign in successful! Redirecting...');
 
       // Hard redirect — ensures AuthProvider re-bootstraps cleanly from localStorage
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { detail?: string } } };
       setError(apiErr?.response?.data?.detail || 'Login failed. Check your credentials.');

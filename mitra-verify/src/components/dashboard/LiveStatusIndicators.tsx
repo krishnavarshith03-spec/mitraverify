@@ -3,11 +3,10 @@
 import React from 'react';
 
 const statuses = [
-  { label: 'System Online', color: '#00ff88' },
-  { label: 'API Gateway', color: '#00d4ff' },
-  { label: 'Face Detect', color: '#00d4ff' },
-  { label: 'Anti-Spoofing', color: '#7c3aed' },
-  { label: 'Identity Match', color: '#00ff88' },
+  { label: 'System Online', color: '#00d4ff' },
+  { label: 'Face Detection Active', color: '#00d4ff' },
+  { label: 'Anti-Spoof Enabled', color: '#00ff9d' },
+  { label: 'Identity Match Engine Running', color: '#007BFF' },
 ];
 
 export default function LiveStatusIndicators() {
