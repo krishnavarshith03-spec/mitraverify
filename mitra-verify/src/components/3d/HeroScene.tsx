@@ -7,6 +7,7 @@ import {
   Stars,
   OrbitControls,
   Trail,
+  Html,
 } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -57,14 +58,15 @@ function phaseColor(phase: ScanPhase): THREE.Color {
   return hexToRgb(PHASE_COLORS[phase]);
 }
 
-// ─── Face Particle Cloud (478 points in face-oval layout) ────────────────────
-function FaceParticles({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
+// ─── Facial Landmark Mesh ───────────────────────────────────────────────────
+function FaceLandmarks({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
   const meshRef = useRef<THREE.Points>(null!);
-  const COUNT = isMobile ? 150 : 478;
+  const COUNT = 478;
 
-  const { positions, colors } = useMemo(() => {
+  const { positions, colors, sizes } = useMemo(() => {
     const pos = new Float32Array(COUNT * 3);
     const col = new Float32Array(COUNT * 3);
+    const siz = new Float32Array(COUNT);
 
     let seed = 12345;
     const lcg = () => {
@@ -74,29 +76,49 @@ function FaceParticles({ phase, isMobile }: { phase: ScanPhase; isMobile: boolea
 
     // Generate face-oval shaped point cloud
     for (let i = 0; i < COUNT; i++) {
-      // Parametric face oval: ellipsoid with noise
       const t = (i / COUNT) * Math.PI * 2;
       const layer = Math.floor(i / 30); // 0-15 vertical layers
       const yNorm = (layer / 16) * 2 - 1; // -1 to 1
       const yPos = yNorm * 1.35;
 
-      // Ellipse radius at this y height — narrower at top and bottom
       const faceMask = Math.sqrt(Math.max(0, 1 - yNorm * yNorm * 0.6));
       const xRadius = 0.85 * faceMask;
       const zRadius = 0.45 * faceMask;
 
       const angle = t + (lcg() - 0.5) * 0.4;
-      const r = 0.7 + lcg() * 0.3; // slight radial variance
+      const r = 0.7 + lcg() * 0.3;
 
       pos[i * 3 + 0] = Math.cos(angle) * xRadius * r + (lcg() - 0.5) * 0.05;
       pos[i * 3 + 1] = yPos + (lcg() - 0.5) * 0.1;
       pos[i * 3 + 2] = Math.sin(angle) * zRadius * r + (lcg() - 0.5) * 0.05;
 
-      col[i * 3 + 0] = 0.0;
-      col[i * 3 + 1] = 0.83;
+      col[i * 3 + 0] = 1.0;
+      col[i * 3 + 1] = 1.0;
       col[i * 3 + 2] = 1.0;
+      siz[i] = 1.0;
     }
-    return { positions: pos, colors: col };
+    
+    // Add distinct eye tracking points
+    const leftEyeIdx = 150;
+    pos[leftEyeIdx * 3 + 0] = -0.3;
+    pos[leftEyeIdx * 3 + 1] = 0.2;
+    pos[leftEyeIdx * 3 + 2] = 0.45;
+    siz[leftEyeIdx] = 4.0;
+    
+    const rightEyeIdx = 151;
+    pos[rightEyeIdx * 3 + 0] = 0.3;
+    pos[rightEyeIdx * 3 + 1] = 0.2;
+    pos[rightEyeIdx * 3 + 2] = 0.45;
+    siz[rightEyeIdx] = 4.0;
+
+    // Nose tip
+    const noseIdx = 152;
+    pos[noseIdx * 3 + 0] = 0;
+    pos[noseIdx * 3 + 1] = -0.1;
+    pos[noseIdx * 3 + 2] = 0.55;
+    siz[noseIdx] = 2.5;
+
+    return { positions: pos, colors: col, sizes: siz };
   }, [COUNT]);
 
   const targetColor = useMemo(() => phaseColor(phase), [phase]);
@@ -107,58 +129,91 @@ function FaceParticles({ phase, isMobile }: { phase: ScanPhase; isMobile: boolea
     currentColor.current.lerp(targetColor, delta * 2);
     const mat = meshRef.current.material as THREE.PointsMaterial;
     mat.color.copy(currentColor.current);
-    meshRef.current.rotation.y += delta * 0.08;
+    
+    // In search phase, scramble points slightly to mimic 'searching'
+    if (phase === 'searching') {
+        meshRef.current.rotation.y += delta * 0.5;
+        mat.opacity = 0.2;
+    } else {
+        meshRef.current.rotation.y += delta * 0.08;
+        mat.opacity = 0.9;
+    }
   });
 
   return (
-    <points ref={meshRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
+    <group>
+      <points ref={meshRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[positions, 3]}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            args={[colors, 3]}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          size={0.02}
+          vertexColors
+          transparent
+          opacity={0.9}
+          sizeAttenuation
+          depthWrite={false}
         />
-        <bufferAttribute
-          attach="attributes-color"
-          args={[colors, 3]}
-        />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.018}
-        vertexColors
-        transparent
-        opacity={0.9}
-        sizeAttenuation
-        depthWrite={false}
-      />
-    </points>
+      </points>
+      {/* Dynamic connecting lines for mesh look when detected */}
+      {phase !== 'searching' && (
+        <mesh>
+          <sphereGeometry args={[1, 16, 16]} />
+          <meshBasicMaterial 
+            color={PHASE_COLORS[phase]} 
+            wireframe 
+            transparent 
+            opacity={0.05} 
+            depthWrite={false} 
+          />
+        </mesh>
+      )}
+    </group>
   );
 }
 
-// ─── Wireframe Face Sphere ────────────────────────────────────────────────────
-function FaceSphere({ phase }: { phase: ScanPhase }) {
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const targetColor = useMemo(() => phaseColor(phase), [phase]);
-  const currentColor = useRef(new THREE.Color(PHASE_COLORS['searching']));
+// ─── Holographic Overlay (HTML) ─────────────────────────────────────────────
+function HolographicUI({ phase }: { phase: ScanPhase }) {
+  if (phase === 'searching') return null;
 
-  useFrame((_, delta) => {
-    if (!meshRef.current) return;
-    currentColor.current.lerp(targetColor, delta * 1.5);
-    const mat = meshRef.current.material as THREE.MeshBasicMaterial;
-    mat.color.copy(currentColor.current);
-    mat.opacity = phase === 'granted' ? 0.25 : 0.12;
-  });
+  const getAccuracy = () => {
+    switch(phase) {
+      case 'detected': return 'Calculating...';
+      case 'landmarks': return 'Extracting 478 pts';
+      case 'liveness': return 'Analyzing Depth';
+      case 'identity': return 'Matching...';
+      case 'granted': return '99.98% Match';
+      default: return '';
+    }
+  };
 
   return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[1, 32, 32]} />
-      <meshBasicMaterial
-        color={PHASE_COLORS[phase]}
-        wireframe
-        transparent
-        opacity={0.12}
-        depthWrite={false}
-      />
-    </mesh>
+    <Html position={[0.7, 0.5, 0.5]} center className="pointer-events-none">
+      <div className="flex flex-col gap-1.5 p-3 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] whitespace-nowrap min-w-[140px] transform transition-all duration-300">
+        <div className="flex justify-between items-center border-b border-white/10 pb-1 mb-1">
+          <span className="text-[9px] font-mono tracking-widest text-slate-400">TARGET: USR_89A</span>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PHASE_COLORS[phase], boxShadow: `0 0 5px \${PHASE_COLORS[phase]}` }} />
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] font-mono text-slate-500">PITCH</span>
+          <span className="text-[10px] font-mono font-medium text-white">-4.2°</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[10px] font-mono text-slate-500">YAW</span>
+          <span className="text-[10px] font-mono font-medium text-white">+1.8°</span>
+        </div>
+        <div className="flex justify-between items-center pt-1 mt-1 border-t border-white/10">
+          <span className="text-[10px] font-mono font-bold" style={{ color: PHASE_COLORS[phase] }}>{getAccuracy()}</span>
+        </div>
+      </div>
+    </Html>
   );
 }
 
@@ -214,7 +269,7 @@ function ScanRing({ phase }: { phase: ScanPhase }) {
     <group ref={groupRef}>
       {/* Outer scan ring */}
       <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.35, 0.008, 8, 80]} />
+        <torusGeometry args={[1.35, 0.015, 16, 100]} />
         <meshBasicMaterial color={PHASE_COLORS[phase]} transparent opacity={0.8} />
       </mesh>
       {/* Inner secondary ring */}
@@ -224,13 +279,13 @@ function ScanRing({ phase }: { phase: ScanPhase }) {
       </mesh>
       {/* Scan line beam */}
       <Trail
-        width={0.04}
-        length={6}
+        width={0.08}
+        length={8}
         color={new THREE.Color(PHASE_COLORS[phase])}
         attenuation={(t) => t * t}
       >
         <mesh position={[1.35, 0, 0]}>
-          <sphereGeometry args={[0.025]} />
+          <sphereGeometry args={[0.03]} />
           <meshBasicMaterial color={PHASE_COLORS[phase]} />
         </mesh>
       </Trail>
@@ -249,19 +304,20 @@ function VolumetricLight({ phase }: { phase: ScanPhase }) {
     currentColor.current.lerp(targetColor, delta * 1.5);
     const mat = meshRef.current.material as THREE.MeshBasicMaterial;
     mat.color.copy(currentColor.current);
-    const pulse = 0.05 + Math.sin(clock.getElapsedTime() * 1.5) * 0.015;
+    const pulse = 0.08 + Math.sin(clock.getElapsedTime() * 1.5) * 0.02;
     mat.opacity = pulse;
   });
 
   return (
     <mesh ref={meshRef} position={[0, 4.5, 0]} rotation={[Math.PI, 0, 0]}>
-      <coneGeometry args={[1.2, 4, 32, 1, true]} />
+      <coneGeometry args={[1.4, 4.5, 32, 1, true]} />
       <meshBasicMaterial
         color={PHASE_COLORS[phase]}
         transparent
-        opacity={0.05}
+        opacity={0.08}
         side={THREE.DoubleSide}
         depthWrite={false}
+        blending={THREE.AdditiveBlending}
       />
     </mesh>
   );
@@ -276,7 +332,6 @@ function CornerBrackets({ phase }: { phase: ScanPhase }) {
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     currentColor.current.lerp(targetColor, delta * 2);
-    // Subtle breathe
     const s = 1 + Math.sin(clock.getElapsedTime() * 1.2) * 0.015;
     groupRef.current.scale.setScalar(s);
   });
@@ -292,12 +347,10 @@ function CornerBrackets({ phase }: { phase: ScanPhase }) {
     <group ref={groupRef}>
       {corners.map(([x, y], i) => (
         <group key={i} position={[x, y, 0.3]}>
-          {/* Horizontal bar */}
           <mesh position={[x > 0 ? -0.08 : 0.08, 0, 0]}>
             <boxGeometry args={[0.22, 0.015, 0.015]} />
             <meshBasicMaterial color={PHASE_COLORS[phase]} />
           </mesh>
-          {/* Vertical bar */}
           <mesh position={[0, y > 0 ? -0.08 : 0.08, 0]}>
             <boxGeometry args={[0.015, 0.22, 0.015]} />
             <meshBasicMaterial color={PHASE_COLORS[phase]} />
@@ -305,90 +358,6 @@ function CornerBrackets({ phase }: { phase: ScanPhase }) {
         </group>
       ))}
     </group>
-  );
-}
-
-// ─── Holographic Panel ────────────────────────────────────────────────────────
-interface HoloPanelProps {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-  phase: ScanPhase;
-  index: number;
-}
-
-function HoloPanel({ position, rotation = [0, 0, 0], phase, index }: HoloPanelProps) {
-  const groupRef = useRef<THREE.Group>(null!);
-  const lines = useMemo(() => {
-    let seed = 98765;
-    const lcg = () => {
-      const x = Math.sin(seed++) * 10000;
-      return x - Math.floor(x);
-    };
-    return Array.from({ length: 6 }, (_, i) => ({
-      width: 0.35 + lcg() * 0.45,
-      y: 0.28 - i * 0.1,
-      speed: 0.4 + lcg() * 0.6,
-      delay: lcg() * Math.PI * 2,
-    }));
-  }, []);
-
-  useFrame(({ clock }) => {
-    if (!groupRef.current) return;
-    const t = clock.getElapsedTime();
-    groupRef.current.position.y = position[1] + Math.sin(t * 0.7 + index) * 0.08;
-    groupRef.current.rotation.y = rotation[1] + Math.sin(t * 0.3 + index) * 0.04;
-  });
-
-  const color = PHASE_COLORS[phase];
-
-  return (
-    <group ref={groupRef} position={position} rotation={rotation}>
-      {/* Panel background */}
-      <mesh>
-        <planeGeometry args={[1.0, 0.8]} />
-        <meshBasicMaterial color="#0a0f1e" transparent opacity={0.5} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Panel border */}
-      <lineSegments>
-        <edgesGeometry args={[new THREE.PlaneGeometry(1.0, 0.8)]} />
-        <lineBasicMaterial color={color} transparent opacity={0.6} />
-      </lineSegments>
-      {/* Metric lines */}
-      {lines.map((line, i) => (
-        <DataLine key={i} {...line} color={color} phase={phase} />
-      ))}
-    </group>
-  );
-}
-
-interface DataLineProps {
-  width: number;
-  y: number;
-  speed: number;
-  delay: number;
-  color: string;
-  phase: ScanPhase;
-}
-
-function DataLine({ width, y, speed, delay, color }: DataLineProps) {
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const targetColor = useMemo(() => new THREE.Color(color), [color]);
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const t = clock.getElapsedTime();
-    const animated = Math.abs(Math.sin(t * speed + delay));
-    meshRef.current.scale.x = 0.3 + animated * 0.7;
-    const mat = meshRef.current.material as THREE.MeshBasicMaterial;
-    mat.color.copy(targetColor);
-    mat.opacity = 0.5 + animated * 0.5;
-  });
-
-  return (
-    <mesh ref={meshRef} position={[-0.25, y, 0.001]}>
-      <planeGeometry args={[width, 0.012]} />
-      <meshBasicMaterial color={color} transparent opacity={0.7} />
-    </mesh>
   );
 }
 
@@ -420,11 +389,9 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
     const t = clock.getElapsedTime();
     for (let i = 0; i < COUNT; i++) {
       posAttr.array[i * 3 + 1] += speeds[i] * 0.003;
-      // Wrap particles that float too high
       if ((posAttr.array as Float32Array)[i * 3 + 1] > 5.5) {
         (posAttr.array as Float32Array)[i * 3 + 1] = -5.5;
       }
-      // Gentle sway
       (posAttr.array as Float32Array)[i * 3] += Math.sin(t * speeds[i] + i) * 0.0005;
     }
     posAttr.needsUpdate = true;
@@ -447,49 +414,6 @@ function AmbientParticles({ isMobile }: { isMobile: boolean }) {
   );
 }
 
-// ─── Phase HUD Text (Billboard using sprites) ─────────────────────────────────
-function PhaseHUD({ phase }: { phase: ScanPhase }) {
-  const meshRef = useRef<THREE.Sprite>(null!);
-
-  // Create canvas texture for the phase text
-  const texture = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, 512, 64);
-    ctx.font = 'bold 22px monospace';
-    ctx.fillStyle = PHASE_COLORS[phase];
-    ctx.textAlign = 'center';
-    ctx.fillText(`● ${PHASE_LABELS[phase]}`, 256, 38);
-    return new THREE.CanvasTexture(canvas);
-  }, [phase]);
-
-  useEffect(() => {
-    if (meshRef.current && texture) {
-      (meshRef.current.material as THREE.SpriteMaterial).map = texture;
-      (meshRef.current.material as THREE.SpriteMaterial).needsUpdate = true;
-    }
-  }, [texture]);
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const t = clock.getElapsedTime();
-    meshRef.current.position.y = -1.9 + Math.sin(t * 1.5) * 0.04;
-    const mat = meshRef.current.material as THREE.SpriteMaterial;
-    mat.opacity = 0.7 + Math.sin(t * 2) * 0.3;
-  });
-
-  if (!texture) return null;
-
-  return (
-    <sprite ref={meshRef} position={[0, -1.9, 0.5]} scale={[3.5, 0.44, 1]}>
-      <spriteMaterial map={texture} transparent depthWrite={false} />
-    </sprite>
-  );
-}
-
 // ─── Scene Root ───────────────────────────────────────────────────────────────
 function Scene({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
   const [lowPerformance, setLowPerformance] = useState(false);
@@ -501,7 +425,6 @@ function Scene({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
     const delta = now - lastFrameTime.current;
     lastFrameTime.current = now;
 
-    // Track deltas to calculate moving average FPS over last 60 frames
     frameTimes.current.push(delta);
     if (frameTimes.current.length > 60) {
       frameTimes.current.shift();
@@ -521,75 +444,47 @@ function Scene({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
 
   return (
     <>
-      {/* Camera controls - subtle auto-rotate */}
       <OrbitControls
         enableZoom={false}
         enablePan={false}
         autoRotate
-        autoRotateSpeed={0.4}
+        autoRotateSpeed={0.8}
         maxPolarAngle={Math.PI / 1.6}
         minPolarAngle={Math.PI / 2.8}
       />
 
-      {/* Stars background */}
       <Stars radius={60} depth={40} count={2000} factor={2} saturation={0} fade speed={0.5} />
 
-      {/* Lighting */}
       <ambientLight intensity={0.15} />
       <pointLight position={[0, 4, 2]} intensity={1.5} color={PHASE_COLORS[phase]} />
       <pointLight position={[-3, 0, 2]} intensity={0.6} color="#3b82f6" />
       <pointLight position={[3, 0, 2]} intensity={0.6} color="#8b5cf6" />
 
-      {/* Volumetric light cone */}
       <VolumetricLight phase={phase} />
 
-      {/* Core face sphere */}
       <Float speed={1.2} rotationIntensity={0.1} floatIntensity={0.15}>
         <group>
-          <FaceSphere phase={phase} />
-          <FaceParticles phase={phase} isMobile={isLowPerf} />
+          <FaceLandmarks phase={phase} isMobile={isLowPerf} />
+          <HolographicUI phase={phase} />
           <GrantedPulse visible={phase === 'granted'} />
           <ScanRing phase={phase} />
           <CornerBrackets phase={phase} />
-          <PhaseHUD phase={phase} />
         </group>
       </Float>
 
-      {/* Holographic side panels */}
-      <HoloPanel
-        position={[-2.6, 0.3, -0.5]}
-        rotation={[0, 0.45, 0]}
-        phase={phase}
-        index={0}
-      />
-      <HoloPanel
-        position={[2.6, 0.3, -0.5]}
-        rotation={[0, -0.45, 0]}
-        phase={phase}
-        index={1}
-      />
-      <HoloPanel
-        position={[0, 2.4, -1.2]}
-        rotation={[-0.2, 0, 0]}
-        phase={phase}
-        index={2}
-      />
-
-      {/* Floating ambient particles */}
       <AmbientParticles isMobile={isLowPerf} />
 
-      {/* Post-processing */}
       {!isLowPerf && (
         <EffectComposer>
           <Bloom
-            luminanceThreshold={0.3}
+            luminanceThreshold={0.2}
             luminanceSmoothing={0.9}
-            intensity={2}
+            intensity={2.5}
             mipmapBlur
           />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.0008, 0.0008)}
+            offset={new THREE.Vector2(0.0015, 0.0015)}
             radialModulation={false}
             modulationOffset={0}
           />
@@ -605,12 +500,12 @@ export function PhaseLabel({ phase }: { phase: ScanPhase }) {
   const label = PHASE_LABELS[phase];
 
   return (
-    <div className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase select-none">
+    <div className="flex items-center gap-2 font-mono text-sm tracking-widest uppercase select-none p-3 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
       <span
-        className="inline-block w-2 h-2 rounded-full animate-pulse"
-        style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+        className="inline-block w-2.5 h-2.5 rounded-full animate-pulse"
+        style={{ backgroundColor: color, boxShadow: `0 0 10px \${color}` }}
       />
-      <span style={{ color }}>{label}</span>
+      <span style={{ color }} className="font-bold">{label}</span>
     </div>
   );
 }
@@ -623,16 +518,13 @@ export default function HeroScene({ phase: controlledPhase }: { phase?: ScanPhas
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const handleResize = () => {
-        setIsMobile(window.innerWidth < 768);
-      };
+      const handleResize = () => setIsMobile(window.innerWidth < 768);
       handleResize();
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
 
-  // Auto-advance phases every 2.5s, loop (only if not controlled)
   useEffect(() => {
     if (controlledPhase) return;
     const timer = setInterval(() => {
@@ -646,17 +538,11 @@ export default function HeroScene({ phase: controlledPhase }: { phase?: ScanPhas
   }, [controlledPhase]);
 
   const activePhase = controlledPhase || internalPhase;
-  const activeIndex = controlledPhase ? PHASE_ORDER.indexOf(controlledPhase) : phaseIndex;
 
   return (
     <div className="relative w-full h-full">
-      {/* 3D Canvas */}
       <Canvas
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: 'high-performance',
-        }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         dpr={isMobile ? 1 : [1, 2]}
         camera={{ position: [0, 0, 5], fov: 45, near: 0.1, far: 200 }}
         style={{ background: 'transparent' }}
@@ -664,24 +550,8 @@ export default function HeroScene({ phase: controlledPhase }: { phase?: ScanPhas
         <Scene phase={activePhase} isMobile={isMobile} />
       </Canvas>
 
-      {/* Phase label overlay (HTML) */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-10">
         <PhaseLabel phase={activePhase} />
-      </div>
-
-      {/* Phase progress dots */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none z-10">
-        {PHASE_ORDER.map((p, i) => (
-          <div
-            key={p}
-            className="w-1.5 h-1.5 rounded-full transition-all duration-500"
-            style={{
-              backgroundColor: i === activeIndex ? PHASE_COLORS[activePhase] : 'rgba(255,255,255,0.2)',
-              boxShadow: i === activeIndex ? `0 0 6px ${PHASE_COLORS[activePhase]}` : 'none',
-              transform: i === activeIndex ? 'scale(1.4)' : 'scale(1)',
-            }}
-          />
-        ))}
       </div>
     </div>
   );

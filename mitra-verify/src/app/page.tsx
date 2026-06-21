@@ -6,14 +6,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Zap, Shield, Fingerprint, ArrowRight, CheckCircle, 
-  Activity, Eye, Lock, Star, ChevronRight,
+  Activity, Eye, Star,
   Building, GraduationCap, CreditCard, Stethoscope, Landmark, UserPlus,
-  ShieldCheck, Fingerprint as FingerprintIcon, Focus,
-  Cpu, Copy, Terminal, Check
+  ShieldCheck, Focus, Cpu, Copy, Terminal, Check, Globe
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import type { ScanPhase } from '@/components/3d/HeroScene';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  BarChart, Bar, Cell
+} from 'recharts';
 
 // 3D Scene lazy load
 const HeroScene = lazy(() => import('@/components/3d/HeroScene'));
@@ -36,12 +39,12 @@ class HeroSceneErrorBoundary extends Component<{ children: React.ReactNode }, { 
 
 // Data
 const PHASES = [
-  { id: 'searching', label: 'Searching for Face', color: '#ffb800' },
+  { id: 'searching', label: 'Searching for Face', color: '#f59e0b' },
   { id: 'detected', label: 'Face Detected', color: '#00d4ff' },
   { id: 'landmarks', label: 'Generating 478 Landmarks', color: '#00d4ff' },
-  { id: 'liveness', label: 'Liveness Verification', color: '#7c3aed' },
-  { id: 'identity', label: 'Identity Matching', color: '#0066ff' },
-  { id: 'granted', label: 'Access Granted', color: '#00ff88' },
+  { id: 'liveness', label: 'Liveness Verification', color: '#10b981' },
+  { id: 'identity', label: 'Identity Matching', color: '#3b82f6' },
+  { id: 'granted', label: 'Access Granted', color: '#10b981' },
 ];
 
 const WHY_US_FEATURES = [
@@ -59,7 +62,6 @@ const API_PRODUCTS = [
     name: 'Fast Liveness API',
     icon: Zap,
     color: '#00d4ff',
-    gradient: 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,102,255,0.05))',
     border: 'rgba(0,212,255,0.2)',
     target: '< 1 second',
     securityLevel: 'Standard',
@@ -72,7 +74,6 @@ const API_PRODUCTS = [
     name: 'Advanced Anti-Spoof',
     icon: Shield,
     color: '#7c3aed',
-    gradient: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,212,255,0.05))',
     border: 'rgba(124,58,237,0.2)',
     target: '2–4 seconds',
     securityLevel: 'High',
@@ -85,7 +86,6 @@ const API_PRODUCTS = [
     name: 'Enterprise Identity',
     icon: Fingerprint,
     color: '#00ff88',
-    gradient: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,102,255,0.05))',
     border: 'rgba(0,255,136,0.2)',
     target: '3–6 seconds',
     securityLevel: 'Military-Grade',
@@ -107,9 +107,7 @@ const CRITICAL_APPS = [
 const CODE_EXAMPLES = {
   javascript: `import { MitraVerify } from '@mitra-verify/sdk';
 
-const client = new MitraVerify({
-  apiKey: process.env.MITRA_API_KEY
-});
+const client = new MitraVerify({ apiKey: process.env.MITRA_API_KEY });
 
 // Perform high-security liveness and identity match
 const result = await client.verifyIdentity({
@@ -124,9 +122,7 @@ if (result.status === "passed" && result.confidence > 0.98) {
 }`,
   typescript: `import { MitraVerify, VerificationResult } from '@mitra-verify/sdk';
 
-const client = new MitraVerify({
-  apiKey: process.env.MITRA_API_KEY!
-});
+const client = new MitraVerify({ apiKey: process.env.MITRA_API_KEY! });
 
 export async function authenticateUser(frame: Buffer, userId: string): Promise<boolean> {
   const result: VerificationResult = await client.verifyIdentity({
@@ -144,14 +140,12 @@ from mitra_verify import Client
 client = Client(api_key=os.environ.get("MITRA_API_KEY"))
 
 def authenticate_user(image_bytes: bytes, user_id: str) -> bool:
-    # Perform high-security liveness and identity match
     result = client.verify_identity(
         image_bytes=image_bytes,
         user_id=user_id,
         require_anti_spoof=True,
         strict_mode=True
     )
-    
     return result.status == "passed" and result.confidence > 0.98`,
   curl: `curl -X POST https://api.mitraverify.com/v1/identity/verify \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
@@ -161,38 +155,64 @@ def authenticate_user(image_bytes: bytes, user_id: str) -> bool:
     "user_id": "usr_88a91bx",
     "require_anti_spoof": true,
     "strict_mode": true
-  }'`
+  }'`,
+  response: `{
+  "status": "passed",
+  "confidence": 0.998,
+  "metrics": {
+    "liveness_score": 0.99,
+    "anti_spoof_score": 0.98,
+    "face_match_score": 0.99
+  },
+  "latency_ms": 342,
+  "request_id": "req_99x12a"
+}`
 };
 
-// Counter Hook for animated numbers
+const COMPLIANCE_BADGES = [
+  { name: 'SOC 2 Type II', desc: 'Audited enterprise security controls' },
+  { name: 'ISO 27001', desc: 'Information security management' },
+  { name: 'GDPR', desc: 'European data protection compliant' },
+  { name: 'CCPA', desc: 'California privacy rights compliant' },
+  { name: 'OWASP', desc: 'Top 10 application security validated' },
+];
+
+// Dashboard Mock Data
+const usageData = [
+  { time: '00:00', volume: 1200 }, { time: '04:00', volume: 800 },
+  { time: '08:00', volume: 3200 }, { time: '12:00', volume: 4500 },
+  { time: '16:00', volume: 3800 }, { time: '20:00', volume: 2900 },
+  { time: '24:00', volume: 1500 },
+];
+const threatData = [
+  { type: 'Deepfake', count: 145 }, { type: 'Replay', count: 89 },
+  { type: 'Mask', count: 34 }, { type: 'Photo', count: 210 },
+];
+
+// Hooks & Components
 function useCounter(end: number, duration: number = 2) {
   const [count, setCount] = useState(0);
-  const nodeRef = useRef(null);
-
   useEffect(() => {
     let startTime: number;
     let animationFrame: number;
-
     const update = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-      // Ease out expo
       const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setCount(Math.floor(easeOut * end));
-      
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(update);
-      }
+      if (progress < 1) animationFrame = requestAnimationFrame(update);
     };
-
     animationFrame = requestAnimationFrame(update);
     return () => cancelAnimationFrame(animationFrame);
   }, [end, duration]);
-
   return count;
 }
 
-// 3D Tilt Card Component
+function AnimatedNumber({ value, suffix = '', prefix = '' }: { value: number, suffix?: string, prefix?: string }) {
+  const count = useCounter(value, 2.5);
+  return <span>{prefix}{count}{suffix}</span>;
+}
+
 function TiltCard({ children, className = '' }: { children: React.ReactNode, className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
@@ -204,8 +224,8 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode, cla
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -15;
-    const rotateY = ((x - centerX) / centerX) * 15;
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
     setRotation({ x: rotateX, y: rotateY });
   };
 
@@ -217,21 +237,15 @@ function TiltCard({ children, className = '' }: { children: React.ReactNode, cla
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       animate={{ rotateX: rotation.x, rotateY: rotation.y }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       style={{ perspective: 1000, transformStyle: 'preserve-3d' }}
       className={className}
     >
-      <div style={{ transform: 'translateZ(30px)' }} className="w-full h-full relative">
+      <div style={{ transform: 'translateZ(20px)' }} className="w-full h-full relative">
         {children}
       </div>
     </motion.div>
   );
-}
-
-// Animated Counter Component
-function AnimatedNumber({ value, suffix = '', prefix = '' }: { value: number, suffix?: string, prefix?: string }) {
-  const count = useCounter(value, 2.5);
-  return <span>{prefix}{count}{suffix}</span>;
 }
 
 export default function HomePage() {
@@ -265,15 +279,7 @@ export default function HomePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center gap-4">
-        <Navbar />
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-10 h-10 rounded-full border-2 border-[#00d4ff]/10 border-t-[#00d4ff]" />
-        <p className="text-slate-400 text-sm font-mono tracking-widest">VERIFYING SESSION</p>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-[#030712] overflow-hidden selection:bg-[#00d4ff]/30 selection:text-white">
@@ -321,7 +327,6 @@ export default function HomePage() {
         <div className="max-w-[1400px] mx-auto px-6 w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             
-            {/* Left Content */}
             <div className="lg:col-span-6 flex flex-col gap-6 lg:gap-8 z-20">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-[0_0_20px_rgba(0,212,255,0.05)] cursor-default">
@@ -361,10 +366,10 @@ export default function HomePage() {
 
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 1 }} className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-white/5">
                 {[ 
-                  { value: 99, suffix: '%', label: 'Accuracy', color: '#00ff88' }, 
-                  { value: 1, prefix: '<', suffix: 's', label: 'Response', color: '#00d4ff' }, 
+                  { value: 478, label: 'Facial Landmarks', color: '#00d4ff' }, 
+                  { value: 1, prefix: '<', suffix: 's', label: 'Verification', color: '#00ff88' }, 
                   { value: 3, label: 'Verification APIs', color: '#7c3aed' }, 
-                  { value: 100, suffix: '%', label: 'Enterprise Security', color: '#ffb800' } 
+                  { value: 24, suffix: '/7', label: 'Monitoring', color: '#f59e0b' } 
                 ].map(stat => (
                   <div key={stat.label} className="flex flex-col">
                     <div className="text-2xl font-bold text-white mb-1 tracking-tight">
@@ -379,13 +384,10 @@ export default function HomePage() {
               </motion.div>
             </div>
 
-            {/* Right Content: 3D Visualization */}
             <div className="lg:col-span-6 relative w-full h-[400px] lg:h-[600px] flex items-center justify-center">
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.2 }} className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00d4ff]/10 rounded-full blur-[120px]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#7c3aed]/10 rounded-full blur-[80px]" />
               </motion.div>
-              
               <div className="relative w-full h-full z-10 pointer-events-auto">
                 {mounted && (
                   <HeroSceneErrorBoundary>
@@ -395,66 +397,32 @@ export default function HomePage() {
                   </HeroSceneErrorBoundary>
                 )}
               </div>
-
-              {/* Holographic Status Overlay */}
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }} 
-                className="absolute right-0 bottom-10 lg:bottom-20 p-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] z-20 w-64">
-                <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
-                  <span className="text-[10px] text-slate-400 font-mono tracking-widest">SYSTEM STATUS</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_5px_#00ff88]" />
-                    <span className="text-[10px] text-[#00ff88] font-mono tracking-widest">LIVE</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {PHASES.map((phase, i) => (
-                    <div key={phase.id} className="flex items-center gap-3">
-                      <div className="relative flex items-center justify-center w-4 h-4">
-                        <motion.div
-                          animate={{
-                            scale: i === currentPhase ? [1, 1.5, 1] : 1,
-                            opacity: i === currentPhase ? 1 : i < currentPhase ? 0.5 : 0.1,
-                            backgroundColor: i === currentPhase ? phase.color : i < currentPhase ? '#00ff88' : '#ffffff'
-                          }}
-                          transition={{ duration: 1, repeat: i === currentPhase ? Infinity : 0 }}
-                          className="w-1.5 h-1.5 rounded-full"
-                        />
-                        {i === currentPhase && (
-                          <motion.div animate={{ scale: [1, 2.5], opacity: [0.8, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="absolute inset-0 rounded-full border border-current" style={{ color: phase.color }} />
-                        )}
-                      </div>
-                      <span className="text-[11px] font-mono" style={{ color: i === currentPhase ? '#fff' : i < currentPhase ? '#94a3b8' : '#475569' }}>
-                        {phase.label.toUpperCase()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
             </div>
 
           </div>
         </div>
       </motion.section>
 
-      {/* ── TRUSTED INDUSTRIES MARQUEE ─────────────────────── */}
-      <section className="py-10 border-y border-white/5 bg-[#030712] relative z-10 overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]">
+      {/* ── TRUSTED ACROSS CRITICAL INDUSTRIES ─────────────────────── */}
+      <section className="py-12 border-y border-white/5 bg-[#030712] relative z-10 overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]">
         <div className="max-w-[1400px] mx-auto px-6 mb-8 text-center text-left">
-          <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500">Securing identity for critical sectors globally</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500">Trusted Across Critical Industries</span>
         </div>
-        <div className="flex whitespace-nowrap opacity-60 relative">
+        <div className="flex whitespace-nowrap opacity-50 relative">
           <div className="absolute left-0 top-0 w-48 h-full bg-gradient-to-r from-[#030712] to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 w-48 h-full bg-gradient-to-l from-[#030712] to-transparent z-10 pointer-events-none" />
           <motion.div
-            animate={{ x: [0, -1500] }}
-            transition={{ repeat: Infinity, duration: 40, ease: 'linear' }}
-            className="flex items-center gap-16 px-8"
+            animate={{ x: [0, -2000] }}
+            transition={{ repeat: Infinity, duration: 50, ease: 'linear' }}
+            className="flex items-center gap-20 px-8"
           >
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-16">
-                {['Education', 'Banking', 'Healthcare', 'Government', 'Enterprise', 'FinTech', 'Insurance', 'Remote Workforce', 'Online Exams', 'Customer Verification'].map(ind => (
-                  <span key={ind} className="text-xl md:text-2xl font-bold tracking-tight text-slate-400 hover:text-white hover:text-shadow-sm transition-colors cursor-default">
-                    {ind}
-                  </span>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-20">
+                {['ACME Corp', 'GlobalBank', 'HealthPlus', 'GovTech', 'FinSecure', 'EduLearn', 'SecurePay'].map((logo, idx) => (
+                  <div key={logo} className="flex items-center gap-3 grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100 cursor-default">
+                    <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-white font-bold text-xs">{logo.charAt(0)}</div>
+                    <span className="text-xl font-bold tracking-tight text-white">{logo}</span>
+                  </div>
                 ))}
               </div>
             ))}
@@ -479,9 +447,7 @@ export default function HomePage() {
             {WHY_US_FEATURES.map((feature, i) => (
               <motion.div key={feature.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: i * 0.1 }}>
                 <TiltCard className="h-full bg-white/[0.01] rounded-2xl p-8 border border-white/5 hover:border-white/10 hover:bg-white/[0.02] transition-colors relative overflow-hidden group">
-                  {/* Subtle hover gradient */}
                   <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-500" style={{ backgroundImage: `linear-gradient(to bottom right, \${feature.color}, transparent)` }} />
-                  
                   <div className="relative z-10">
                     <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300" style={{ background: `\${feature.color}15`, border: `1px solid \${feature.color}30`, boxShadow: `0 0 20px \${feature.color}10` }}>
                       <feature.icon size={28} color={feature.color} />
@@ -510,9 +476,7 @@ export default function HomePage() {
           </div>
 
           <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative mx-auto max-w-[1100px]">
-            {/* Dashboard Mock Window */}
             <div className="rounded-2xl border border-white/10 bg-[#030712] shadow-[0_30px_100px_-20px_rgba(0,212,255,0.2)] overflow-hidden relative">
-              {/* Top Bar */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
                 <div className="flex items-center gap-6">
                   <div className="flex gap-2">
@@ -522,9 +486,8 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-4 text-sm font-medium">
                     <span className="text-white">Overview</span>
-                    <span className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">Logs</span>
-                    <span className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">API Keys</span>
-                    <span className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">Settings</span>
+                    <span className="text-slate-500">Logs</span>
+                    <span className="text-slate-500">API Keys</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -536,132 +499,134 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Dashboard Content */}
               <div className="p-6 md:p-8 bg-gradient-to-b from-[#030712] to-[#0a0f1e]">
-                
-                {/* KPI Row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
                   {[
-                    { label: 'Total Verifications', value: '2.4M', trend: '+18.2%', color: '#00d4ff', up: true },
-                    { label: 'Passed', value: '2.1M', trend: '+15.4%', color: '#00ff88', up: true },
-                    { label: 'Spoofs Blocked', value: '45.2K', trend: '+2.1%', color: '#ffb800', up: true },
-                    { label: 'Avg Latency', value: '342ms', trend: '-45ms', color: '#7c3aed', up: false },
+                    { label: 'API Calls', value: 345000, color: '#00d4ff' },
+                    { label: 'Passed', value: 342100, color: '#00ff88' },
+                    { label: 'Spoofs Blocked', value: 11240, color: '#ffb800' },
                   ].map((kpi, i) => (
-                    <div key={i} className="p-5 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-colors relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] rounded-full blur-2xl group-hover:bg-current transition-colors opacity-20" style={{ color: kpi.color }} />
+                    <div key={i} className="p-5 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden">
                       <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mb-2">{kpi.label}</div>
-                      <div className="text-3xl font-bold text-white tracking-tight mb-2">{kpi.value}</div>
-                      <div className="flex items-center gap-1 text-[11px] font-mono font-medium" style={{ color: kpi.up ? '#00ff88' : '#00d4ff' }}>
-                        {kpi.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />} {kpi.trend} this week
+                      <div className="text-3xl font-bold text-white tracking-tight">
+                        {mounted ? <AnimatedNumber value={kpi.value} /> : kpi.value}
                       </div>
                     </div>
                   ))}
+                  <div className="p-5 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden">
+                      <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mb-2">Avg Latency</div>
+                      <div className="text-3xl font-bold text-white tracking-tight">312<span className="text-lg text-slate-500 ml-1">ms</span></div>
+                  </div>
                 </div>
 
-                {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Main Chart */}
-                  <div className="lg:col-span-2 p-6 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-6">
-                      <div className="text-sm font-semibold text-white">Verification Volume</div>
-                      <div className="text-xs text-slate-500 border border-white/10 px-2 py-1 rounded">30 Days</div>
-                    </div>
-                    <div className="h-48 flex items-end justify-between px-2 relative z-10">
-                      {[...Array(40)].map((_, i) => {
-                        const h = Math.random() * 80 + 20;
-                        return (
-                          <motion.div key={i} className="w-[1.5%] rounded-t-sm"
-                            style={{ 
-                              height: `\${h}%`, 
-                              background: i > 35 ? 'linear-gradient(to top, rgba(0,212,255,0.2), rgba(0,212,255,0.8))' : 'linear-gradient(to top, rgba(255,255,255,0.05), rgba(255,255,255,0.2))',
-                              transformOrigin: "bottom"
-                            }}
-                            initial={{ scaleY: 0 }}
-                            whileInView={{ scaleY: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: i * 0.02 }}
-                          />
-                        );
-                      })}
+                  {/* Real Recharts Volume */}
+                  <div className="lg:col-span-2 p-6 rounded-xl border border-white/5 bg-white/[0.01]">
+                    <div className="text-sm font-semibold text-white mb-6">Verification Volume</div>
+                    <div className="h-48 w-full">
+                      {mounted && (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={usageData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="volColor" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                            <RechartsTooltip contentStyle={{ backgroundColor: '#030712', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                            <Area type="monotone" dataKey="volume" stroke="#00d4ff" strokeWidth={2} fillOpacity={1} fill="url(#volColor)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
 
-                  {/* Threat Feed */}
+                  {/* Real Recharts Threats */}
                   <div className="p-6 rounded-xl border border-white/5 bg-white/[0.01]">
-                    <div className="text-sm font-semibold text-white mb-6">Recent Threats Blocked</div>
-                    <div className="space-y-4">
-                      {[
-                        { type: 'Deepfake (Video)', ip: '192.168.1.1', time: '2m ago', color: '#ff3366' },
-                        { type: 'Screen Replay', ip: '10.0.0.4', time: '14m ago', color: '#ffb800' },
-                        { type: 'Mask Attack', ip: '172.16.0.1', time: '1h ago', color: '#ff3366' },
-                        { type: 'Photo Print', ip: '192.168.0.10', time: '3h ago', color: '#ffb800' },
-                      ].map((threat, i) => (
-                        <div key={i} className="flex justify-between items-center border-b border-white/5 pb-3 last:border-0 last:pb-0">
-                          <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: threat.color, boxShadow: `0 0 5px \${threat.color}` }} />
-                            <div>
-                              <div className="text-[13px] text-white font-medium">{threat.type}</div>
-                              <div className="text-[11px] text-slate-500 font-mono">{threat.ip}</div>
-                            </div>
-                          </div>
-                          <div className="text-[11px] text-slate-500">{threat.time}</div>
-                        </div>
-                      ))}
+                    <div className="text-sm font-semibold text-white mb-6">Threat Vectors</div>
+                    <div className="h-48 w-full">
+                      {mounted && (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={threatData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="type" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} width={60} />
+                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: '#030712', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                              {threatData.map((entry, index) => (
+                                <Cell key={`cell-\${index}`} fill={['#ff3366', '#ffb800', '#f59e0b', '#ef4444'][index % 4]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
                 </div>
 
+                <div className="mt-6 p-6 rounded-xl border border-white/5 bg-white/[0.01] flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-1">Global Regional Map</h3>
+                    <p className="text-xs text-slate-500">Live verification requests spanning 45 countries.</p>
+                  </div>
+                  <Globe size={40} className="text-[#00d4ff] opacity-20" />
+                </div>
               </div>
             </div>
-            
-            {/* Glow behind dashboard */}
             <div className="absolute -inset-4 bg-gradient-to-b from-[#00d4ff]/10 to-transparent blur-3xl -z-10" />
           </motion.div>
         </div>
       </section>
 
-      {/* ── ANIMATED VERIFICATION PIPELINE ─────────────────── */}
+      {/* ── DYNAMIC VERIFICATION PIPELINE ─────────────────── */}
       <section className="py-24 lg:py-32 relative z-10 bg-[#030712] border-t border-white/5 overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             
             <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7c3aed] mb-4 block flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7c3aed] mb-4 flex items-center gap-2">
                 <Cpu size={14} /> Neural Processing Pipeline
               </span>
               <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Security Architecture</h2>
               <p className="text-xl text-slate-400 mb-8 leading-relaxed">
                 MITRA VERIFY routes every request through a rigorous 5-stage neural pipeline. From spatial bounding to liveness checking and deepfake risk analysis, nothing bypasses the architecture.
               </p>
-              
-              <Link href="/signup" className="inline-flex items-center gap-2 text-[#00d4ff] font-semibold hover:text-white transition-colors">
+              <Link href="/security" className="inline-flex items-center gap-2 text-[#00d4ff] font-semibold hover:text-white transition-colors">
                 Read the Security Whitepaper <ArrowRight size={16} />
               </Link>
             </motion.div>
 
-            {/* Visual Pipeline */}
-            <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative h-[400px] flex flex-col justify-between py-4">
-              {/* Connecting vertical line */}
+            <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative h-[450px] flex flex-col justify-between py-4">
               <div className="absolute left-[27px] top-8 bottom-8 w-px bg-white/10 z-0" />
-              {/* Animated glow moving down the line */}
-              <motion.div 
-                className="absolute left-[26px] w-[3px] h-16 bg-[#00d4ff] rounded-full shadow-[0_0_15px_#00d4ff] z-10"
-                animate={{ top: ['0%', '100%'] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-              />
+              
+              <AnimatePresence>
+                {[...Array(5)].map((_, i) => (
+                  <motion.div 
+                    key={i}
+                    className="absolute left-[26px] w-[3px] h-12 bg-[#00d4ff] rounded-full shadow-[0_0_15px_#00d4ff] z-10"
+                    initial={{ top: '0%', opacity: 0 }}
+                    animate={{ top: '100%', opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear', delay: i * 0.6 }}
+                  />
+                ))}
+              </AnimatePresence>
 
               {[
-                { step: '01', title: 'Face Detection & Bounding', color: '#475569', activeColor: '#00d4ff' },
-                { step: '02', title: '478-Point Landmark Extraction', color: '#475569', activeColor: '#00d4ff' },
-                { step: '03', title: 'Liveness & Anti-Spoof Engine', color: '#475569', activeColor: '#7c3aed' },
-                { step: '04', title: '1:N Identity Matching', color: '#475569', activeColor: '#0066ff' },
-                { step: '05', title: 'Access Granted & Token Issued', color: '#475569', activeColor: '#00ff88' }
+                { step: '01', title: 'Face Detection & Bounding', color: '#00d4ff' },
+                { step: '02', title: 'Landmark Extraction', color: '#00d4ff' },
+                { step: '03', title: 'Liveness Verification', color: '#7c3aed' },
+                { step: '04', title: 'Anti-Spoof Analysis', color: '#7c3aed' },
+                { step: '05', title: 'Identity Matching', color: '#3b82f6' },
+                { step: '06', title: 'Access Granted', color: '#00ff88' }
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-6 relative z-20 group">
-                  <div className="w-14 h-14 rounded-full bg-[#0a0f1e] border border-white/10 flex items-center justify-center font-mono text-sm font-bold text-slate-500 group-hover:border-current group-hover:text-current transition-colors" style={{ color: item.color }} onMouseEnter={(e) => e.currentTarget.style.color = item.activeColor} onMouseLeave={(e) => e.currentTarget.style.color = item.color}>
+                  <div className="w-14 h-14 rounded-full bg-[#0a0f1e] border flex items-center justify-center font-mono text-sm font-bold transition-all shadow-lg"
+                    style={{ borderColor: `\${item.color}40`, color: item.color, boxShadow: `0 0 15px \${item.color}20` }}>
                     {item.step}
                   </div>
-                  <div className="flex-1 p-4 rounded-xl border border-transparent group-hover:border-white/5 group-hover:bg-white/[0.01] transition-all">
+                  <div className="flex-1 p-3 rounded-xl border border-transparent group-hover:border-white/5 group-hover:bg-white/[0.01] transition-all">
                     <div className="text-lg font-semibold text-slate-300 group-hover:text-white transition-colors">{item.title}</div>
                   </div>
                 </div>
@@ -685,28 +650,27 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="max-w-4xl mx-auto">
             <div className="rounded-xl border border-white/10 bg-[#030712] overflow-hidden shadow-2xl">
               
-              {/* Terminal Header */}
               <div className="flex justify-between items-center bg-white/[0.02] border-b border-white/10 px-4 py-3">
                 <div className="flex gap-2">
                   <button onClick={() => setActiveCodeTab('typescript')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'typescript' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}>TypeScript</button>
-                  <button onClick={() => setActiveCodeTab('javascript')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'javascript' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Node.js</button>
                   <button onClick={() => setActiveCodeTab('python')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'python' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}>Python</button>
-                  <button onClick={() => setActiveCodeTab('curl')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'curl' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}>cURL</button>
+                  <button onClick={() => setActiveCodeTab('curl')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'curl' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}>cURL Request</button>
+                  <button onClick={() => setActiveCodeTab('response')} className={`text-[13px] font-mono px-3 py-1.5 rounded-md transition-colors \${activeCodeTab === 'response' ? 'bg-[#00ff88]/10 text-[#00ff88]' : 'text-slate-500 hover:text-slate-300'}`}>Response</button>
                 </div>
-                <button onClick={handleCopy} className="text-slate-500 hover:text-white transition-colors p-2 rounded-md hover:bg-white/5" title="Copy code">
-                  {copied ? <Check size={16} color="#00ff88" /> : <Copy size={16} />}
-                </button>
+                <div className="flex items-center gap-4">
+                  <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> us-east-1: 42ms</div>
+                  <button onClick={handleCopy} className="text-slate-500 hover:text-white transition-colors p-2 rounded-md hover:bg-white/5" title="Copy code">
+                    {copied ? <Check size={16} color="#00ff88" /> : <Copy size={16} />}
+                  </button>
+                </div>
               </div>
               
-              {/* Terminal Body */}
               <div className="p-6 overflow-x-auto">
                 <pre className="text-[13px] font-mono leading-relaxed text-[#a8b2d1]">
                   {activeCodeTab === 'typescript' && (
                     <>
                       <span className="text-[#c678dd]">import</span> {'{ MitraVerify, VerificationResult }'} <span className="text-[#c678dd]">from</span> <span className="text-[#98c379]">'@mitra-verify/sdk'</span>;<br/><br/>
-                      <span className="text-[#c678dd]">const</span> client = <span className="text-[#c678dd]">new</span> <span className="text-[#e5c07b]">MitraVerify</span>({'{'}<br/>
-                      {'  '}apiKey: process.env.MITRA_API_KEY!<br/>
-                      {'}'});<br/><br/>
+                      <span className="text-[#c678dd]">const</span> client = <span className="text-[#c678dd]">new</span> <span className="text-[#e5c07b]">MitraVerify</span>({'{'} apiKey: process.env.MITRA_API_KEY! {'}'});<br/><br/>
                       <span className="text-[#c678dd]">export async function</span> <span className="text-[#61afef]">authenticateUser</span>(frame: <span className="text-[#e5c07b]">Buffer</span>, userId: <span className="text-[#e5c07b]">string</span>): <span className="text-[#e5c07b]">Promise</span>{'<'}<span className="text-[#e5c07b]">boolean</span>{'> {'}<br/>
                       {'  '}<span className="text-[#c678dd]">const</span> result: <span className="text-[#e5c07b]">VerificationResult</span> = <span className="text-[#c678dd]">await</span> client.<span className="text-[#61afef]">verifyIdentity</span>({'{'}<br/>
                       {'    '}imageBuffer: frame,<br/>
@@ -721,64 +685,59 @@ export default function HomePage() {
                   {activeCodeTab === 'javascript' && CODE_EXAMPLES.javascript}
                   {activeCodeTab === 'python' && CODE_EXAMPLES.python}
                   {activeCodeTab === 'curl' && CODE_EXAMPLES.curl}
+                  {activeCodeTab === 'response' && <span className="text-[#98c379]">{CODE_EXAMPLES.response}</span>}
                 </pre>
               </div>
               
-              {/* Terminal Footer */}
-              <div className="bg-[#00d4ff]/10 border-t border-[#00d4ff]/20 px-6 py-3 flex items-center gap-3">
-                <Terminal size={14} color="#00d4ff" />
-                <span className="text-[12px] font-mono text-[#00d4ff]">npm install @mitra-verify/sdk</span>
+              <div className="bg-black/50 border-t border-white/5 px-6 py-3 flex items-center gap-3">
+                <Terminal size={14} className="text-slate-500" />
+                <span className="text-[12px] font-mono text-slate-300"><span className="text-slate-500">~</span> npm install @mitra-verify/sdk</span>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── API COMPARISON ─────────────────────────────────── */}
+      {/* ── API COMPARISON / PRICING ─────────────────────────── */}
       <section className="py-24 lg:py-32 relative z-10 bg-[#030712] border-t border-white/5">
         <div className="max-w-[1400px] mx-auto px-6">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#00d4ff] mb-4 block">THREE POWERFUL APIs</span>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Choose Your Verification Level</h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">From frictionless 1-second liveness checks to high-assurance enterprise identity validation.</p>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#00d4ff] mb-4 block">FLEXIBLE INFRASTRUCTURE</span>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Simple Enterprise Pricing</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">Scale securely from your first 10,000 verifications to global enterprise deployment.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {API_PRODUCTS.map((product, i) => (
-              <motion.div key={product.id} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="flex flex-col h-full bg-[#0a0f1e] p-8 rounded-2xl border transition-colors group" style={{ borderColor: product.border }}>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `\${product.color}15`, border: `1px solid \${product.color}30` }}>
-                    <product.icon size={26} color={product.color} />
+            {[
+              { id: 'starter', name: 'Starter', price: 'Free', limit: '10,000/mo', icon: Zap, color: '#00d4ff', features: ['Fast Liveness API', 'Basic Anti-Spoof', 'Community Support', '99.9% Uptime SLA'] },
+              { id: 'growth', name: 'Growth', price: '$499', limit: '100,000/mo', icon: Shield, color: '#7c3aed', features: ['Advanced Anti-Spoof', '1:N Identity Matching', 'Dashboard Analytics', 'Email Support'] },
+              { id: 'enterprise', name: 'Enterprise', price: 'Custom', limit: 'Unlimited', icon: Fingerprint, color: '#00ff88', features: ['Custom ML Models', 'On-Premise Deployment', 'Dedicated Account Manager', '99.99% Uptime SLA'] },
+            ].map((plan, i) => (
+              <motion.div key={plan.id} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                className="flex flex-col h-full bg-[#0a0f1e] p-8 rounded-2xl border border-white/5 hover:border-white/20 transition-colors group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-[0.03] transition-opacity" style={{ backgroundImage: `linear-gradient(to bottom, \${plan.color}, transparent)` }} />
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{ background: `\${plan.color}15`, border: `1px solid \${plan.color}30` }}>
+                    <plan.icon size={24} color={plan.color} />
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold" style={{ color: product.color }}>{product.securityLevel}</div>
-                    <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Security Level</div>
+                  <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{plan.name}</h3>
+                  <div className="flex items-end gap-2 mb-2">
+                    <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
+                    {plan.price !== 'Custom' && <span className="text-slate-500 mb-1">/ month</span>}
                   </div>
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{product.name}</h3>
-                <div className="text-sm text-slate-400 mb-6 min-h-[40px] leading-relaxed">{product.useCase}</div>
-                
-                <div className="font-mono text-[11px] px-3 py-2 rounded-lg mb-6 truncate" style={{ color: product.color, background: `\${product.color}10`, border: `1px solid \${product.color}20` }}>
-                  {product.endpoint}
-                </div>
-                
-                <div className="space-y-4 flex-grow mb-8">
-                  {product.checks.map(check => (
-                    <div key={check} className="flex items-start gap-3">
-                      <CheckCircle size={16} color={product.color} className="mt-0.5 shrink-0" />
-                      <span className="text-[14px] text-slate-300 font-medium">{check}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="flex justify-between items-center pt-6 border-t border-white/10">
-                  <div>
-                    <div className="text-[11px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Latency Target</div>
-                    <div className="text-base font-bold text-white">{product.target}</div>
+                  <div className="text-sm font-mono text-slate-400 mb-8 pb-8 border-b border-white/10">Verifications: {plan.limit}</div>
+                  
+                  <div className="space-y-4 flex-grow mb-8">
+                    {plan.features.map(f => (
+                      <div key={f} className="flex items-center gap-3">
+                        <CheckCircle size={16} color={plan.color} />
+                        <span className="text-[14px] text-slate-300">{f}</span>
+                      </div>
+                    ))}
                   </div>
-                  <Link href={`/demo/\${product.id}`} className="flex items-center gap-2 text-sm font-bold transition-transform hover:translate-x-1" style={{ color: product.color }}>
-                    Try Demo <ArrowRight size={16} />
+                  
+                  <Link href="/signup" className="block text-center py-3 rounded-xl font-bold transition-all border" style={{ borderColor: `\${plan.color}40`, color: plan.color }}>
+                    Get Started
                   </Link>
                 </div>
               </motion.div>
@@ -787,22 +746,35 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── COMPLIANCE BADGES ──────────────────────────────── */}
+      <section className="py-16 bg-[#030712] border-t border-white/5">
+        <div className="max-w-[1400px] mx-auto px-6">
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+            {COMPLIANCE_BADGES.map((badge, i) => (
+              <div key={badge.name} className="group relative flex flex-col items-center">
+                <div className="text-lg md:text-xl font-extrabold text-slate-600 group-hover:text-white transition-colors cursor-default tracking-tight">
+                  {badge.name}
+                </div>
+                <div className="absolute top-full mt-2 w-max px-3 py-1.5 bg-white/10 backdrop-blur-md rounded border border-white/10 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  {badge.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FINAL CTA ──────────────────────────────────────── */}
-      <section className="py-32 relative z-10 overflow-hidden bg-[#030712] border-t border-white/5">
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
+      <section className="py-24 relative z-10 overflow-hidden bg-[#030712] border-t border-white/5">
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
-            className="bg-gradient-to-br from-[#0a0f1e] to-[#030712] p-12 md:p-24 rounded-[40px] text-center border border-white/10 relative overflow-hidden shadow-[0_0_100px_rgba(0,212,255,0.05)]">
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+            className="bg-gradient-to-br from-[#0a0f1e] to-[#030712] p-12 md:p-20 rounded-[40px] text-center border border-white/10 relative overflow-hidden shadow-[0_0_100px_rgba(0,212,255,0.05)]">
             
-            {/* Massive background glows */}
             <div className="absolute -top-[50%] -left-[10%] w-[800px] h-[800px] bg-[#00d4ff]/10 rounded-full blur-[150px] pointer-events-none" />
             <div className="absolute -bottom-[50%] -right-[10%] w-[800px] h-[800px] bg-[#7c3aed]/10 rounded-full blur-[150px] pointer-events-none" />
             
             <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-8 tracking-tight leading-[1.1]">Secure Identity Verification Starts Here</h2>
-              <p className="text-xl md:text-2xl text-slate-400 mb-12 leading-relaxed">
-                Deploy enterprise-grade biometric authentication in minutes. Stop identity fraud, eliminate deepfakes, and build profound trust with your users.
-              </p>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-8 tracking-tight leading-[1.1]">Secure Identity Verification Starts Here</h2>
               
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <Link href="/signup" className="group relative inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-transparent rounded-2xl overflow-hidden hover:scale-[1.02] w-full sm:w-auto">
@@ -814,11 +786,6 @@ export default function HomePage() {
                   Book a Demo
                 </Link>
               </div>
-              
-              <p className="mt-10 text-[13px] text-slate-500 font-mono uppercase tracking-widest font-semibold flex items-center justify-center gap-4">
-                <span><CheckCircle size={14} className="inline mr-1 mb-0.5 text-[#00ff88]" /> No credit card</span>
-                <span><CheckCircle size={14} className="inline mr-1 mb-0.5 text-[#00ff88]" /> 10k free API calls/mo</span>
-              </p>
             </div>
           </motion.div>
         </div>
@@ -826,12 +793,4 @@ export default function HomePage() {
 
     </div>
   );
-}
-
-function TrendingUp(props: any) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width={props.size||24} height={props.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>;
-}
-
-function TrendingDown(props: any) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width={props.size||24} height={props.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>;
 }
