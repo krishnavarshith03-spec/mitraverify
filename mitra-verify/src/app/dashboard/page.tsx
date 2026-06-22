@@ -91,16 +91,33 @@ export default function DashboardPage() {
           <div className="p-6 md:p-8 lg:p-10 max-w-[1440px] mx-auto space-y-8">
             
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
               <div>
                 <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
                   Enterprise Security Command Center
                 </h1>
-                <p className="text-sm text-slate-400 mt-2 font-light max-w-2xl">
+                
+                {/* System Health Indicators */}
+                <div className="flex flex-wrap items-center gap-3 mt-4 mb-2">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00ff88]/10 border border-[#00ff88]/20 shadow-[0_0_10px_rgba(0,255,136,0.1)]">
+                    <CheckCircle2 size={12} className="text-[#00ff88]" />
+                    <span className="text-[10px] uppercase tracking-widest text-[#00ff88] font-bold">System Operational</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/10">
+                    <Activity size={12} className="text-[#00d4ff]" />
+                    <span className="text-[10px] uppercase tracking-widest text-slate-300 font-bold">99.99% Uptime</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/10">
+                    <Globe size={12} className="text-[#7c3aed]" />
+                    <span className="text-[10px] uppercase tracking-widest text-slate-300 font-bold">12 Active Regions</span>
+                  </div>
+                </div>
+
+                <p className="text-sm text-slate-400 mt-3 font-light max-w-2xl">
                   Real-time threat monitoring and biometric telemetry across global edge nodes.
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 shrink-0">
                 <Link href="/developer" className="px-5 py-2.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 rounded-xl text-[13px] font-semibold text-white transition-all flex items-center gap-2">
                   <FileText size={16} /> API Docs
                 </Link>
