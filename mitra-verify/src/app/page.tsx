@@ -1,10 +1,10 @@
 'use client';
 
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState, useEffect, Suspense, lazy, Component } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Shield, Zap, Fingerprint, Activity, Eye, Building, GraduationCap, Landmark, Lock, ChevronRight, CheckCircle2, Server, Cpu, Database } from 'lucide-react';
+import { Shield, Activity, Eye, Building, GraduationCap, Landmark, Lock, ChevronRight, Server, Cpu, Database, Network, Fingerprint, ShieldAlert, Key } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import type { ScanPhase } from '@/components/3d/HeroScene';
@@ -206,14 +206,14 @@ export default function HomePage() {
       <motion.section
         ref={heroRef}
         style={mounted ? { opacity: heroOpacity, y: heroY } : {}}
-        className="relative min-h-[100dvh] flex items-center pt-24"
+        className="relative min-h-[100dvh] flex items-center pt-32 pb-24"
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_60%_40%,rgba(0,212,255,0.06),transparent)] z-0 pointer-events-none" />
 
         <div className="max-w-[1400px] mx-auto px-6 w-full relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 items-center">
             
-            <div className="flex flex-col gap-10 z-20">
+            <div className="flex flex-col gap-8 z-20 xl:pr-12">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <span className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] uppercase text-[#00d4ff] border border-[#00d4ff]/20 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(0,212,255,0.1)] backdrop-blur-md">
                   <Shield size={14} /> Identity Infrastructure For The Fortune 500
@@ -221,19 +221,19 @@ export default function HomePage() {
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                className="text-5xl md:text-6xl lg:text-[80px] font-bold text-white tracking-tight leading-[1.05]"
+                className="text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-[1.1]"
               >
                 Enterprise Biometric Intelligence
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-xl lg:text-2xl text-slate-400 font-light leading-relaxed max-w-xl"
+                className="text-lg lg:text-xl text-slate-400 font-light leading-relaxed max-w-xl"
               >
-                Real-time liveness detection, deepfake defense, and zero-trust authentication for mission-critical systems.
+                Real-time liveness detection, deepfake defense, and zero-trust authentication for mission-critical systems. Build trust at a global scale.
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} 
-                className="flex flex-col sm:flex-row gap-6 mt-4"
+                className="flex flex-col sm:flex-row gap-5 mt-4"
               >
                 <MagneticButton href="/demo/enterprise">
                   Request Demo <ChevronRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
@@ -244,9 +244,10 @@ export default function HomePage() {
               </motion.div>
             </div>
 
-            <div className="relative w-full h-[600px] lg:h-[800px] flex items-center justify-center scale-100 lg:scale-125">
+            {/* Scale reduced by ~20% from scale-125 to scale-[0.95] for visual balance */}
+            <div className="relative w-full h-[500px] lg:h-[700px] flex items-center justify-center scale-90 lg:scale-[0.95] mt-12 lg:mt-0">
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.5, delay: 0.2 }} className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="absolute w-[800px] h-[800px] bg-[#00d4ff]/10 rounded-full blur-[150px] mix-blend-screen" />
+                <div className="absolute w-[600px] h-[600px] bg-[#00d4ff]/10 rounded-full blur-[120px] mix-blend-screen" />
               </motion.div>
               
               <div className="relative w-full h-full z-10 pointer-events-auto">
@@ -264,12 +265,12 @@ export default function HomePage() {
                 <motion.div 
                   animate={{ rotate: 360 }} 
                   transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-                  className="w-[500px] h-[500px] border border-white/5 rounded-full border-dashed opacity-50"
+                  className="w-[450px] h-[450px] border border-white/5 rounded-full border-dashed opacity-50"
                 />
                 <motion.div 
                   animate={{ rotate: -360 }} 
                   transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                  className="absolute w-[600px] h-[600px] border border-[#00d4ff]/10 rounded-full border-dotted opacity-30"
+                  className="absolute w-[550px] h-[550px] border border-[#00d4ff]/10 rounded-full border-dotted opacity-30"
                 />
               </div>
             </div>
@@ -288,17 +289,19 @@ export default function HomePage() {
             className="flex flex-wrap justify-between items-center gap-8 lg:gap-12"
           >
             {[
-              { title: 'Zero-Day Spoof Prevention', desc: 'Defends against synthetic media & replays' },
-              { title: 'Continuous Tracking', desc: 'Real-time session persistence' },
-              { title: 'Sub-Millisecond Inference', desc: 'Global edge processing' },
-              { title: 'Encrypted Biometrics', desc: 'Mathematical hash storage only' },
-              { title: 'FIDO2 Compliant', desc: 'Enterprise security standards' }
+              { title: 'Zero-Day Spoof Prevention', desc: 'Defends against synthetic media & replays via multi-spectral analysis' },
+              { title: 'Continuous Tracking', desc: 'Real-time session persistence with passive background verification' },
+              { title: 'Sub-Millisecond Inference', desc: 'Global edge processing for near-zero latency auth events' },
+              { title: 'Encrypted Biometrics', desc: 'Mathematical hash storage only; raw imagery is instantly discarded' },
             ].map((capability) => (
-              <div key={capability.title} className="flex flex-col flex-1 min-w-[200px]">
-                <div className="text-[13px] font-semibold text-white tracking-wide uppercase mb-2">
-                  {capability.title}
+              <div key={capability.title} className="flex flex-col flex-1 min-w-[240px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#00d4ff]" />
+                  <div className="text-[13px] font-semibold text-white tracking-wide uppercase">
+                    {capability.title}
+                  </div>
                 </div>
-                <div className="text-[14px] text-slate-500 font-light leading-relaxed">
+                <div className="text-[14px] text-slate-500 font-light leading-relaxed pl-3 border-l border-white/10 ml-[3px]">
                   {capability.desc}
                 </div>
               </div>
@@ -308,10 +311,10 @@ export default function HomePage() {
       </section>
 
       {/* ── 3. PRODUCT SHOWCASE (THREAT INTELLIGENCE) ────────────────────── */}
-      <section className="py-32 lg:py-48 relative z-10">
+      <section className="py-32 lg:py-40 relative z-10">
         <div className="max-w-[1200px] mx-auto px-6 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-8">Active Threat Intelligence</h2>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">Active Threat Intelligence</h2>
             <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Monitor authentication streams globally with deep cryptographic confidence scoring and real-time risk mitigation.</p>
           </motion.div>
 
@@ -325,49 +328,66 @@ export default function HomePage() {
               <div className="rounded-3xl border border-white/10 bg-[#050b14]/90 backdrop-blur-3xl shadow-2xl overflow-hidden relative">
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#00d4ff] via-[#3b82f6] to-[#00FFB2]" />
                 
-                <div className="p-10 lg:p-14 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-2 gap-10">
                   
-                  {/* Intelligence Matrix */}
+                  {/* Intelligence Matrix - Increased Density */}
                   <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(0,212,255,0.08),transparent)] pointer-events-none" />
                     
-                    <div>
-                      <h3 className="text-xl font-bold text-white mb-2">Identity Matrix</h3>
-                      <p className="text-sm text-slate-400 font-light">Analyzing 478 vector points for cryptographic match.</p>
+                    <div className="flex items-start justify-between mb-8">
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-2">Identity Cryptography</h3>
+                        <p className="text-sm text-slate-400 font-light">Analyzing 478 vector points to generate an irreversible, salted biometric signature.</p>
+                      </div>
+                      <ShieldAlert className="text-[#00d4ff] opacity-50" size={32} />
                     </div>
 
-                    <div className="mt-12 space-y-6 relative z-10">
+                    <div className="space-y-5 relative z-10 flex-1">
                       {[
-                        { label: 'Spatial Consistency', score: 'Verified', color: '#10b981' },
-                        { label: 'Micro-expression Sync', score: 'Verified', color: '#10b981' },
-                        { label: 'Texture Depth Analysis', score: 'Verified', color: '#10b981' },
+                        { label: 'Spatial Consistency', desc: 'Geometry mapping across 3D axes', status: 'Cryptographically Sound', color: '#10b981' },
+                        { label: 'Micro-expression Sync', desc: 'Involuntary muscular movement verification', status: 'Liveness Confirmed', color: '#10b981' },
+                        { label: 'Texture Depth Analysis', desc: 'Sub-surface light scattering patterns', status: 'Human Verified', color: '#10b981' },
                       ].map((item, i) => (
-                        <div key={i} className="flex justify-between items-center border-b border-white/5 pb-4">
-                          <span className="text-sm text-slate-300 font-light">{item.label}</span>
-                          <span className="text-[12px] uppercase tracking-widest font-semibold" style={{ color: item.color }}>{item.score}</span>
+                        <div key={i} className="flex flex-col border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[15px] text-white font-medium">{item.label}</span>
+                            <span className="text-[11px] uppercase tracking-widest font-semibold bg-[#10b981]/10 text-[#10b981] px-2 py-1 rounded">
+                              {item.status}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 font-light">{item.desc}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Threat Vectors */}
-                  <div className="flex flex-col gap-6">
-                    <h3 className="text-xl font-bold text-white mb-2">Threat Vectors Mitigated</h3>
-                    {[
-                      { label: 'Deepfake Injection', risk: 'Mitigated', icon: Shield, color: '#3b82f6' },
-                      { label: 'Presentation Attack (Print)', risk: 'Blocked', icon: Activity, color: '#00d4ff' },
-                      { label: 'Replay Attack (Video)', risk: 'Blocked', icon: Lock, color: '#7c3aed' },
-                    ].map((item, i) => (
-                      <div key={i} className="bg-[#020617] border border-white/5 rounded-xl p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}>
-                            <item.icon size={18} color={item.color} />
+                  {/* Threat Vectors - Increased Density */}
+                  <div className="flex flex-col gap-5">
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2">Threat Vectors Mitigated</h3>
+                      <p className="text-sm text-slate-400 font-light mb-6">Our engine automatically isolates and nullifies incoming attack vectors before they hit your infrastructure.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Deepfake Injection', risk: 'Mitigated - Synthetic Media Detected', icon: Activity, color: '#3b82f6', desc: 'GAN-generated artifacts identified in video feed.' },
+                        { label: 'Presentation Attack', risk: 'Blocked - 2D Screen Detected', icon: Eye, color: '#00d4ff', desc: 'Lack of depth variance triggers spoof defense.' },
+                        { label: 'Replay Attack', risk: 'Blocked - Stale Session Hash', icon: Lock, color: '#7c3aed', desc: 'Re-used biometric payload instantly rejected.' },
+                      ].map((item, i) => (
+                        <div key={i} className="bg-[#020617] border border-white/5 rounded-xl p-5 hover:bg-white/[0.02] transition-colors group">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-lg shrink-0 flex items-center justify-center transition-colors duration-300" style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}>
+                              <item.icon size={20} color={item.color} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[15px] font-medium text-white mb-1">{item.label}</span>
+                              <span className="text-xs text-slate-400 leading-relaxed mb-2">{item.desc}</span>
+                              <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: item.color }}>{item.risk}</span>
+                            </div>
                           </div>
-                          <span className="text-[15px] font-medium text-white">{item.label}</span>
                         </div>
-                        <span className="text-[11px] uppercase tracking-wider text-slate-500">{item.risk}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                 </div>
@@ -380,28 +400,28 @@ export default function HomePage() {
       {/* ── 4. ENTERPRISE USE CASES ───────────────────────────────────── */}
       <section className="py-32 relative z-10 bg-[#01040a] border-y border-white/5">
         <div className="max-w-[1400px] mx-auto px-6">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-8">Mission-Critical Deployments</h2>
-            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Securing high-assurance environments where traditional authentication fails.</p>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">Mission-Critical Deployments</h2>
+            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Securing high-assurance environments where traditional authentication protocols are insufficient.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { title: 'Government', icon: Landmark, desc: 'High-assurance verification for citizen services and digital identity portals.', color: '#00d4ff' },
-              { title: 'Banking & FinTech', icon: Shield, desc: 'KYC compliance, secure wire transfers, and fraud prevention at scale.', color: '#00FFB2' },
-              { title: 'Corporate Security', icon: Building, desc: 'Zero-trust biometric access for VPNs, secure facilities, and internal tools.', color: '#3b82f6' },
-              { title: 'Education', icon: GraduationCap, desc: 'Prevent impersonation and ensure academic integrity during remote testing.', color: '#7c3aed' },
+              { title: 'Government', icon: Landmark, desc: 'High-assurance verification for citizen services, border control, and digital identity portals.', color: '#00d4ff' },
+              { title: 'Banking & FinTech', icon: Shield, desc: 'KYC compliance, secure wire transfers, and comprehensive fraud prevention at global scale.', color: '#00FFB2' },
+              { title: 'Corporate Security', icon: Building, desc: 'Zero-trust biometric access for VPNs, secure facilities, and sensitive internal tools.', color: '#3b82f6' },
+              { title: 'Education', icon: GraduationCap, desc: 'Prevent impersonation and strictly enforce academic integrity during remote testing.', color: '#7c3aed' },
             ].map((useCase, i) => (
               <motion.div key={useCase.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <TiltCard className="h-full">
-                  <div className="h-full p-10 rounded-2xl bg-[#020617] border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group">
+                  <div className="h-full p-8 rounded-2xl bg-[#020617] border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" style={{ backgroundImage: `linear-gradient(to bottom right, ${useCase.color}, transparent)` }} />
                     <div className="relative z-10">
-                      <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-8" style={{ background: `${useCase.color}10`, border: `1px solid ${useCase.color}20` }}>
-                        <useCase.icon size={26} color={useCase.color} />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style={{ background: `${useCase.color}10`, border: `1px solid ${useCase.color}20` }}>
+                        <useCase.icon size={22} color={useCase.color} />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-4 tracking-tight">{useCase.title}</h3>
-                      <p className="text-slate-400 font-light leading-relaxed text-[16px]">{useCase.desc}</p>
+                      <h3 className="text-xl font-bold text-white mb-3 tracking-tight">{useCase.title}</h3>
+                      <p className="text-slate-400 font-light leading-relaxed text-[15px]">{useCase.desc}</p>
                     </div>
                   </div>
                 </TiltCard>
@@ -411,47 +431,87 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 5. ARCHITECTURE PILLARS (Replaces Pricing) ────────────────── */}
-      <section className="py-32 lg:py-48 relative z-10 bg-[#020617]">
+      {/* ── 5. ARCHITECTURE PILLARS ───────────────────────────────────── */}
+      <section className="py-32 lg:py-40 relative z-10 bg-[#020617]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-[#00d4ff]/20 to-transparent" />
         <div className="max-w-[1200px] mx-auto px-6 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-8">Deep-Tech Architecture</h2>
-            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Built from the ground up to prevent spoofing, protect privacy, and scale infinitely.</p>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">Deep-Tech Architecture</h2>
+            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Built from the ground up to prevent spoofing, protect privacy, and scale infinitely across distributed systems.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { name: 'Edge Processing', icon: Cpu, desc: 'Models run directly on the client to extract landmarks and assess lighting instantly.', color: '#00d4ff' },
-              { name: 'Core Engine', icon: Server, desc: 'Proprietary cloud models execute heavy-weight anti-spoofing and deepfake analysis.', color: '#3b82f6' },
-              { name: 'Zero-Trust Vault', icon: Database, desc: 'No facial imagery is stored. Only mathematically irreversible biometric hashes.', color: '#00FFB2' },
+              { name: 'Edge Processing', icon: Cpu, desc: 'WebAssembly models run directly on the client to extract landmarks and assess lighting instantly without server round-trips.', color: '#00d4ff' },
+              { name: 'Core Engine', icon: Server, desc: 'Proprietary cloud infrastructure executes heavy-weight anti-spoofing heuristics and multi-frame deepfake analysis.', color: '#3b82f6' },
+              { name: 'Zero-Trust Vault', icon: Database, desc: 'No facial imagery is stored. We retain only mathematically irreversible biometric hashes secured by KMS encryption.', color: '#00FFB2' },
             ].map((pillar, i) => (
               <motion.div key={pillar.name} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="relative flex flex-col h-full bg-[#050b14] p-10 rounded-2xl border border-white/5 hover:border-white/10 transition-all group overflow-hidden"
+                className="relative flex flex-col h-full bg-[#050b14] p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-all group overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-[0.02] transition-opacity duration-500" style={{ backgroundImage: `linear-gradient(to bottom, ${pillar.color}, transparent)` }} />
                 
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-6" style={{ background: `${pillar.color}05` }}>
-                  <pillar.icon size={24} color={pillar.color} />
+                  <pillar.icon size={22} color={pillar.color} />
                 </div>
                 
-                <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{pillar.name}</h3>
-                <p className="text-[15px] text-slate-400 font-light leading-relaxed mb-8">
+                <h3 className="text-xl font-bold text-white mb-3 tracking-tight">{pillar.name}</h3>
+                <p className="text-[14px] text-slate-400 font-light leading-relaxed mb-6">
                   {pillar.desc}
                 </p>
                 
               </motion.div>
             ))}
           </div>
+
+          {/* Visual System Diagram */}
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            viewport={{ once: true }} 
+            transition={{ delay: 0.3 }}
+            className="mt-12 p-8 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 relative overflow-hidden"
+          >
+             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,212,255,0.03),transparent_70%)] pointer-events-none" />
+             
+             <div className="flex flex-col items-center z-10">
+               <div className="w-14 h-14 rounded-full border border-white/10 bg-[#020617] flex items-center justify-center shadow-[0_0_15px_rgba(0,212,255,0.1)]">
+                 <Network size={20} className="text-[#00d4ff]" />
+               </div>
+               <span className="text-xs uppercase tracking-widest text-slate-500 mt-3 font-semibold">Client Edge</span>
+             </div>
+
+             <div className="hidden md:flex flex-1 max-w-[200px] h-px bg-gradient-to-r from-[#00d4ff]/20 via-[#3b82f6]/50 to-[#00FFB2]/20 relative">
+                <motion.div animate={{ left: ['0%', '100%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }} className="absolute top-1/2 -translate-y-1/2 w-8 h-[2px] bg-[#3b82f6] shadow-[0_0_10px_#3b82f6]" />
+             </div>
+
+             <div className="flex flex-col items-center z-10">
+               <div className="w-16 h-16 rounded-full border border-white/10 bg-[#020617] flex items-center justify-center shadow-[0_0_25px_rgba(59,130,246,0.15)]">
+                 <Server size={24} className="text-[#3b82f6]" />
+               </div>
+               <span className="text-xs uppercase tracking-widest text-slate-500 mt-3 font-semibold">Core Verification API</span>
+             </div>
+
+             <div className="hidden md:flex flex-1 max-w-[200px] h-px bg-gradient-to-r from-[#3b82f6]/20 via-[#00FFB2]/50 to-[#10b981]/20 relative">
+                <motion.div animate={{ left: ['0%', '100%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear', delay: 1 }} className="absolute top-1/2 -translate-y-1/2 w-8 h-[2px] bg-[#00FFB2] shadow-[0_0_10px_#00FFB2]" />
+             </div>
+
+             <div className="flex flex-col items-center z-10">
+               <div className="w-14 h-14 rounded-full border border-white/10 bg-[#020617] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,178,0.1)]">
+                 <Key size={20} className="text-[#00FFB2]" />
+               </div>
+               <span className="text-xs uppercase tracking-widest text-slate-500 mt-3 font-semibold">Customer Vault</span>
+             </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* ── 6. ANIMATED WORKFLOW (Replaces Static Pipeline) ─────────────── */}
-      <section className="py-32 lg:py-48 relative z-10 border-t border-white/5 bg-[#01040a] overflow-hidden">
+      {/* ── 6. ANIMATED WORKFLOW (Expanded Descriptions) ────────────────── */}
+      <section className="py-32 relative z-10 border-t border-white/5 bg-[#01040a] overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-32 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-8">Data Workflow</h2>
-            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Every authentication request is broken down into packetized verification steps.</p>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-24 text-center">
+            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6">Data Workflow</h2>
+            <p className="text-xl text-slate-400 font-light max-w-2xl mx-auto">Every authentication request is systematically packetized, verified, and secured.</p>
           </motion.div>
 
           <motion.div 
@@ -460,40 +520,43 @@ export default function HomePage() {
             viewport={{ once: true, margin: "-100px" }} 
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="relative p-12 lg:p-20 rounded-3xl bg-[#050b14]/30 border border-white/5 shadow-2xl backdrop-blur-md max-w-6xl mx-auto overflow-hidden">
+            <div className="relative p-10 lg:p-16 rounded-3xl bg-[#050b14]/30 border border-white/5 shadow-2xl backdrop-blur-md max-w-6xl mx-auto overflow-hidden">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,212,255,0.02),transparent)] pointer-events-none" />
               
-              <div className="flex flex-col md:flex-row items-center justify-between relative z-10 w-full gap-8 md:gap-0">
+              <div className="flex flex-col md:flex-row items-start justify-between relative z-10 w-full gap-12 md:gap-0">
                 {[
-                  { id: '1', title: 'Capture', icon: Eye },
-                  { id: '2', title: 'Landmarks', icon: Activity },
-                  { id: '3', title: 'Anti-Spoof', icon: Shield },
-                  { id: '4', title: 'Match', icon: Fingerprint },
-                  { id: '5', title: 'Auth Token', icon: Lock }
+                  { id: '1', title: 'Capture', icon: Eye, desc: 'High-res frame sampling' },
+                  { id: '2', title: 'Landmarks', icon: Activity, desc: '478-point mesh extraction' },
+                  { id: '3', title: 'Anti-Spoof', icon: Shield, desc: 'Liveness & depth checks' },
+                  { id: '4', title: 'Match', icon: Fingerprint, desc: 'Cryptographic hash pairing' },
+                  { id: '5', title: 'Auth Token', icon: Lock, desc: 'Signed JWT generation' }
                 ].map((step, index, arr) => (
-                  <div key={step.id} className="flex flex-col md:flex-row items-center flex-1 w-full md:w-auto relative">
+                  <div key={step.id} className="flex flex-col md:flex-row items-center flex-1 w-full md:w-auto relative group">
                     
-                    <div className="flex flex-col items-center relative shrink-0">
-                      <div className="w-16 h-16 rounded-2xl bg-[#020617] border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)] relative z-20">
+                    <div className="flex flex-col items-center relative shrink-0 text-center">
+                      <div className="w-16 h-16 rounded-2xl bg-[#020617] border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)] relative z-20 group-hover:border-[#00d4ff]/30 group-hover:shadow-[0_0_25px_rgba(0,212,255,0.2)] transition-all duration-300">
                         <step.icon size={24} className="text-[#00d4ff]" />
                       </div>
-                      <span className="md:absolute md:top-24 mt-4 md:mt-0 text-[12px] uppercase tracking-widest text-slate-300 text-center w-32 md:left-1/2 md:-translate-x-1/2 font-semibold">
+                      <span className="mt-5 text-[13px] uppercase tracking-widest text-white font-semibold">
                         {step.title}
+                      </span>
+                      <span className="mt-2 text-[11px] text-slate-500 max-w-[120px] leading-relaxed">
+                        {step.desc}
                       </span>
                     </div>
 
                     {index < arr.length - 1 && (
-                      <div className="flex-1 w-px h-16 md:w-full md:h-px bg-white/5 mx-auto my-4 md:my-0 md:mx-6 relative overflow-hidden rounded-full">
+                      <div className="flex-1 w-px h-16 md:w-full md:h-px bg-white/5 mx-auto my-4 md:my-0 md:mx-4 relative overflow-hidden rounded-full self-start md:mt-8">
                         {/* Data Packets flowing through pipeline */}
                         <motion.div
                           animate={{ left: ['-20%', '120%'] }}
-                          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear', delay: index * 0.15 }}
-                          className="absolute hidden md:block top-1/2 -translate-y-1/2 w-4 h-[2px] bg-[#00d4ff] shadow-[0_0_10px_#00d4ff]"
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'linear', delay: index * 0.2 }}
+                          className="absolute hidden md:block top-1/2 -translate-y-1/2 w-6 h-[2px] bg-gradient-to-r from-transparent via-[#00d4ff] to-transparent"
                         />
                         <motion.div
                           animate={{ top: ['-20%', '120%'] }}
-                          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear', delay: index * 0.15 }}
-                          className="absolute md:hidden left-1/2 -translate-x-1/2 h-4 w-[2px] bg-[#00d4ff] shadow-[0_0_10px_#00d4ff]"
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'linear', delay: index * 0.2 }}
+                          className="absolute md:hidden left-1/2 -translate-x-1/2 h-6 w-[2px] bg-gradient-to-b from-transparent via-[#00d4ff] to-transparent"
                         />
                       </div>
                     )}
@@ -506,18 +569,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 7. FINAL CTA ──────────────────────────────────────── */}
-      <section className="py-40 lg:py-60 relative z-10 bg-[#020617] border-t border-white/5 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,212,255,0.06),transparent_50%)] pointer-events-none" />
+      {/* ── 7. FINAL CTA (Height Reduced) ───────────────────────────────── */}
+      <section className="py-24 lg:py-32 relative z-10 bg-[#020617] border-t border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,212,255,0.06),transparent_60%)] pointer-events-none" />
         
         <div className="max-w-[1000px] mx-auto px-6 relative z-10 text-center">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-            <h2 className="text-5xl md:text-8xl font-bold text-white mb-10 tracking-tight leading-[1.05]">Deploy Trust At Scale</h2>
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 tracking-tight">Deploy Trust At Scale</h2>
+            <p className="text-lg text-slate-400 mb-10 max-w-xl mx-auto">Strengthen security, reduce fraud, and build trust at every interaction with our enterprise API.</p>
             
-            <div className="flex justify-center">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <MagneticButton href="/demo/enterprise">
-                Request Enterprise Demo <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                Request Enterprise Demo <ChevronRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
               </MagneticButton>
+              <GlassButton href="/docs">
+                Read Documentation
+              </GlassButton>
             </div>
           </motion.div>
         </div>
@@ -528,13 +595,17 @@ export default function HomePage() {
         <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3">
             <Shield className="text-[#00d4ff]" size={18} />
-            <span className="text-sm font-bold text-white tracking-widest uppercase">MITRAVERIFY</span>
+            <span className="text-sm font-bold text-white tracking-widest uppercase">MITRA VERIFY</span>
           </div>
           
-          <div className="flex gap-10 text-[13px] font-medium text-slate-500 uppercase tracking-widest">
+          <div className="flex gap-8 text-[12px] font-medium text-slate-500 uppercase tracking-widest">
             <Link href="/docs" className="hover:text-white transition-colors">Documentation</Link>
             <Link href="/security" className="hover:text-white transition-colors">Security</Link>
             <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+          </div>
+
+          <div className="text-[11px] text-slate-600 font-medium tracking-wide">
+            © {new Date().getFullYear()} NXT STEP INNOVATORS
           </div>
         </div>
       </footer>

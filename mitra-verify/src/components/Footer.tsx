@@ -70,7 +70,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/10 gap-4">
           <div className="flex items-center gap-6">
             <div className="text-[13px] font-medium text-slate-500">
-              © {new Date().getFullYear()} Next Step Innovators. All rights reserved.
+              © {new Date().getFullYear()} Nxt Step Innovators. All rights reserved.
             </div>
           </div>
           <div className="flex items-center gap-2 bg-white/[0.02] border border-white/5 px-4 py-2 rounded-full">

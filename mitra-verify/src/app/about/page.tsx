@@ -248,7 +248,7 @@ export default function AboutPage() {
           <EnterpriseBenefits />
 
           <div className="section-container mt-32">
-            {/* 10. Powered By Next Step Innovators */}
+            {/* 10. Powered By Nxt Step Innovators */}
             <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} 
               className="premium-glass p-12 rounded-3xl text-center border border-white/10 relative overflow-hidden mb-32 shadow-[0_0_50px_rgba(0,212,255,0.05)]">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-full bg-gradient-to-b from-[#00d4ff]/10 to-transparent pointer-events-none" />
@@ -257,7 +257,7 @@ export default function AboutPage() {
               </div>
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">Building the Future of Trust and Identity</h2>
               <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8">
-                Powered by Next Step Innovators, a team of security researchers, machine learning engineers, and distributed 
+                Powered by Nxt Step Innovators, a team of security researchers, machine learning engineers, and distributed 
                 systems architects dedicated to building the future of authentication. MITRA VERIFY 
                 is our flagship platform, designed to bring enterprise-grade biometric security 
                 to organizations of all sizes.
