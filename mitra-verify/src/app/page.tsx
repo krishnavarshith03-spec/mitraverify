@@ -165,12 +165,12 @@ def authenticate_user(image_bytes: bytes, user_id: str) -> bool:
 }`
 };
 
-const COMPLIANCE_BADGES = [
-  { name: 'SOC 2 Type II', desc: 'Audited enterprise security controls' },
-  { name: 'ISO 27001', desc: 'Information security management' },
-  { name: 'GDPR', desc: 'European data protection compliant' },
-  { name: 'CCPA', desc: 'California privacy rights compliant' },
-  { name: 'OWASP', desc: 'Top 10 application security validated' },
+const CAPABILITY_BADGES = [
+  { name: '478 Facial Landmarks', desc: 'Dense micro-expression tracking' },
+  { name: 'Liveness Detection', desc: 'Real-time biological verification' },
+  { name: 'Deepfake Analysis', desc: 'Synthetic media detection' },
+  { name: 'Identity Matching', desc: 'Military-grade 1:N recognition' },
+  { name: 'Multi-Face Detection', desc: 'Zero-trust background monitoring' },
 ];
 
 const threatData = [
@@ -643,16 +643,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── COMPLIANCE BADGES ──────────────────────────────── */}
-      <section className="py-16 bg-[#030712] border-t border-white/5">
+      {/* ── TECHNICAL CAPABILITIES ──────────────────────────────── */}
+      <section className="py-16 bg-[#030712] border-t border-white/5 relative z-10">
         <div className="max-w-[1400px] mx-auto px-6">
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16">
-            {COMPLIANCE_BADGES.map((badge, i) => (
-              <div key={badge.name} className="group relative flex flex-col items-center">
-                <div className="text-lg md:text-xl font-extrabold text-slate-600 group-hover:text-white transition-colors cursor-default tracking-tight">
-                  {badge.name}
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            {CAPABILITY_BADGES.map((badge) => (
+              <div key={badge.name} className="group relative flex items-center justify-center">
+                <div className="relative px-5 py-2.5 rounded-full bg-white/[0.01] border border-white/5 backdrop-blur-md overflow-hidden cursor-default transition-all duration-500 hover:bg-white/[0.03] hover:border-[#00d4ff]/30 hover:shadow-[0_0_20px_rgba(0,212,255,0.15)]">
+                  {/* Subtle animated pulse glow in the background */}
+                  <div className="absolute inset-0 bg-[#00d4ff]/0 group-hover:bg-[#00d4ff]/5 transition-colors duration-500 rounded-full" />
+                  <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-[#00d4ff]/10 to-transparent opacity-0 group-hover:opacity-100 blur-sm group-hover:animate-[pulse_2s_ease-in-out_infinite] transition-opacity duration-500" />
+                  
+                  <div className="relative z-10 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-[#00d4ff] group-hover:shadow-[0_0_8px_#00d4ff] transition-all duration-500" />
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.5)] transition-all duration-500">
+                      {badge.name}
+                    </span>
+                  </div>
                 </div>
-                <div className="absolute top-full mt-2 w-max px-3 py-1.5 bg-white/10 backdrop-blur-md rounded border border-white/10 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                
+                {/* Tooltip */}
+                <div className="absolute top-full mt-3 w-max px-3 py-1.5 bg-[#0a0f1e]/90 backdrop-blur-md rounded border border-white/10 text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20 shadow-xl">
                   {badge.desc}
                 </div>
               </div>
