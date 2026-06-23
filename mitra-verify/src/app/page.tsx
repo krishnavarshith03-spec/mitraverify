@@ -2,6 +2,7 @@
 
 import { Play, ArrowRight, Star, Plus, Shield, Globe, Zap, Headphones } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import BiometricCore3D from '@/components/BiometricCore3D';
