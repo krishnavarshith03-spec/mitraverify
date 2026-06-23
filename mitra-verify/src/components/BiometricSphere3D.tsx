@@ -139,14 +139,22 @@ function HollowPlexusCore() {
     time: { value: 0 }
   }), []);
 
+  // Core glow reference for breathing effect
+  const coreGlowRef = useRef<THREE.Mesh>(null);
+
   useFrame((state, delta) => {
     if (groupRef.current) {
-      // Rotation matches the image orientation
-      groupRef.current.rotation.y += delta * 0.05; 
+      // Slow rotation for premium feel
+      groupRef.current.rotation.y += delta * 0.02; 
       groupRef.current.rotation.x = 0.2; 
     }
     if (shaderMaterialRef.current) {
       shaderMaterialRef.current.uniforms.time.value = state.clock.elapsedTime;
+    }
+    if (coreGlowRef.current) {
+      // Soft breathing glow
+      const material = coreGlowRef.current.material as THREE.MeshBasicMaterial;
+      material.opacity = 0.05 + Math.sin(state.clock.elapsedTime * 1.5) * 0.03;
     }
   });
 
@@ -175,6 +183,12 @@ function HollowPlexusCore() {
           depthWrite={false}
         />
       </points>
+
+      {/* Soft Breathing Core Glow */}
+      <mesh ref={coreGlowRef}>
+        <sphereGeometry args={[3.3, 32, 32]} />
+        <meshBasicMaterial color="#00d4ff" transparent opacity={0.05} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
@@ -183,40 +197,61 @@ function HollowPlexusCore() {
 function OrbitalRings() {
   const ring1Ref = useRef<THREE.Group>(null);
   const ring2Ref = useRef<THREE.Group>(null);
+  const dataPacket1Ref = useRef<THREE.Mesh>(null);
+  const dataPacket2Ref = useRef<THREE.Mesh>(null);
+  const dataPacket3Ref = useRef<THREE.Mesh>(null);
 
   useFrame((state, delta) => {
+    const time = state.clock.elapsedTime;
     if (ring1Ref.current) {
-      ring1Ref.current.rotation.y -= delta * 0.15;
+      ring1Ref.current.rotation.z -= delta * 0.05;
     }
     if (ring2Ref.current) {
-      ring2Ref.current.rotation.x -= delta * 0.1;
-      ring2Ref.current.rotation.y += delta * 0.05;
+      ring2Ref.current.rotation.z += delta * 0.08;
+    }
+
+    // Data packets moving along the rings
+    if (dataPacket1Ref.current) {
+      dataPacket1Ref.current.position.x = Math.cos(time * 0.5) * 5.2;
+      dataPacket1Ref.current.position.y = Math.sin(time * 0.5) * 5.2;
+    }
+    if (dataPacket2Ref.current) {
+      dataPacket2Ref.current.position.x = Math.cos(time * 0.8 + Math.PI) * 4.6;
+      dataPacket2Ref.current.position.y = Math.sin(time * 0.8 + Math.PI) * 4.6;
+    }
+    if (dataPacket3Ref.current) {
+      dataPacket3Ref.current.position.x = Math.cos(time * 0.3 + 2) * 5.2;
+      dataPacket3Ref.current.position.y = Math.sin(time * 0.3 + 2) * 5.2;
     }
   });
 
   return (
-    <group>
-      {/* Ring 1: Wide, Cyan, Horizontal tilt */}
-      <group ref={ring1Ref} rotation={[0.2, 0, -0.1]}>
+    <group rotation={[1.4, 0.2, 0]}>
+      {/* Ring 1: Large horizontal ring, cyan glow */}
+      <group ref={ring1Ref}>
         <Ring args={[5.2, 5.22, 128]}>
-          <meshBasicMaterial color="#00d4ff" transparent opacity={0.3} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
         </Ring>
-        {/* Comet node */}
-        <mesh position={[5.21, 0, 0]}>
-          <circleGeometry args={[0.06, 16]} />
-          <meshBasicMaterial color="#ffffff" />
+        {/* Data Packets */}
+        <mesh ref={dataPacket1Ref}>
+          <circleGeometry args={[0.08, 16]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} />
+        </mesh>
+        <mesh ref={dataPacket3Ref}>
+          <circleGeometry args={[0.05, 16]} />
+          <meshBasicMaterial color="#00d4ff" transparent opacity={0.7} blending={THREE.AdditiveBlending} />
         </mesh>
       </group>
 
-      {/* Ring 2: Purple-blue, angled */}
-      <group ref={ring2Ref} rotation={[0.5, 0.4, 0.8]}>
+      {/* Ring 2: Slightly smaller horizontal ring, blue-purple gradient, different angle */}
+      <group ref={ring2Ref} rotation={[0.1, 0.15, 0]}>
         <Ring args={[4.6, 4.62, 128]}>
-          <meshBasicMaterial color="#8a2be2" transparent opacity={0.4} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+          <meshBasicMaterial color="#8a2be2" transparent opacity={0.6} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
         </Ring>
-        {/* Comet node */}
-        <mesh position={[-4.61, 0, 0]}>
-          <circleGeometry args={[0.05, 16]} />
-          <meshBasicMaterial color="#00d4ff" />
+        {/* Data Packet */}
+        <mesh ref={dataPacket2Ref}>
+          <circleGeometry args={[0.06, 16]} />
+          <meshBasicMaterial color="#00d4ff" transparent opacity={0.8} blending={THREE.AdditiveBlending} />
         </mesh>
       </group>
     </group>
@@ -261,32 +296,7 @@ function BackgroundParticles() {
 }
 
 // ─── HOLOGRAPHIC GROUND PROJECTION & CORE BEAM ──────────────────────────────
-function GroundProjection() {
-  return (
-    <group position={[0, -4.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      {/* Intense center beam source */}
-      <mesh position={[0, 0, 0.1]}>
-         <circleGeometry args={[1.5, 64]} />
-         <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0, 0.05]}>
-         <circleGeometry args={[0.5, 64]} />
-         <meshBasicMaterial color="#ffffff" transparent opacity={0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-
-      {/* Deep floor rings */}
-      <Ring args={[2.5, 2.52, 128]}>
-        <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} />
-      </Ring>
-      <Ring args={[3.5, 3.52, 128]}>
-        <meshBasicMaterial color="#0066ff" transparent opacity={0.2} blending={THREE.AdditiveBlending} />
-      </Ring>
-      <Ring args={[4.5, 4.51, 128]}>
-        <meshBasicMaterial color="#8a2be2" transparent opacity={0.15} blending={THREE.AdditiveBlending} />
-      </Ring>
-    </group>
-  );
-}
+// Removed as requested to reduce clutter.
 
 // ─── BACKGROUND RADIAL GLOW ────────────────────────────────────────────────
 function RadialGlow() {
@@ -306,26 +316,44 @@ function RadialGlow() {
 
 // ─── REFINED EXACT VERIFICATION CARD MATCHING MOCKUP ───────────────────────
 function IntegratedVerificationCard() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useFrame((state) => {
+    if (containerRef.current) {
+      // Floating animation
+      const yOffset = Math.sin(state.clock.elapsedTime * 1.2) * 5;
+      
+      // Slight parallax based on pointer
+      const xParallax = (state.pointer.x * 10);
+      const yParallax = (state.pointer.y * 10);
+
+      containerRef.current.style.transform = `translate3d(${xParallax}px, calc(${yOffset}px + ${yParallax}px), 0)`;
+    }
+  });
+
   return (
     <Html 
-      position={[3.2, 1.5, 2.0]} 
-      scale={0.4} 
+      position={[4.5, 3.5, 1.0]} 
+      scale={1} 
       transform 
       occlude="blending"
-      className="pointer-events-none"
+      className="pointer-events-none z-50"
     >
-      <div className="bg-[#020617]/90 backdrop-blur-3xl border border-white/10 rounded-[20px] p-8 shadow-[0_0_80px_rgba(0,0,0,0.8)] w-[320px] transform transition-all relative overflow-hidden">
+      <div 
+        ref={containerRef}
+        className="bg-[rgba(2,6,23,0.65)] backdrop-blur-2xl border border-[rgba(255,255,255,0.12)] rounded-[16px] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)] w-[240px] relative overflow-hidden transform-gpu"
+      >
         {/* Subtle top glow */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00d4ff]/50 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00d4ff]/60 to-transparent" />
         
-        <div className="flex items-center gap-4 mb-8">
-           <div className="w-10 h-10 rounded-lg bg-[#00d4ff]/10 flex items-center justify-center border border-[#00d4ff]/20">
-             <Shield size={20} className="text-[#00d4ff]" />
+        <div className="flex items-center gap-3 mb-6">
+           <div className="w-8 h-8 rounded-lg bg-[#00d4ff]/10 flex items-center justify-center border border-[#00d4ff]/20">
+             <Shield size={16} className="text-[#00d4ff]" />
            </div>
-           <span className="text-sm font-semibold text-white tracking-wide">Verification Engine</span>
+           <span className="text-xs font-bold text-white tracking-wide">Verification Engine</span>
         </div>
         
-        <div className="space-y-5 text-xs font-mono uppercase tracking-widest text-slate-400">
+        <div className="space-y-4 text-[10px] font-mono uppercase tracking-widest text-slate-300">
            <div className="flex items-center justify-between">
               <span>Liveness</span>
               <span className="text-[#00ff88] font-bold">PASS</span>
@@ -354,17 +382,30 @@ function IntegratedVerificationCard() {
 
 // ─── BOTTOM LIVE FEED BADGE ────────────────────────────────────────────────
 function LiveFeedBadge() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useFrame((state) => {
+    if (containerRef.current) {
+      // Floating animation
+      const yOffset = Math.cos(state.clock.elapsedTime * 1.5) * 3;
+      containerRef.current.style.transform = `translate3d(0, ${yOffset}px, 0)`;
+    }
+  });
+
   return (
     <Html 
-      position={[4.0, -3.0, 1.5]} 
-      scale={0.35} 
+      position={[4.0, -3.5, 1.5]} 
+      scale={1} 
       transform 
-      className="pointer-events-none"
+      className="pointer-events-none z-50"
     >
-      <div className="bg-[#020617]/90 backdrop-blur-xl border border-white/10 rounded-full px-8 py-4 flex items-center gap-4 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-        <span className="w-3 h-3 rounded-full bg-[#00ff88] shadow-[0_0_12px_#00ff88] animate-pulse" />
-        <span className="text-sm font-bold text-white uppercase tracking-widest">Live Feed Active</span>
-        <Activity size={18} className="text-[#00d4ff] ml-2" />
+      <div 
+        ref={containerRef}
+        className="bg-[rgba(2,6,23,0.65)] backdrop-blur-xl border border-[rgba(255,255,255,0.12)] rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] transform-gpu"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88] animate-pulse" />
+        <span className="text-xs font-bold text-white uppercase tracking-widest whitespace-nowrap">Live Feed Active</span>
+        <Activity size={14} className="text-[#00d4ff] ml-1" />
       </div>
     </Html>
   );
@@ -390,7 +431,6 @@ function SceneContainer() {
       <BackgroundParticles />
       <HollowPlexusCore />
       <OrbitalRings />
-      <GroundProjection />
       <IntegratedVerificationCard />
       <LiveFeedBadge />
     </group>
@@ -399,12 +439,14 @@ function SceneContainer() {
 
 export default function BiometricSphere3D() {
   return (
-    <div className="w-full h-full absolute inset-0 pointer-events-auto">
+    <div className="w-full h-full absolute inset-0 pointer-events-none">
       <Canvas
-        camera={{ position: [0, 0, 11], fov: 45 }}
+        camera={{ position: [0, 0, 13], fov: 45 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
       >
-        <SceneContainer />
+        <group position={[1.5, 0, 0]} scale={0.88}>
+          <SceneContainer />
+        </group>
         
         {/* Cinematic Postprocessing matching mockup */}
         <EffectComposer multisampling={4}>

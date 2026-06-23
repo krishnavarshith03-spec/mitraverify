@@ -48,17 +48,24 @@ export default function HomePage() {
          <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vw] bg-[#00d4ff]/10 blur-[150px] rounded-full mix-blend-screen" />
          <div className="absolute bottom-[-10%] left-[-5%] w-[40vw] h-[40vw] bg-[#0066ff]/10 blur-[150px] rounded-full mix-blend-screen" />
          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] mix-blend-screen" />
-         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_20%,#000_20%,transparent_100%)]" />
+         {/* Animated premium grid */}
+         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_20%,#000_20%,transparent_100%)]" style={{ backgroundPosition: '0 0', animation: 'gridMove 20s linear infinite' }} />
+         <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes gridMove {
+               0% { background-position: 0 0; }
+               100% { background-position: 0 4rem; }
+            }
+         `}} />
       </div>
 
       <main className="relative z-10">
          
          {/* ─── HERO SECTION ─────────────────────────────────────────────────── */}
-         <section className="pt-40 pb-20 px-6 md:px-12 max-w-[1400px] mx-auto min-h-[90vh] flex flex-col justify-center border-b border-[rgba(255,255,255,0.05)]">
-            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 items-center">
+         <section className="relative pt-40 pb-20 px-6 md:px-12 max-w-[1400px] mx-auto min-h-[95vh] flex flex-col justify-center border-b border-[rgba(255,255,255,0.05)]">
+            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-8 items-center relative">
                
                {/* LEFT SIDE: Typography & Actions */}
-               <motion.div variants={itemVariants} className="flex flex-col items-start text-left z-10">
+               <motion.div variants={itemVariants} className="flex flex-col items-start text-left z-20">
                   <div className="flex flex-wrap items-center gap-3 mb-8">
                      <span className="px-3 py-1.5 rounded-full bg-[#00d4ff]/10 border border-[#00d4ff]/30 text-[#00d4ff] text-[10px] font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(0,212,255,0.2)]">Enterprise Edition</span>
                      <span className="px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 text-slate-400 text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">World-Class Biometric Authentication</span>
@@ -95,29 +102,11 @@ export default function HomePage() {
                   </div>
                </motion.div>
 
-               {/* RIGHT SIDE: Extensively Upgraded 3D Biometric Sphere */}
-               <motion.div variants={itemVariants} className="relative w-full aspect-square lg:h-[750px] lg:aspect-auto flex items-center justify-center mt-10 lg:mt-0 z-0">
-                  {/* Subtle Vercel-style background grid instead of huge radial glow */}
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_70%)]" />
-                  
-                  {/* Holographic Sphere Container */}
-                  <div className="relative w-full h-full flex items-center justify-center">
-                     
-                     {/* The new WebGL Three.js Sphere */}
+               {/* RIGHT SIDE: Seamless 3D Globe Integration */}
+               <motion.div variants={itemVariants} className="relative w-full h-[500px] lg:h-[850px] flex items-center justify-center mt-10 lg:mt-0 z-0">
+                  {/* Container allowing seamless overflow and removing boxy boundaries */}
+                  <div className="absolute inset-[-30%] lg:inset-[-50%] lg:right-[-40%] pointer-events-none flex items-center justify-center z-0">
                      <BiometricSphere3D />
-
-                     {/* The DOM Verification Engine card has been moved into the WebGL scene for true 3D integration. */}
-
-                     {/* Bottom Floating Badge (Refined) */}
-                     <motion.div 
-                       animate={{ y: [0, 10, 0] }} 
-                       transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                       className="absolute bottom-[15%] left-0 md:left-8 bg-white/[0.02] backdrop-blur-3xl border border-white/[0.05] rounded-full px-6 py-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20 flex items-center gap-3"
-                     >
-                        <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-[0_0_10px_white]" />
-                        <span className="text-[11px] font-bold text-white uppercase tracking-widest">Live Feed Active</span>
-                        <Activity size={14} className="text-[#00bfff] animate-pulse ml-2" />
-                     </motion.div>
                   </div>
                </motion.div>
 
