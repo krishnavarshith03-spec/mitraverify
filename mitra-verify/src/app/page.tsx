@@ -106,41 +106,7 @@ export default function HomePage() {
                      {/* The new WebGL Three.js Sphere */}
                      <BiometricSphere3D />
 
-                     {/* Floating Verification Engine Card (Refined Glassmorphism) */}
-                     <motion.div 
-                       animate={{ y: [0, -10, 0] }} 
-                       transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                       className="absolute top-[15%] right-0 md:right-8 bg-white/[0.02] backdrop-blur-3xl border border-white/[0.05] rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20 w-64"
-                     >
-                        <div className="flex items-center gap-3 mb-5 border-b border-white/5 pb-4">
-                           <div className="w-8 h-8 rounded bg-white/[0.05] flex items-center justify-center border border-white/10">
-                             <Shield size={16} className="text-white" />
-                           </div>
-                           <span className="text-xs font-bold text-white tracking-wide">Verification Engine</span>
-                        </div>
-                        <div className="space-y-4 text-[10px] font-mono uppercase tracking-widest text-slate-400">
-                           <div className="flex items-center justify-between">
-                              <span>Liveness</span>
-                              <span className="text-white font-bold drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">PASS</span>
-                           </div>
-                           <div className="flex items-center justify-between">
-                              <span>Blink</span>
-                              <span className="text-white font-bold drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">VERIFIED</span>
-                           </div>
-                           <div className="flex items-center justify-between">
-                              <span>Head Rotation</span>
-                              <span className="text-white font-bold drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">VERIFIED</span>
-                           </div>
-                           <div className="flex items-center justify-between">
-                              <span>Spoof Risk</span>
-                              <span className="text-[#00bfff] font-bold">0.2%</span>
-                           </div>
-                           <div className="flex items-center justify-between">
-                              <span>Identity Match</span>
-                              <span className="text-[#00bfff] font-bold animate-pulse">98.7%</span>
-                           </div>
-                        </div>
-                     </motion.div>
+                     {/* The DOM Verification Engine card has been moved into the WebGL scene for true 3D integration. */}
 
                      {/* Bottom Floating Badge (Refined) */}
                      <motion.div 
