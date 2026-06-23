@@ -94,7 +94,7 @@ export default function HomePage() {
                onMouseMove={handleMouseMove}
                onMouseLeave={handleMouseLeave}
                style={{ rotateX, rotateY, transformPerspective: 1000 }}
-               className="flex flex-col items-start justify-center text-left pt-10 z-20"
+               className="relative flex flex-col items-start justify-center text-left pt-10 z-20"
             >
                
                {/* Badge */}
