@@ -102,10 +102,9 @@ export default function HomePage() {
                   </div>
                </motion.div>
 
-               {/* RIGHT SIDE: Seamless 3D Globe Integration */}
-               <motion.div variants={itemVariants} className="relative w-full h-[500px] lg:h-[850px] flex items-center justify-center mt-10 lg:mt-0 z-0">
-                  {/* Container allowing seamless overflow and removing boxy boundaries */}
-                  <div className="absolute inset-[-30%] lg:inset-[-50%] lg:right-[-40%] pointer-events-none flex items-center justify-center z-0">
+               {/* RIGHT SIDE: Premium 3D Biometric Sphere */}
+               <motion.div variants={itemVariants} className="relative w-full aspect-square lg:h-[700px] lg:aspect-auto flex items-center justify-center mt-10 lg:mt-0 z-0">
+                  <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
                      <BiometricSphere3D />
                   </div>
                </motion.div>

@@ -144,17 +144,17 @@ function HollowPlexusCore() {
 
   useFrame((state, delta) => {
     if (groupRef.current) {
-      // Slow rotation for premium feel
-      groupRef.current.rotation.y += delta * 0.02; 
-      groupRef.current.rotation.x = 0.2; 
+      // Extremely slow rotation for premium enterprise feel (~20-30s per rotation)
+      groupRef.current.rotation.y += delta * 0.008; 
+      groupRef.current.rotation.x = 0.15; 
     }
     if (shaderMaterialRef.current) {
-      shaderMaterialRef.current.uniforms.time.value = state.clock.elapsedTime;
+      shaderMaterialRef.current.uniforms.time.value = state.clock.elapsedTime * 0.3; // Slowed down shader
     }
     if (coreGlowRef.current) {
-      // Soft breathing glow
+      // Very soft, slow breathing glow
       const material = coreGlowRef.current.material as THREE.MeshBasicMaterial;
-      material.opacity = 0.05 + Math.sin(state.clock.elapsedTime * 1.5) * 0.03;
+      material.opacity = 0.03 + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
     }
   });
 
@@ -199,58 +199,49 @@ function OrbitalRings() {
   const ring2Ref = useRef<THREE.Group>(null);
   const dataPacket1Ref = useRef<THREE.Mesh>(null);
   const dataPacket2Ref = useRef<THREE.Mesh>(null);
-  const dataPacket3Ref = useRef<THREE.Mesh>(null);
 
   useFrame((state, delta) => {
-    const time = state.clock.elapsedTime;
+    const time = state.clock.elapsedTime * 0.2; // Very slow
     if (ring1Ref.current) {
-      ring1Ref.current.rotation.z -= delta * 0.05;
+      ring1Ref.current.rotation.z -= delta * 0.02;
     }
     if (ring2Ref.current) {
-      ring2Ref.current.rotation.z += delta * 0.08;
+      ring2Ref.current.rotation.z += delta * 0.015;
     }
 
-    // Data packets moving along the rings
+    // Data packets moving along the rings slowly
     if (dataPacket1Ref.current) {
-      dataPacket1Ref.current.position.x = Math.cos(time * 0.5) * 5.2;
-      dataPacket1Ref.current.position.y = Math.sin(time * 0.5) * 5.2;
+      dataPacket1Ref.current.position.x = Math.cos(time * 0.5) * 4.2;
+      dataPacket1Ref.current.position.y = Math.sin(time * 0.5) * 4.2;
     }
     if (dataPacket2Ref.current) {
-      dataPacket2Ref.current.position.x = Math.cos(time * 0.8 + Math.PI) * 4.6;
-      dataPacket2Ref.current.position.y = Math.sin(time * 0.8 + Math.PI) * 4.6;
-    }
-    if (dataPacket3Ref.current) {
-      dataPacket3Ref.current.position.x = Math.cos(time * 0.3 + 2) * 5.2;
-      dataPacket3Ref.current.position.y = Math.sin(time * 0.3 + 2) * 5.2;
+      dataPacket2Ref.current.position.x = Math.cos(time * 0.8 + Math.PI) * 3.9;
+      dataPacket2Ref.current.position.y = Math.sin(time * 0.8 + Math.PI) * 3.9;
     }
   });
 
   return (
     <group rotation={[1.4, 0.2, 0]}>
-      {/* Ring 1: Large horizontal ring, cyan glow */}
+      {/* Ring 1: Horizontal, cyan glow, tightly around globe */}
       <group ref={ring1Ref}>
-        <Ring args={[5.2, 5.22, 128]}>
-          <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+        <Ring args={[4.2, 4.22, 128]}>
+          <meshBasicMaterial color="#00d4ff" transparent opacity={0.3} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
         </Ring>
-        {/* Data Packets */}
+        {/* Data Packet */}
         <mesh ref={dataPacket1Ref}>
-          <circleGeometry args={[0.08, 16]} />
+          <circleGeometry args={[0.06, 16]} />
           <meshBasicMaterial color="#ffffff" transparent opacity={0.9} blending={THREE.AdditiveBlending} />
-        </mesh>
-        <mesh ref={dataPacket3Ref}>
-          <circleGeometry args={[0.05, 16]} />
-          <meshBasicMaterial color="#00d4ff" transparent opacity={0.7} blending={THREE.AdditiveBlending} />
         </mesh>
       </group>
 
-      {/* Ring 2: Slightly smaller horizontal ring, blue-purple gradient, different angle */}
-      <group ref={ring2Ref} rotation={[0.1, 0.15, 0]}>
-        <Ring args={[4.6, 4.62, 128]}>
-          <meshBasicMaterial color="#8a2be2" transparent opacity={0.6} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+      {/* Ring 2: Slightly smaller, tilted, purple-blue glow */}
+      <group ref={ring2Ref} rotation={[0.15, 0.2, 0]}>
+        <Ring args={[3.9, 3.92, 128]}>
+          <meshBasicMaterial color="#8a2be2" transparent opacity={0.4} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
         </Ring>
         {/* Data Packet */}
         <mesh ref={dataPacket2Ref}>
-          <circleGeometry args={[0.06, 16]} />
+          <circleGeometry args={[0.05, 16]} />
           <meshBasicMaterial color="#00d4ff" transparent opacity={0.8} blending={THREE.AdditiveBlending} />
         </mesh>
       </group>
@@ -263,20 +254,20 @@ function BackgroundParticles() {
   const pointsRef = useRef<THREE.Points>(null);
 
   const [positions] = useMemo(() => {
-    const count = 1500;
+    const count = 400; // Minimal tiny particles
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 50; 
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 50; 
-      positions[i * 3 + 2] = -15 + (Math.random() - 0.5) * 10; 
+      positions[i * 3] = (Math.random() - 0.5) * 30; 
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 30; 
+      positions[i * 3 + 2] = -5 + (Math.random() - 0.5) * 5; 
     }
     return [positions];
   }, []);
 
   useFrame((state, delta) => {
     if (pointsRef.current) {
-      pointsRef.current.position.y += delta * 0.05;
-      if (pointsRef.current.position.y > 20) pointsRef.current.position.y = -20;
+      pointsRef.current.position.y += delta * 0.02; // Very slow movement
+      if (pointsRef.current.position.y > 15) pointsRef.current.position.y = -15;
     }
   });
 
@@ -284,11 +275,11 @@ function BackgroundParticles() {
     <Points ref={pointsRef} positions={positions}>
       <PointMaterial
         transparent
-        color="#ffffff"
-        size={0.04}
+        color="#00d4ff"
+        size={0.02}
         sizeAttenuation={true}
         depthWrite={false}
-        opacity={0.3}
+        opacity={0.15}
         blending={THREE.AdditiveBlending}
       />
     </Points>
@@ -301,12 +292,12 @@ function BackgroundParticles() {
 // ─── BACKGROUND RADIAL GLOW ────────────────────────────────────────────────
 function RadialGlow() {
   return (
-    <mesh position={[0, 0, -8]}>
-      <planeGeometry args={[25, 25]} />
+    <mesh position={[0, 0, -5]}>
+      <planeGeometry args={[15, 15]} />
       <meshBasicMaterial 
         color="#0033aa" 
         transparent 
-        opacity={0.05} 
+        opacity={0.08} 
         blending={THREE.AdditiveBlending}
         depthWrite={false}
       />
@@ -320,12 +311,12 @@ function IntegratedVerificationCard() {
 
   useFrame((state) => {
     if (containerRef.current) {
-      // Floating animation
-      const yOffset = Math.sin(state.clock.elapsedTime * 1.2) * 5;
+      // Floating animation (very slow)
+      const yOffset = Math.sin(state.clock.elapsedTime * 0.8) * 3;
       
       // Slight parallax based on pointer
-      const xParallax = (state.pointer.x * 10);
-      const yParallax = (state.pointer.y * 10);
+      const xParallax = (state.pointer.x * 5);
+      const yParallax = (state.pointer.y * 5);
 
       containerRef.current.style.transform = `translate3d(${xParallax}px, calc(${yOffset}px + ${yParallax}px), 0)`;
     }
@@ -333,7 +324,7 @@ function IntegratedVerificationCard() {
 
   return (
     <Html 
-      position={[4.5, 3.5, 1.0]} 
+      position={[2.5, 2.5, 1.0]} 
       scale={1} 
       transform 
       occlude="blending"
@@ -386,15 +377,15 @@ function LiveFeedBadge() {
 
   useFrame((state) => {
     if (containerRef.current) {
-      // Floating animation
-      const yOffset = Math.cos(state.clock.elapsedTime * 1.5) * 3;
+      // Very slow float
+      const yOffset = Math.cos(state.clock.elapsedTime * 0.8) * 2;
       containerRef.current.style.transform = `translate3d(0, ${yOffset}px, 0)`;
     }
   });
 
   return (
     <Html 
-      position={[4.0, -3.5, 1.5]} 
+      position={[0, -3.2, 1.5]} 
       scale={1} 
       transform 
       className="pointer-events-none z-50"
@@ -417,8 +408,8 @@ function SceneContainer() {
 
   useFrame((state) => {
     if (groupRef.current) {
-      const targetX = (state.pointer.x * Math.PI) / 24;
-      const targetY = (state.pointer.y * Math.PI) / 24;
+      const targetX = (state.pointer.x * Math.PI) / 32; // Less exaggerated parallax
+      const targetY = (state.pointer.y * Math.PI) / 32;
       
       groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.02;
       groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.02;
@@ -439,12 +430,12 @@ function SceneContainer() {
 
 export default function BiometricSphere3D() {
   return (
-    <div className="w-full h-full absolute inset-0 pointer-events-none">
+    <div className="w-full h-full absolute inset-0 pointer-events-none flex items-center justify-center">
       <Canvas
-        camera={{ position: [0, 0, 13], fov: 45 }}
+        camera={{ position: [0, 0, 10], fov: 45 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
       >
-        <group position={[1.5, 0, 0]} scale={0.88}>
+        <group position={[0, 0, 0]} scale={0.65}>
           <SceneContainer />
         </group>
         
