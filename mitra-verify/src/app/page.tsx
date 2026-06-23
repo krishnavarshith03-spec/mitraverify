@@ -40,7 +40,7 @@ export default function HomePage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#02050D] font-sans selection:bg-[#00d4ff]/30 text-slate-300 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#040e29_0%,#010308_100%)] font-sans selection:bg-[#00d4ff]/30 text-slate-300 overflow-x-hidden relative">
       <Navbar />
 
       {/* Global Backgrounds (Apple/Stripe Polish) */}

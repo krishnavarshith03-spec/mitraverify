@@ -129,10 +129,10 @@ function HollowPlexusCore() {
   const groupRef = useRef<THREE.Group>(null);
   const shaderMaterialRef = useRef<THREE.ShaderMaterial>(null);
 
-  // High density Sphere (128x128 = 16k vertices) for detailed continents
-  const pointGeometry = useMemo(() => new THREE.SphereGeometry(3.5, 128, 128), []);
+  // Extremely dense sphere for "thousands of tiny glowing nodes"
+  const pointGeometry = useMemo(() => new THREE.SphereGeometry(3.5, 180, 180), []);
   // Lower density Icosahedron for subtle background wireframe
-  const lineGeometry = useMemo(() => new THREE.IcosahedronGeometry(3.5, 4), []);
+  const lineGeometry = useMemo(() => new THREE.IcosahedronGeometry(3.5, 6), []);
   const edgesGeometry = useMemo(() => new THREE.EdgesGeometry(lineGeometry, 5), [lineGeometry]);
 
   const shaderUniforms = useMemo(() => ({
@@ -287,9 +287,34 @@ function BackgroundParticles() {
 }
 
 // ─── HOLOGRAPHIC GROUND PROJECTION & CORE BEAM ──────────────────────────────
-// Removed as requested to reduce clutter.
+function GroundProjection() {
+  return (
+    <group position={[0, -4.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Intense center beam source */}
+      <mesh position={[0, 0, 0.1]}>
+         <circleGeometry args={[1.5, 64]} />
+         <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 0, 0.05]}>
+         <circleGeometry args={[0.5, 64]} />
+         <meshBasicMaterial color="#ffffff" transparent opacity={0.8} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
 
-// ─── BACKGROUND RADIAL GLOW ────────────────────────────────────────────────
+      {/* Deep floor rings */}
+      <Ring args={[2.5, 2.52, 128]}>
+        <meshBasicMaterial color="#00d4ff" transparent opacity={0.4} blending={THREE.AdditiveBlending} />
+      </Ring>
+      <Ring args={[3.5, 3.52, 128]}>
+        <meshBasicMaterial color="#0066ff" transparent opacity={0.2} blending={THREE.AdditiveBlending} />
+      </Ring>
+      <Ring args={[4.5, 4.51, 128]}>
+        <meshBasicMaterial color="#8a2be2" transparent opacity={0.15} blending={THREE.AdditiveBlending} />
+      </Ring>
+    </group>
+  );
+}
+
+// ─── BACKGROUND PARALLAX PARTICLES ────────────────────────────────────────────────
 function RadialGlow() {
   return (
     <mesh position={[0, 0, -5]}>
@@ -324,27 +349,27 @@ function IntegratedVerificationCard() {
 
   return (
     <Html 
-      position={[2.5, 2.5, 1.0]} 
-      scale={1} 
+      position={[5.5, 4.5, 1.0]} 
+      scale={1.2} 
       transform 
       occlude="blending"
       className="pointer-events-none z-50"
     >
       <div 
         ref={containerRef}
-        className="bg-[rgba(2,6,23,0.65)] backdrop-blur-2xl border border-[rgba(255,255,255,0.12)] rounded-[16px] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)] w-[240px] relative overflow-hidden transform-gpu"
+        className="bg-[rgba(2,6,15,0.8)] backdrop-blur-md border border-[rgba(0,212,255,0.15)] rounded-[14px] p-5 shadow-[0_20px_40px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] w-[210px] relative overflow-hidden transform-gpu"
       >
         {/* Subtle top glow */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00d4ff]/60 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00d4ff]/40 to-transparent" />
         
-        <div className="flex items-center gap-3 mb-6">
-           <div className="w-8 h-8 rounded-lg bg-[#00d4ff]/10 flex items-center justify-center border border-[#00d4ff]/20">
-             <Shield size={16} className="text-[#00d4ff]" />
+        <div className="flex items-center gap-3 mb-5">
+           <div className="w-7 h-7 rounded-lg bg-[#00d4ff]/10 flex items-center justify-center border border-[#00d4ff]/20">
+             <Shield size={14} className="text-[#00d4ff]" />
            </div>
-           <span className="text-xs font-bold text-white tracking-wide">Verification Engine</span>
+           <span className="text-[11px] font-bold text-white tracking-wide">Verification Engine</span>
         </div>
         
-        <div className="space-y-4 text-[10px] font-mono uppercase tracking-widest text-slate-300">
+        <div className="space-y-3 text-[9px] font-mono uppercase tracking-widest text-slate-300">
            <div className="flex items-center justify-between">
               <span>Liveness</span>
               <span className="text-[#00ff88] font-bold">PASS</span>
@@ -385,18 +410,18 @@ function LiveFeedBadge() {
 
   return (
     <Html 
-      position={[0, -3.2, 1.5]} 
-      scale={1} 
+      position={[5.5, -4.5, 1.5]} 
+      scale={1.2} 
       transform 
       className="pointer-events-none z-50"
     >
       <div 
         ref={containerRef}
-        className="bg-[rgba(2,6,23,0.65)] backdrop-blur-xl border border-[rgba(255,255,255,0.12)] rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] transform-gpu"
+        className="bg-[rgba(2,6,15,0.8)] backdrop-blur-md border border-[rgba(0,212,255,0.15)] rounded-full px-5 py-2.5 flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.05)] transform-gpu"
       >
-        <span className="w-2.5 h-2.5 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88] animate-pulse" />
-        <span className="text-xs font-bold text-white uppercase tracking-widest whitespace-nowrap">Live Feed Active</span>
-        <Activity size={14} className="text-[#00d4ff] ml-1" />
+        <span className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] animate-pulse" />
+        <span className="text-[10px] font-bold text-white uppercase tracking-widest whitespace-nowrap">Live Feed Active</span>
+        <Activity size={12} className="text-[#00d4ff] ml-1" />
       </div>
     </Html>
   );
@@ -408,11 +433,11 @@ function SceneContainer() {
 
   useFrame((state) => {
     if (groupRef.current) {
-      const targetX = (state.pointer.x * Math.PI) / 32; // Less exaggerated parallax
-      const targetY = (state.pointer.y * Math.PI) / 32;
+      const targetX = (state.pointer.x * Math.PI) / 48; // Even more subtle
+      const targetY = (state.pointer.y * Math.PI) / 48;
       
-      groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.02;
-      groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.02;
+      groupRef.current.rotation.y += (targetX - groupRef.current.rotation.y) * 0.01;
+      groupRef.current.rotation.x += (-targetY - groupRef.current.rotation.x) * 0.01;
     }
   });
 
@@ -422,6 +447,7 @@ function SceneContainer() {
       <BackgroundParticles />
       <HollowPlexusCore />
       <OrbitalRings />
+      <GroundProjection />
       <IntegratedVerificationCard />
       <LiveFeedBadge />
     </group>
@@ -435,7 +461,7 @@ export default function BiometricSphere3D() {
         camera={{ position: [0, 0, 10], fov: 45 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
       >
-        <group position={[0, 0, 0]} scale={0.65}>
+        <group position={[0, 0, 0]} scale={0.48}>
           <SceneContainer />
         </group>
         
