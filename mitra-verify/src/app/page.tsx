@@ -2,13 +2,13 @@
 
 import { 
   Shield, Activity, Server, CheckCircle2, ShieldAlert, Fingerprint, 
-  Eye, Key, Network, FileText, Cpu, Webhook, Box, Lock, Code, 
-  Database, Terminal, Globe, ChevronRight, Zap, Layers, Users, Building, Scale
+  Eye, Key, Network, Code, Database, Globe, ChevronRight, Layers, Users, Building, Scale,
+  Camera, Lock, HardDrive, Smartphone, FileText, HeartPulse
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── TYPES ──────────────────────────────────────────────────────────────────
 interface TelemetryData {
@@ -38,6 +38,9 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
 
+  // Simulation State
+  const [simStep, setSimStep] = useState(0);
+
   const fetchData = async () => {
     try {
       const res = await fetch('/api/analytics/overview');
@@ -51,13 +54,19 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true);
     fetchData();
-    const interval = setInterval(fetchData, 10000); // Polling every 10s for homepage
+    const interval = setInterval(fetchData, 10000); // Polling every 10s
     return () => clearInterval(interval);
   }, []);
 
-  if (!mounted) return null;
+  useEffect(() => {
+    // Cycle through simulation steps 0 to 5
+    const simInterval = setInterval(() => {
+       setSimStep(prev => (prev + 1) % 6);
+    }, 2000);
+    return () => clearInterval(simInterval);
+  }, []);
 
-  const hasData = telemetry && telemetry.executive_overview.total_verifications > 0;
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-[#030712] font-sans selection:bg-[#00d4ff]/30 text-slate-300 overflow-x-hidden relative">
@@ -72,7 +81,7 @@ export default function HomePage() {
 
       <main className="relative z-10">
          
-         {/* SECTION 1: Enterprise Hero */}
+         {/* SECTION 1: Restored Left/Right Split Hero */}
          <section className="pt-32 pb-20 px-6 md:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center border-b border-[rgba(0,255,255,0.05)]">
             <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
                
@@ -94,7 +103,7 @@ export default function HomePage() {
                   </p>
                   
                   <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-12">
-                    <Link href="/demo/enterprise" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#00d4ff] text-[#020610] hover:bg-white transition-all text-sm font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(0,212,255,0.25)] flex items-center justify-center gap-2 group">
+                    <Link href="/developer" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#00d4ff] text-[#020610] hover:bg-white transition-all text-sm font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(0,212,255,0.25)] flex items-center justify-center gap-2 group">
                       Start Building Free <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link href="/demo/enterprise" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[rgba(10,20,40,0.6)] border border-[rgba(0,255,255,0.08)] hover:bg-[rgba(10,20,40,0.8)] hover:border-[#00d4ff]/30 transition-all text-sm font-bold text-white uppercase tracking-widest flex items-center justify-center gap-2 backdrop-blur-md">
@@ -194,129 +203,120 @@ export default function HomePage() {
             </motion.div>
          </section>
 
-         {/* SECTION 2 & 8: Live Verification Center & AI Engine Cluster */}
-         <section className="px-6 md:px-12 py-20 max-w-[1400px] mx-auto border-t border-[rgba(0,255,255,0.05)]">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-               
-               {/* Centerpiece: Biometric Core */}
-               <motion.div variants={itemVariants} className="lg:col-span-8 relative rounded-2xl bg-[rgba(5,10,25,0.8)] border border-[rgba(0,255,255,0.1)] overflow-hidden shadow-[0_20px_80px_rgba(0,0,0,0.6)] aspect-[16/9] md:aspect-[21/9] flex flex-col items-center justify-center group">
-                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-screen" />
-                 
-                 {/* Animated Rings & Core */}
-                 <div className="absolute w-64 h-64 border border-[#00d4ff]/20 rounded-full animate-[spin_10s_linear_infinite]" />
-                 <div className="absolute w-96 h-96 border border-[#00d4ff]/10 rounded-full animate-[spin_15s_linear_infinite_reverse] border-dashed" />
-                 <div className="absolute w-[500px] h-[500px] border border-[#00ff88]/5 rounded-full animate-[spin_20s_linear_infinite]" />
-                 <div className="absolute w-2 h-2 bg-[#00d4ff] rounded-full shadow-[0_0_20px_#00d4ff] animate-pulse" />
-                 
-                 {/* Scanning Laser */}
-                 <div className="absolute inset-x-0 h-[1px] bg-[#00d4ff]/50 shadow-[0_0_30px_#00d4ff] animate-[scan_3s_ease-in-out_infinite]" style={{ transformOrigin: 'center' }} />
-                 
-                 <div className="relative z-10 flex flex-col items-center text-center mt-12 bg-gradient-to-t from-[#030712] p-8 rounded-xl backdrop-blur-sm border border-white/5">
-                    <Shield size={32} className="text-[#00d4ff] mb-3 opacity-80" />
-                    <h3 className="text-xl font-bold text-white mb-1 tracking-tight">Mission Control: Biometric Core</h3>
-                    <p className="text-slate-400 text-xs font-light max-w-sm mb-6">Global edge network active. Ready to process extreme-volume identity verification requests with sub-50ms latency.</p>
-                    <div className="flex gap-3">
-                       <Link href="/demo/enterprise" className="px-6 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#00d4ff]/50 transition-all text-xs font-bold text-white flex items-center gap-2">
-                         Initialize Scanner <Zap size={14} />
-                       </Link>
-                    </div>
-                 </div>
-               </motion.div>
+         {/* SECTION 2: Real-Time Verification Simulation */}
+         <section className="px-6 md:px-12 py-24 max-w-[1400px] mx-auto border-b border-[rgba(0,255,255,0.05)]">
+            <div className="text-center mb-16">
+               <h2 className="text-3xl font-bold text-white mb-4">Real-Time Threat Analysis</h2>
+               <p className="text-slate-400 text-base font-light max-w-2xl mx-auto">See how MITRA VERIFY actively processes raw camera feeds, isolating presentation attacks from genuine users with sub-millisecond precision.</p>
+            </div>
 
-               {/* Right Side: Developer Infrastructure & Trust Center */}
-               <motion.div variants={itemVariants} className="lg:col-span-4 flex flex-col gap-6">
-                  <div className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-6 flex-1">
-                     <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                       <Terminal size={16} className="text-slate-400" /> Developer Infrastructure
-                     </h3>
-                     <div className="space-y-4">
-                        <InfraRow icon={Key} label="API Endpoints" status="Operational" />
-                        <InfraRow icon={Webhook} label="Webhook Delivery" status="Operational" />
-                        <InfraRow icon={Box} label="SDK Distribution" status="v3.0.4 Active" />
-                        <InfraRow icon={Code} label="Tensor Engines" status="Optimized" />
-                        <InfraRow icon={Lock} label="Auth Gateway" status="Enforced" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+               {/* Panel A: Camera Feed Simulation */}
+               <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="bg-[#050a14] border border-[rgba(0,255,255,0.1)] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative flex flex-col">
+                  <div className="bg-[#02040a] px-4 py-3 border-b border-[rgba(0,255,255,0.05)] flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#ff3366]" />
+                        <div className="w-3 h-3 rounded-full bg-[#ffb800]" />
+                        <div className="w-3 h-3 rounded-full bg-[#00ff88]" />
                      </div>
+                     <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Camera Interface</span>
                   </div>
                   
-                  <div className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-6 relative overflow-hidden">
-                     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#00ff88]/10 blur-[30px] rounded-full" />
-                     <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
-                       <Globe size={16} className="text-[#00ff88]" /> Global Trust Center
-                     </h3>
-                     <p className="text-xs text-slate-400 mb-4 font-light">Certified compliant for enterprise and government deployments.</p>
-                     <div className="flex flex-col gap-2 text-[10px] font-mono text-slate-300">
-                        <span className="flex items-center justify-between"><span className="flex items-center gap-2"><Shield size={12}/> SOC2 TYPE II</span> <CheckCircle2 size={12} className="text-[#00ff88]" /></span>
-                        <span className="flex items-center justify-between"><span className="flex items-center gap-2"><Lock size={12}/> GDPR COMPLIANT</span> <CheckCircle2 size={12} className="text-[#00ff88]" /></span>
-                        <span className="flex items-center justify-between"><span className="flex items-center gap-2"><Database size={12}/> AES-256 ENCRYPTION</span> <CheckCircle2 size={12} className="text-[#00ff88]" /></span>
+                  <div className="relative flex-1 min-h-[300px] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-opacity-20 flex items-center justify-center">
+                     {/* Frame Outline */}
+                     <div className="absolute inset-8 border border-[#00d4ff]/20 rounded-xl">
+                        {/* Corner markers */}
+                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-[#00d4ff]" />
+                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-[#00d4ff]" />
+                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-[#00d4ff]" />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-[#00d4ff]" />
+                     </div>
+
+                     <div className="relative z-10 text-center flex flex-col items-center">
+                        <Camera size={48} className="text-[#00d4ff]/50 mb-4 animate-pulse" />
+                        <span className="text-[#00ff88] font-mono text-xs uppercase tracking-widest animate-[pulse_1s_infinite]">Rec: Active</span>
+                     </div>
+
+                     {/* Scanning laser effect */}
+                     <div className="absolute top-8 bottom-8 left-8 right-8 overflow-hidden rounded-xl">
+                        <motion.div 
+                           animate={{ y: ['0%', '100%', '0%'] }} 
+                           transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                           className="w-full h-[2px] bg-[#00d4ff] shadow-[0_0_20px_#00d4ff] opacity-50"
+                        />
                      </div>
                   </div>
                </motion.div>
-               
-            </motion.div>
+
+               {/* Panel B: Data Readout Readout */}
+               <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-6 flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-8">
+                     <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                       <Activity size={16} className="text-[#00d4ff]" /> Live Diagnostics
+                     </h3>
+                     <span className="text-[10px] font-mono text-[#00ff88] border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-1 rounded">PROCESSING</span>
+                  </div>
+
+                  <div className="space-y-6">
+                     <SimRow label="Face Detection" stepLimit={1} simStep={simStep} value="Active" color="text-[#00d4ff]" />
+                     <SimRow label="Liveness Score" stepLimit={2} simStep={simStep} value="99.4%" color="text-[#00ff88]" />
+                     <SimRow label="Blink Detection" stepLimit={3} simStep={simStep} value="True" color="text-white" />
+                     <SimRow label="Head Rotation (Yaw/Pitch/Roll)" stepLimit={4} simStep={simStep} value="0.12 / -0.05 / 0.01" color="text-slate-300" />
+                     <SimRow label="Anti-Spoof Detection" stepLimit={5} simStep={simStep} value="Clear" color="text-[#00ff88]" />
+                     <SimRow label="Identity Match" stepLimit={6} simStep={simStep} value="Verified" color="text-[#7c3aed]" />
+                  </div>
+               </motion.div>
+            </div>
          </section>
 
-         {/* SECTION 4: Live Platform Status Center */}
-         <section className="px-6 md:px-12 py-10 max-w-[1400px] mx-auto border-t border-[rgba(0,255,255,0.05)]">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={containerVariants}>
-               <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                     <Database className="text-[#00d4ff]" /> Platform Status Center
-                  </h2>
-                  <div className="flex items-center gap-2 text-[11px] font-mono text-[#00ff88] uppercase tracking-widest bg-[#00ff88]/10 px-3 py-1 rounded-full border border-[#00ff88]/20">
-                     <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> Live Telemetry
-                  </div>
-               </div>
+         {/* SECTION 3: Real-Time Infrastructure Monitoring */}
+         <section className="px-6 md:px-12 py-24 max-w-[1400px] mx-auto border-b border-[rgba(0,255,255,0.05)]">
+            <div className="mb-12">
+               <h2 className="text-3xl font-bold text-white mb-4">Infrastructure Status</h2>
+               <p className="text-slate-400 text-sm font-light">Global edge network health and service availability.</p>
+            </div>
 
-               {!hasData ? (
-                  <div className="w-full py-16 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center bg-white/[0.01]">
-                     <Activity size={32} className="text-slate-600 mb-4" />
-                     <h3 className="text-lg font-bold text-white mb-2">System Operational</h3>
-                     <p className="text-slate-500 text-xs font-mono uppercase tracking-widest">Waiting for verification telemetry...</p>
-                  </div>
-               ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                     <TelemetryCard label="Total Verifications" value={telemetry.executive_overview.total_verifications.toLocaleString()} />
-                     <TelemetryCard label="Avg Latency" value={`${telemetry.executive_overview.avg_processing_time_ms}ms`} color="text-[#00d4ff]" />
-                     <TelemetryCard label="Verified Sessions" value={telemetry.executive_overview.successful_verifications.toLocaleString()} color="text-[#00ff88]" />
-                     <TelemetryCard label="Blocked Spoofs" value={telemetry.executive_overview.spoof_attempts_blocked.toLocaleString()} color="text-[#ffb800]" />
-                     <TelemetryCard label="Failed Sessions" value={telemetry.executive_overview.failed_verifications.toLocaleString()} color="text-[#ff3366]" />
-                     <TelemetryCard label="Identity Matches" value={telemetry.executive_overview.identity_matches.toLocaleString()} color="text-[#7c3aed]" />
-                  </div>
-               )}
-            </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               <ServiceNode name="Face Detection Engine" uptime="99.99%" latency="12ms" />
+               <ServiceNode name="MediaPipe Processing" uptime="99.98%" latency="8ms" />
+               <ServiceNode name="Liveness Engine AI" uptime="100%" latency="24ms" />
+               <ServiceNode name="Anti-Spoofing Policy" uptime="100%" latency="15ms" />
+               <ServiceNode name="Identity Matching" uptime="99.99%" latency="45ms" />
+               <ServiceNode name="API Gateway Network" uptime="100%" latency="5ms" />
+            </div>
          </section>
 
-         {/* SECTION 3: Enterprise Verification Pipeline (Architecture) */}
-         <section className="px-6 md:px-12 py-20 max-w-[1400px] mx-auto border-t border-[rgba(0,255,255,0.05)] overflow-hidden">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 relative">
+         {/* SECTION 4: Animated Enterprise Verification Pipeline */}
+         <section className="px-6 md:px-12 py-24 max-w-[1400px] mx-auto border-b border-[rgba(0,255,255,0.05)] overflow-hidden">
+            <div className="text-center mb-16">
+               <h2 className="text-3xl font-bold text-white mb-4">Enterprise Architecture Pipeline</h2>
+               <p className="text-slate-400 text-base font-light max-w-2xl mx-auto">A seamless flow of cryptographic data packets routed through 6 localized edge nodes.</p>
+            </div>
+
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants} className="relative bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 lg:p-16">
                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,212,255,0.05)_0%,transparent_100%)] pointer-events-none" />
-               <div className="text-center mb-12 relative z-10">
-                  <h2 className="text-2xl font-bold text-white mb-3">Enterprise Verification Pipeline</h2>
-                  <p className="text-slate-400 text-sm font-light">Sub-second biometric analysis routed through 6 distinct AI tensors.</p>
-               </div>
-
-               <div className="relative flex flex-col lg:flex-row items-center justify-between gap-6 w-full px-4 overflow-x-auto pb-4 hide-scrollbar">
+               
+               <div className="relative flex flex-col lg:flex-row items-center justify-between gap-6 w-full relative z-10">
                   {/* SVG Animated Flow Line */}
-                  <svg className="absolute top-1/2 left-16 right-16 h-4 -translate-y-1/2 hidden lg:block z-0 overflow-visible" preserveAspectRatio="none">
-                     <path d="M0,8 L2000,8" stroke="rgba(255,255,255,0.1)" strokeWidth="1" fill="none" strokeDasharray="4 4" />
-                     {/* Multiple glowing packets */}
-                     <circle r="3" fill="#00d4ff" className="animate-[slide_4s_linear_infinite] drop-shadow-[0_0_10px_#00d4ff]" />
-                     <circle r="3" fill="#00ff88" className="animate-[slide_4s_linear_infinite_1.5s] drop-shadow-[0_0_10px_#00ff88]" />
-                     <circle r="3" fill="#7c3aed" className="animate-[slide_4s_linear_infinite_3s] drop-shadow-[0_0_10px_#7c3aed]" />
+                  <svg className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 hidden lg:block z-0 overflow-visible" preserveAspectRatio="none">
+                     <path d="M50,8 L2000,8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" strokeDasharray="6 6" className="animate-[slide_1s_linear_infinite]" />
+                     {/* Packets */}
+                     <circle r="4" fill="#00d4ff" className="animate-[slide_3s_linear_infinite] drop-shadow-[0_0_10px_#00d4ff]" />
+                     <circle r="4" fill="#00ff88" className="animate-[slide_3s_linear_infinite_1s] drop-shadow-[0_0_10px_#00ff88]" />
+                     <circle r="4" fill="#7c3aed" className="animate-[slide_3s_linear_infinite_2s] drop-shadow-[0_0_10px_#7c3aed]" />
                   </svg>
 
                   {[
-                    { name: 'Client Payload', icon: Code, type: 'Ingress' },
-                    { name: 'Face Mesh', icon: Eye, type: 'MediaPipe' },
-                    { name: 'Liveness', icon: Activity, type: 'Heuristic' },
+                    { name: 'Client Camera', icon: Camera, type: 'Ingress' },
+                    { name: 'Face Mesh', icon: Eye, type: 'Tensor' },
+                    { name: 'Liveness', icon: HeartPulse, type: 'Heuristic' },
                     { name: 'Anti-Spoof', icon: ShieldAlert, type: 'Policy' },
-                    { name: 'Identity', icon: Fingerprint, type: 'Matching' },
-                    { name: 'Auth Decision', icon: Server, type: 'Gateway' },
+                    { name: 'Identity Match', icon: Fingerprint, type: 'Database' },
+                    { name: 'Decision Engine', icon: Server, type: 'Response' },
                   ].map((node, i) => (
-                    <motion.div variants={itemVariants} key={i} className="flex flex-col items-center relative z-10 shrink-0 px-4 group">
-                       <div className="w-16 h-16 rounded-2xl bg-[#050a17] border border-[#00d4ff]/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(0,212,255,0.05)] group-hover:border-[#00d4ff]/80 group-hover:shadow-[0_0_30px_rgba(0,212,255,0.2)] transition-all relative">
+                    <motion.div variants={itemVariants} key={i} className="flex flex-col items-center relative z-10 shrink-0 bg-[#030712] p-2 rounded-xl group">
+                       <div className="w-16 h-16 rounded-xl bg-[rgba(5,10,25,0.8)] border border-[#00d4ff]/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(0,212,255,0.05)] group-hover:border-[#00d4ff]/80 group-hover:shadow-[0_0_30px_rgba(0,212,255,0.2)] transition-all">
                           <node.icon size={24} className="text-[#00d4ff] group-hover:scale-110 transition-transform" />
-                          <div className="absolute inset-0 rounded-2xl border border-[#00d4ff]/30 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]" style={{ animationDelay: `${i * 0.5}s`}} />
                        </div>
                        <div className="text-sm font-bold text-white whitespace-nowrap mb-1">{node.name}</div>
                        <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">{node.type}</div>
@@ -326,84 +326,117 @@ export default function HomePage() {
             </motion.div>
          </section>
 
-         {/* SECTION 5 & 6: Advanced API Platform Cards & Integrations */}
-         <section className="px-6 md:px-12 py-20 max-w-[1400px] mx-auto border-t border-[rgba(0,255,255,0.05)]">
+         {/* SECTION 5: Advanced API Platform Cards */}
+         <section className="px-6 md:px-12 py-24 max-w-[1400px] mx-auto border-b border-[rgba(0,255,255,0.05)]">
             <div className="text-center mb-16">
-               <h2 className="text-3xl font-bold text-white mb-4">Enterprise Integration Platform</h2>
-               <p className="text-slate-400 text-base font-light max-w-2xl mx-auto">Drop-in biometric security for any stack. Integrates seamlessly with existing identity providers and custom workflows.</p>
+               <h2 className="text-3xl font-bold text-white mb-4">Integration Platform</h2>
+               <p className="text-slate-400 text-base font-light max-w-2xl mx-auto">Drop-in biometric security for any stack. Integrates seamlessly with your existing REST architecture.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 hover:border-[rgba(0,212,255,0.3)] transition-colors group">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 group-hover:border-[#00d4ff]/50 transition-colors">
-                     <Layers className="text-[#00d4ff]" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+               {/* API Card 1 */}
+               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 hover:border-[rgba(0,212,255,0.3)] transition-colors group flex flex-col">
+                  <div className="flex items-center justify-between mb-6">
+                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#00d4ff]/50 transition-colors">
+                        <Layers className="text-[#00d4ff]" />
+                     </div>
+                     <div className="flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest">
+                        <span className="text-[#00ff88]">Acc: 99.8%</span>
+                        <span className="text-[#00d4ff]">Lat: &lt;50ms</span>
+                     </div>
                   </div>
+                  
                   <h3 className="text-xl font-bold text-white mb-3">Liveness API</h3>
-                  <p className="text-slate-400 text-sm font-light mb-6 leading-relaxed">
-                     Prevent presentation attacks (printed photos, screen replays, 3D masks) with our deep-learning liveness engine. Returns a boolean spoof flag and confidence score in &lt;50ms.
+                  <p className="text-slate-400 text-sm font-light mb-8 leading-relaxed flex-1">
+                     Prevent presentation attacks (printed photos, screen replays, 3D masks) with our deep-learning liveness engine. Returns a boolean spoof flag and confidence score instantly.
                   </p>
-                  <div className="bg-[#020408] rounded-xl p-4 border border-white/5 font-mono text-xs text-[#00ff88]">
-                     POST /api/verify/liveness
+                  
+                  <div className="bg-[#020408] rounded-xl overflow-hidden border border-white/5">
+                     <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02] text-[10px] font-mono text-slate-500 flex items-center gap-2">
+                        <span className="text-[#00ff88]">POST</span> https://api.mitra.com/v1/verify/liveness
+                     </div>
+                     <div className="p-4 text-[11px] font-mono text-[#00d4ff]">
+                        {`{
+  "status": "success",
+  "liveness": true,
+  "confidence_score": 0.994,
+  "spoof_detected": false
+}`}
+                     </div>
                   </div>
                </motion.div>
 
-               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 hover:border-[rgba(0,212,255,0.3)] transition-colors group">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 group-hover:border-[#7c3aed]/50 transition-colors">
-                     <Fingerprint className="text-[#7c3aed]" />
+               {/* API Card 2 */}
+               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-2xl p-8 hover:border-[rgba(0,212,255,0.3)] transition-colors group flex flex-col">
+                  <div className="flex items-center justify-between mb-6">
+                     <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7c3aed]/50 transition-colors">
+                        <Fingerprint className="text-[#7c3aed]" />
+                     </div>
+                     <div className="flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest">
+                        <span className="text-[#00ff88]">Acc: 99.9%</span>
+                        <span className="text-[#00d4ff]">Lat: &lt;80ms</span>
+                     </div>
                   </div>
+
                   <h3 className="text-xl font-bold text-white mb-3">Enterprise Identity API</h3>
-                  <p className="text-slate-400 text-sm font-light mb-6 leading-relaxed">
+                  <p className="text-slate-400 text-sm font-light mb-8 leading-relaxed flex-1">
                      Continuous authentication and 1:1 face matching against enrolled databases. Instantly verifies if the person at the keyboard is the authorized account holder.
                   </p>
-                  <div className="bg-[#020408] rounded-xl p-4 border border-white/5 font-mono text-xs text-[#7c3aed]">
-                     POST /api/verify/enterprise
+
+                  <div className="bg-[#020408] rounded-xl overflow-hidden border border-white/5">
+                     <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02] text-[10px] font-mono text-slate-500 flex items-center gap-2">
+                        <span className="text-[#00ff88]">POST</span> https://api.mitra.com/v1/verify/identity
+                     </div>
+                     <div className="p-4 text-[11px] font-mono text-[#7c3aed]">
+                        {`{
+  "status": "success",
+  "identity_match": true,
+  "user_id": "usr_998xjk",
+  "match_confidence": 0.985
+}`}
+                     </div>
                   </div>
                </motion.div>
-            </div>
-
-            {/* Seamless Integrations Strip */}
-            <div className="border border-white/5 rounded-2xl p-8 bg-white/[0.01] flex flex-col md:flex-row items-center justify-between gap-8">
-               <div className="text-center md:text-left">
-                  <h4 className="text-white font-bold mb-2">Seamless IAM Integrations</h4>
-                  <p className="text-slate-500 text-xs font-light">Plug into your existing Identity and Access Management flow.</p>
-               </div>
-               <div className="flex flex-wrap justify-center gap-6 text-sm font-mono text-slate-400 font-bold uppercase tracking-widest">
-                  <span className="px-4 py-2 bg-white/5 rounded hover:text-white transition-colors cursor-pointer">Okta</span>
-                  <span className="px-4 py-2 bg-white/5 rounded hover:text-white transition-colors cursor-pointer">Auth0</span>
-                  <span className="px-4 py-2 bg-white/5 rounded hover:text-white transition-colors cursor-pointer">Microsoft Entra</span>
-                  <span className="px-4 py-2 bg-white/5 rounded hover:text-white transition-colors cursor-pointer">Ping Identity</span>
-               </div>
             </div>
          </section>
 
-         {/* SECTION 7: Verification Use Cases */}
-         <section className="px-6 md:px-12 py-20 max-w-[1400px] mx-auto border-t border-[rgba(0,255,255,0.05)]">
+         {/* SECTION 6: Critical Infrastructure Use Cases */}
+         <section className="px-6 md:px-12 py-24 max-w-[1400px] mx-auto border-b border-[rgba(0,255,255,0.05)]">
             <div className="text-center mb-16">
                <h2 className="text-3xl font-bold text-white mb-4">Built for Critical Infrastructure</h2>
                <p className="text-slate-400 text-base font-light max-w-2xl mx-auto">MITRA VERIFY is designed to secure high-stakes environments where identity fraud is unacceptable.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <UseCaseCard 
-                  icon={Building} 
-                  title="Financial Services KYC" 
-                  description="Automate Know Your Customer onboarding with unbreakable face liveness detection to prevent deepfake account creation." 
-               />
-               <UseCaseCard 
-                  icon={Scale} 
-                  title="Government Identity" 
-                  description="Secure citizen portals and benefit distribution systems with enterprise-grade 1:1 facial matching and spoof protection." 
-               />
-               <UseCaseCard 
-                  icon={Users} 
-                  title="Remote Examination" 
-                  description="Ensure academic integrity with continuous background authentication to verify the enrolled student is taking the test." 
-               />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               <UseCaseCard icon={Building} title="Banking & KYC" description="Automate Know Your Customer onboarding with unbreakable face liveness detection to prevent deepfake account creation." />
+               <UseCaseCard icon={Scale} title="Government Identity" description="Secure citizen portals and benefit distribution systems with enterprise-grade 1:1 facial matching and spoof protection." />
+               <UseCaseCard icon={HeartPulse} title="Healthcare Access" description="Ensure HIPAA compliance by verifying physician identity before granting access to sensitive patient records." />
+               <UseCaseCard icon={Users} title="Remote Examinations" description="Ensure academic integrity with continuous background authentication to verify the enrolled student is taking the test." />
+               <UseCaseCard icon={Lock} title="Workforce Auth" description="Deploy Zero Trust access for corporate VPNs and internal tooling with continuous identity verification." />
+               <UseCaseCard icon={HardDrive} title="Secure Facilities" description="Integrate with physical hardware and access control systems for seamless, keyless entry." />
             </div>
          </section>
 
-         {/* SECTION 9: Enterprise Footer */}
-         <footer className="border-t border-[rgba(0,255,255,0.08)] bg-[#010308] pt-20 pb-10 px-6 md:px-12">
+         {/* SECTION 7: Final Premium CTA */}
+         <section className="px-6 md:px-12 py-32 max-w-[1400px] mx-auto text-center relative overflow-hidden">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#00d4ff]/5 blur-[200px] rounded-full pointer-events-none" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="relative z-10">
+               <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Ready to Secure Your Platform?</h2>
+               <p className="text-xl text-slate-400 font-light mb-10 max-w-2xl mx-auto">Start Building With MITRA VERIFY today and deploy military-grade biometric infrastructure in minutes.</p>
+               
+               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Link href="/developer" className="px-8 py-4 rounded-xl bg-[#00d4ff] text-[#020610] hover:bg-white transition-all text-sm font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(0,212,255,0.3)]">
+                     Get API Key
+                  </Link>
+                  <Link href="/developer" className="px-8 py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-sm font-bold text-white uppercase tracking-widest">
+                     View Documentation
+                  </Link>
+               </div>
+            </motion.div>
+         </section>
+
+         {/* SECTION 8: Enterprise Footer */}
+         <footer className="border-t border-[rgba(0,255,255,0.08)] bg-[#010308] pt-20 pb-10 px-6 md:px-12 relative z-10">
             <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-16">
                <div className="col-span-1 md:col-span-1">
                   <div className="flex items-center gap-2 mb-4">
@@ -422,9 +455,8 @@ export default function HomePage() {
                <div>
                   <h4 className="text-white font-bold text-sm mb-4">Platform</h4>
                   <ul className="space-y-2 text-sm text-slate-400 font-light">
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Liveness API</Link></li>
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Identity API</Link></li>
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Anti-Spoofing SDK</Link></li>
+                     <li><Link href="/demo/enterprise" className="hover:text-[#00d4ff] transition-colors">Liveness API</Link></li>
+                     <li><Link href="/demo/enterprise" className="hover:text-[#00d4ff] transition-colors">Identity API</Link></li>
                      <li><Link href="/dashboard" className="hover:text-[#00d4ff] transition-colors">Security Console</Link></li>
                   </ul>
                </div>
@@ -433,8 +465,7 @@ export default function HomePage() {
                   <h4 className="text-white font-bold text-sm mb-4">Developers</h4>
                   <ul className="space-y-2 text-sm text-slate-400 font-light">
                      <li><Link href="/developer" className="hover:text-[#00d4ff] transition-colors">Documentation</Link></li>
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">API Reference</Link></li>
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Status Page</Link></li>
+                     <li><Link href="/developer" className="hover:text-[#00d4ff] transition-colors">API Reference</Link></li>
                      <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">GitHub</Link></li>
                   </ul>
                </div>
@@ -445,7 +476,6 @@ export default function HomePage() {
                      <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Security & Compliance</Link></li>
                      <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Privacy Policy</Link></li>
                      <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">SOC2 Report</Link></li>
-                     <li><Link href="#" className="hover:text-[#00d4ff] transition-colors">Terms of Service</Link></li>
                   </ul>
                </div>
             </div>
@@ -467,29 +497,37 @@ export default function HomePage() {
 
 // ─── HELPER COMPONENTS ──────────────────────────────────────────────────────
 
-function TelemetryCard({ label, value, color = "text-white" }: { label: string, value: string, color?: string }) {
-  return (
-    <motion.div variants={itemVariants} className="bg-[rgba(10,20,40,0.6)] backdrop-blur-md border border-[rgba(0,255,255,0.08)] rounded-xl p-4 flex flex-col justify-between shadow-md hover:border-[rgba(0,212,255,0.3)] transition-colors">
-      <div className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-2">{label}</div>
-      <div className={`text-2xl font-bold tracking-tight ${color}`}>{value}</div>
-    </motion.div>
-  );
+function SimRow({ label, stepLimit, simStep, value, color }: { label: string, stepLimit: number, simStep: number, value: string, color: string }) {
+   const isActive = simStep >= stepLimit;
+   return (
+      <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+         <span className="text-xs text-slate-400 font-medium">{label}</span>
+         <span className={`text-[11px] font-mono uppercase tracking-widest ${isActive ? color : 'text-slate-600'}`}>
+            {isActive ? value : 'Waiting...'}
+         </span>
+      </div>
+   );
 }
 
-function InfraRow({ icon: Icon, label, status }: { icon: any, label: string, status: string }) {
-  return (
-    <div className="flex items-center justify-between">
-       <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded border border-white/5 flex items-center justify-center bg-white/[0.02]">
-             <Icon size={14} className="text-slate-400" />
-          </div>
-          <span className="text-xs text-slate-300 font-medium">{label}</span>
-       </div>
-       <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#00d4ff] bg-[#00d4ff]/10 px-2 py-0.5 rounded border border-[#00d4ff]/20">
-          <CheckCircle2 size={10} /> {status}
-       </span>
-    </div>
-  );
+function ServiceNode({ name, uptime, latency }: { name: string, uptime: string, latency: string }) {
+   return (
+      <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 hover:bg-white/[0.04] transition-colors flex flex-col">
+         <div className="flex items-center justify-between mb-6">
+            <span className="text-sm font-bold text-white">{name}</span>
+            <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_10px_#00ff88]" />
+         </div>
+         <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest">
+            <div className="flex flex-col gap-1">
+               <span className="text-slate-500">Uptime</span>
+               <span className="text-[#00ff88]">{uptime}</span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+               <span className="text-slate-500">Latency</span>
+               <span className="text-[#00d4ff]">{latency}</span>
+            </div>
+         </div>
+      </motion.div>
+   );
 }
 
 function UseCaseCard({ icon: Icon, title, description }: { icon: any, title: string, description: string }) {
