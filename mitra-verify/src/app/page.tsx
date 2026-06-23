@@ -73,44 +73,124 @@ export default function HomePage() {
       <main className="relative z-10">
          
          {/* SECTION 1: Enterprise Hero */}
-         <section className="pt-40 pb-20 px-6 md:px-12 max-w-[1400px] mx-auto text-center flex flex-col items-center">
-            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="max-w-4xl flex flex-col items-center">
-               <motion.div variants={itemVariants} className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[10px] font-mono uppercase tracking-widest shadow-[0_0_15px_rgba(0,255,136,0.15)] mb-8">
-                  <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" /> Platform Operational
-               </motion.div>
-               <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 leading-[1.1]">
-                 Enterprise Biometric <br />
-                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#0066ff] filter drop-shadow-[0_0_20px_rgba(0,212,255,0.3)]">Security Infrastructure</span>
-               </motion.h1>
-               <motion.p variants={itemVariants} className="text-lg md:text-xl text-slate-400 font-light mb-10 max-w-2xl leading-relaxed">
-                 Real-time biometric authentication, liveness intelligence, anti-spoof protection, and identity verification infrastructure built for global scale.
-               </motion.p>
+         <section className="pt-32 pb-20 px-6 md:px-12 max-w-[1400px] mx-auto min-h-[85vh] flex flex-col justify-center border-b border-[rgba(0,255,255,0.05)]">
+            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
                
-               <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                 <Link href="/demo/enterprise" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#00d4ff] text-[#020610] hover:bg-white transition-all text-sm font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(0,212,255,0.25)] flex items-center justify-center gap-2 group">
-                   Launch Verification <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                 </Link>
-                 <Link href="/developer" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[rgba(10,20,40,0.6)] border border-[rgba(0,255,255,0.08)] hover:bg-[rgba(10,20,40,0.8)] hover:border-[#00d4ff]/30 transition-all text-sm font-bold text-white uppercase tracking-widest flex items-center justify-center gap-2 backdrop-blur-md">
-                   <Code size={16} /> API Documentation
-                 </Link>
-               </motion.div>
-            </motion.div>
+               {/* LEFT SIDE: Typography & Actions */}
+               <motion.div variants={itemVariants} className="flex flex-col items-start text-left z-10">
+                  <div className="flex flex-wrap items-center gap-3 mb-8">
+                     <span className="px-3 py-1 rounded bg-[#00d4ff]/10 border border-[#00d4ff]/30 text-[#00d4ff] text-[10px] font-bold uppercase tracking-widest">Enterprise Edition</span>
+                     <span className="px-3 py-1 rounded bg-white/[0.03] border border-white/10 text-slate-400 text-[10px] font-bold uppercase tracking-widest">World-Class Biometric Authentication</span>
+                  </div>
+                  
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 leading-[1.1]">
+                    Secure Identity<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00d4ff] to-[#0066ff] filter drop-shadow-[0_0_20px_rgba(0,212,255,0.3)]">Verification</span><br />
+                    Infrastructure
+                  </h1>
+                  
+                  <p className="text-base md:text-lg text-slate-400 font-light mb-10 max-w-xl leading-relaxed">
+                    Deploy military-grade liveness detection, anti-spoofing, and continuous authentication with just a few lines of code. Built for mission-critical applications.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-12">
+                    <Link href="/demo/enterprise" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#00d4ff] text-[#020610] hover:bg-white transition-all text-sm font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(0,212,255,0.25)] flex items-center justify-center gap-2 group">
+                      Start Building Free <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                    <Link href="/demo/enterprise" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[rgba(10,20,40,0.6)] border border-[rgba(0,255,255,0.08)] hover:bg-[rgba(10,20,40,0.8)] hover:border-[#00d4ff]/30 transition-all text-sm font-bold text-white uppercase tracking-widest flex items-center justify-center gap-2 backdrop-blur-md">
+                      <Activity size={16} className="text-[#00d4ff]" /> Try Live Demo
+                    </Link>
+                  </div>
 
-            {/* Glowing Engine Indicators */}
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 1 }} className="mt-16 flex flex-wrap items-center justify-center gap-4 md:gap-8 border-t border-[rgba(0,255,255,0.05)] pt-8 w-full">
-               {[
-                 { label: 'Face Detection Engine', icon: Eye },
-                 { label: 'Liveness Engine', icon: Activity },
-                 { label: 'Anti-Spoof Engine', icon: ShieldAlert },
-                 { label: 'Identity Engine', icon: Fingerprint },
-                 { label: 'API Gateway', icon: Network }
-               ].map((engine, idx) => (
-                 <div key={idx} className="flex items-center gap-2">
-                    <engine.icon size={14} className="text-slate-500" />
-                    <span className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">{engine.label}</span>
-                    <CheckCircle2 size={12} className="text-[#00ff88]" />
-                 </div>
-               ))}
+                  {/* Metrics Row */}
+                  <div className="flex flex-wrap items-center gap-6 md:gap-10 pt-8 border-t border-white/5 w-full">
+                     <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold text-lg">478</span>
+                        <span className="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Facial Landmarks</span>
+                     </div>
+                     <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold text-lg">&lt;1s</span>
+                        <span className="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Verification</span>
+                     </div>
+                     <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold text-lg">3</span>
+                        <span className="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Verification APIs</span>
+                     </div>
+                     <div className="flex flex-col gap-1">
+                        <span className="text-white font-bold text-lg flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> 24/7</span>
+                        <span className="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Monitoring</span>
+                     </div>
+                  </div>
+               </motion.div>
+
+               {/* RIGHT SIDE: 3D Biometric Sphere */}
+               <motion.div variants={itemVariants} className="relative w-full aspect-square max-w-[500px] mx-auto lg:ml-auto flex items-center justify-center mt-8 lg:mt-0">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,212,255,0.08)_0%,transparent_60%)] mix-blend-screen" />
+                  
+                  {/* Holographic Sphere */}
+                  <div className="relative w-full h-full rounded-full flex items-center justify-center perspective-[1000px]">
+                     {/* Outer Rings */}
+                     <div className="absolute w-[90%] h-[90%] rounded-full border border-dashed border-[#00d4ff]/20 animate-[spin_20s_linear_infinite]" />
+                     <div className="absolute w-[80%] h-[80%] rounded-full border border-dotted border-[#00ff88]/20 animate-[spin_15s_linear_infinite_reverse]" />
+                     
+                     {/* Core Sphere (Wireframe representation) */}
+                     <motion.div 
+                        animate={{ rotateX: [0, 360], rotateY: [0, 360] }}
+                        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                        className="relative w-[60%] h-[60%] rounded-full border-2 border-[#00d4ff]/30 shadow-[inset_0_0_50px_rgba(0,212,255,0.2)]"
+                        style={{ transformStyle: 'preserve-3d' }}
+                     >
+                        {/* 3D Wireframe Equators */}
+                        <div className="absolute inset-0 rounded-full border border-[#00d4ff]/20" style={{transform: 'rotateX(45deg)'}} />
+                        <div className="absolute inset-0 rounded-full border border-[#00d4ff]/20" style={{transform: 'rotateX(-45deg)'}} />
+                        <div className="absolute inset-0 rounded-full border border-[#00d4ff]/20" style={{transform: 'rotateY(45deg)'}} />
+                        <div className="absolute inset-0 rounded-full border border-[#00d4ff]/20" style={{transform: 'rotateY(-45deg)'}} />
+                        
+                        {/* Animated Landmark Dots */}
+                        <div className="absolute top-1/4 left-1/4 w-1.5 h-1.5 bg-[#00ff88] rounded-full shadow-[0_0_10px_#00ff88] animate-pulse" />
+                        <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-[#00d4ff] rounded-full shadow-[0_0_10px_#00d4ff] animate-pulse" style={{ animationDelay: '0.5s' }} />
+                        <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-[#00ff88] rounded-full shadow-[0_0_10px_#00ff88] animate-pulse" style={{ animationDelay: '1s' }} />
+                        <div className="absolute bottom-1/4 right-1/3 w-1 h-1 bg-[#00d4ff] rounded-full shadow-[0_0_10px_#00d4ff] animate-pulse" style={{ animationDelay: '1.5s' }} />
+                     </motion.div>
+
+                     {/* Floating Status Card */}
+                     <motion.div 
+                       animate={{ y: [0, -10, 0] }} 
+                       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                       className="absolute top-1/4 -right-2 md:-right-8 bg-[rgba(5,10,20,0.8)] backdrop-blur-md border border-[rgba(0,255,255,0.15)] rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-20"
+                     >
+                        <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
+                           <Shield size={14} className="text-[#00d4ff]" />
+                           <span className="text-xs font-bold text-white">Verification Engine</span>
+                        </div>
+                        <div className="space-y-2 text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                           <div className="flex items-center justify-between gap-6">
+                              <span>Liveness:</span>
+                              <span className="text-[#00ff88] font-bold">PASS</span>
+                           </div>
+                           <div className="flex items-center justify-between gap-6">
+                              <span>Landmarks:</span>
+                              <span className="text-white">478</span>
+                           </div>
+                           <div className="flex items-center justify-between gap-6">
+                              <span>Confidence:</span>
+                              <span className="text-[#00d4ff] animate-pulse">Pending...</span>
+                           </div>
+                        </div>
+                     </motion.div>
+
+                     {/* Bottom Floating Badge */}
+                     <motion.div 
+                       animate={{ y: [0, 10, 0] }} 
+                       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                       className="absolute bottom-1/4 -left-2 md:-left-6 bg-[rgba(5,10,20,0.8)] backdrop-blur-md border border-[rgba(0,255,136,0.15)] rounded-full px-4 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-20 flex items-center gap-2"
+                     >
+                        <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse shadow-[0_0_10px_#00ff88]" />
+                        <span className="text-[10px] font-bold text-white uppercase tracking-widest">Liveness Check</span>
+                     </motion.div>
+                  </div>
+               </motion.div>
+
             </motion.div>
          </section>
 
