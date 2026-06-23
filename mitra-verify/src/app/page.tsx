@@ -62,7 +62,7 @@ export default function HomePage() {
          <div className="absolute top-[10%] right-[19%] w-32 h-px border-t border-dashed border-[#00E5FF]/20" />
       </div>
 
-      <main className="relative z-10 flex items-center min-h-screen pt-20">
+      <main className="relative z-10 flex items-center min-h-screen pt-10 pb-20">
          <div className="max-w-[1400px] w-full mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 relative">
             
             {/* ─── LEFT SIDE CONTENT ─────────────────────────────────────── */}
