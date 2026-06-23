@@ -4,75 +4,77 @@ import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { 
   Shield, Activity, Server, BarChart3, 
-  HelpCircle, FileText, ShieldAlert, Globe, Clock, CheckCircle2, XCircle, AlertTriangle
+  HelpCircle, FileText, ShieldAlert, Globe, Clock, CheckCircle2, XCircle, AlertTriangle, Eye, Zap, RefreshCw
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-// --- MOCK DATA ---
-const CHART_DATA = [
-  { time: '00:00', verified: 120, blocked: 12 },
-  { time: '02:00', verified: 150, blocked: 18 },
-  { time: '04:00', verified: 110, blocked: 8 },
-  { time: '06:00', verified: 280, blocked: 35 },
-  { time: '08:00', verified: 850, blocked: 120 },
-  { time: '10:00', verified: 1200, blocked: 210 },
-  { time: '12:00', verified: 1350, blocked: 240 },
-  { time: '14:00', verified: 1400, blocked: 260 },
-  { time: '16:00', verified: 1150, blocked: 190 },
-  { time: '18:00', verified: 900, blocked: 150 },
-  { time: '20:00', verified: 600, blocked: 80 },
-  { time: '22:00', verified: 350, blocked: 45 },
-];
-
-const THREAT_DISTRIBUTION = [
-  { type: 'Synthetic Media (Deepfake)', count: 1245, percentage: 45, color: '#ff3366' },
-  { type: 'Presentation Attack (2D Screen)', count: 830, percentage: 30, color: '#ffb800' },
-  { type: 'Session Replay', count: 415, percentage: 15, color: '#7c3aed' },
-  { type: 'Camera Injection', count: 276, percentage: 10, color: '#3b82f6' },
-];
-
-const LIVE_EVENTS = [
-  { id: 'req_982xPq', time: 'Just now', status: 'verified', score: 0.99, latency: 245, location: 'New York, US', ip: '192.168.**.**' },
-  { id: 'req_981mYz', time: '2s ago', status: 'blocked', score: 0.12, latency: 310, location: 'St. Petersburg, RU', ip: '45.132.**.**', reason: 'Deepfake Detected' },
-  { id: 'req_980vBc', time: '12s ago', status: 'verified', score: 0.97, latency: 210, location: 'London, UK', ip: '82.165.**.**' },
-  { id: 'req_979aRt', time: '15s ago', status: 'verified', score: 0.98, latency: 195, location: 'Frankfurt, DE', ip: '144.76.**.**' },
-  { id: 'req_978fGh', time: '21s ago', status: 'blocked', score: 0.34, latency: 280, location: 'Unknown Proxy', ip: '104.28.**.**', reason: 'Presentation Attack' },
-  { id: 'req_977kLm', time: '28s ago', status: 'verified', score: 0.99, latency: 220, location: 'Tokyo, JP', ip: '133.200.**.**' },
-];
-
-// Custom Tooltip for Chart
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-[#050a17]/95 border border-white/10 p-3 rounded-lg shadow-xl backdrop-blur-md">
-        <p className="text-white text-xs font-bold mb-2">{label}</p>
-        <div className="space-y-1 text-xs">
-          <p className="text-[#00d4ff]">
-            Verified: <span className="font-mono">{payload[0].value}</span>
-          </p>
-          <p className="text-[#ff3366]">
-            Blocked: <span className="font-mono">{payload[1].value}</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+interface VerificationEvent {
+  id: string;
+  timestamp: string;
+  apiType: string;
+  status: string;
+  confidence: number;
+  processingTimeMs: number;
+  spoofFlag: boolean;
+  faceDetectedFlag: boolean;
+  identityMatchedFlag: boolean;
+  attentionScore: number;
+  ip: string;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  
+  const [events, setEvents] = useState<VerificationEvent[]>([]);
+  const [overview, setOverview] = useState({
+    total: 0,
+    successful: 0,
+    failed: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    fetchData();
+    // Refresh every 5 seconds to show live updates
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
   }, []);
 
+  const fetchData = async () => {
+    try {
+      const [eventsRes, overviewRes] = await Promise.all([
+        fetch('/api/events'),
+        fetch('/api/analytics/overview')
+      ]);
+      
+      const eventsData = await eventsRes.json();
+      const overviewData = await overviewRes.json();
+      
+      if (eventsData && eventsData.events) {
+        setEvents(eventsData.events);
+      }
+      
+      if (overviewData) {
+        setOverview({
+          total: overviewData.total_verifications || 0,
+          successful: overviewData.successful_verifications || 0,
+          failed: overviewData.failed_verifications || 0,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!mounted) return null;
+
+  const hasData = overview.total > 0;
 
   return (
     <ProtectedRoute>
@@ -127,165 +129,185 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {[
-                { label: 'Verified Identities (24h)', value: '1.2M+', trend: '+12.4%', good: true, icon: CheckCircle2, color: '#00d4ff' },
-                { label: 'Fraud Attempts Blocked', value: '45,291', trend: '+4.1%', good: false, icon: ShieldAlert, color: '#ff3366' },
-                { label: 'Average Trust Score', value: '99.4%', trend: '+0.2%', good: true, icon: Activity, color: '#00ff88' },
-                { label: 'Global Edge Latency', value: '24ms', trend: '-2ms', good: true, icon: Globe, color: '#7c3aed' },
-              ].map((kpi, i) => (
-                <div key={i} className="relative p-5 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5 hover:border-white/10 transition-colors group overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-[0.03] transition-opacity" style={{ backgroundImage: `linear-gradient(to bottom right, ${kpi.color}, transparent)` }} />
-                  <div className="flex justify-between items-start mb-4 relative z-10">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${kpi.color}15`, border: `1px solid ${kpi.color}30` }}>
-                      <kpi.icon size={18} color={kpi.color} />
-                    </div>
-                    <span className={`text-[11px] font-bold tracking-wider px-2 py-1 rounded bg-white/[0.03] border border-white/5 ${kpi.good ? 'text-[#00ff88]' : 'text-[#ff3366]'}`}>
-                      {kpi.trend}
-                    </span>
-                  </div>
-                  <div className="relative z-10">
-                    <div className="text-3xl font-bold text-white tracking-tight mb-1">{kpi.value}</div>
-                    <div className="text-[12px] text-slate-400 uppercase tracking-wider font-semibold">{kpi.label}</div>
-                  </div>
+            {loading ? (
+              <div className="py-20 flex justify-center">
+                 <div className="w-8 h-8 border-2 border-[#00d4ff] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : !hasData ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                {/* Premium Empty State: Architecture & Engine Status */}
+                <div className="w-20 h-20 bg-[#00d4ff]/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(0,212,255,0.2)]">
+                  <Activity size={32} className="text-[#00d4ff]" />
                 </div>
-              ))}
-            </div>
+                <h2 className="text-2xl font-bold text-white mb-3">System Ready & Awaiting Telemetry</h2>
+                <p className="text-slate-400 max-w-lg text-center mb-10 text-sm">
+                  The MITRA VERIFY enterprise engines are fully operational. Connect your application via the API, or run a test verification to start generating real-time liveness data.
+                </p>
 
-            {/* Charts & Intelligence */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Main Chart */}
-              <div className="lg:col-span-2 p-6 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5 flex flex-col h-[400px]">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">Verification Volume</h3>
-                    <p className="text-xs text-slate-500 mt-1">Total requests vs. blocked threats across all zones.</p>
+                {/* Architecture Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+                  {/* Engine 1 */}
+                  <div className="bg-[#050a17]/80 backdrop-blur-md border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 p-4"><span className="flex items-center gap-1.5 text-[#00ff88] text-[10px] font-bold uppercase tracking-widest"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span> Online</span></div>
+                     <div className="w-10 h-10 rounded-lg bg-[#7c3aed]/10 border border-[#7c3aed]/30 flex items-center justify-center mb-4"><Eye size={18} className="text-[#7c3aed]" /></div>
+                     <h3 className="text-white font-bold text-[15px] mb-2">MediaPipe Face Mesh</h3>
+                     <p className="text-slate-500 text-xs leading-relaxed">478-point 3D facial landmark detection engine. Processing node active.</p>
+                  </div>
+
+                  {/* Engine 2 */}
+                  <div className="bg-[#050a17]/80 backdrop-blur-md border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 p-4"><span className="flex items-center gap-1.5 text-[#00ff88] text-[10px] font-bold uppercase tracking-widest"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span> Online</span></div>
+                     <div className="w-10 h-10 rounded-lg bg-[#00d4ff]/10 border border-[#00d4ff]/30 flex items-center justify-center mb-4"><Zap size={18} className="text-[#00d4ff]" /></div>
+                     <h3 className="text-white font-bold text-[15px] mb-2">Liveness Detection</h3>
+                     <p className="text-slate-500 text-xs leading-relaxed">Real-time heuristic evaluation including blink rate, head pose, and micro-expressions.</p>
+                  </div>
+
+                  {/* Engine 3 */}
+                  <div className="bg-[#050a17]/80 backdrop-blur-md border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 p-4"><span className="flex items-center gap-1.5 text-[#00ff88] text-[10px] font-bold uppercase tracking-widest"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span> Online</span></div>
+                     <div className="w-10 h-10 rounded-lg bg-[#ff3366]/10 border border-[#ff3366]/30 flex items-center justify-center mb-4"><ShieldAlert size={18} className="text-[#ff3366]" /></div>
+                     <h3 className="text-white font-bold text-[15px] mb-2">Anti-Spoofing AI</h3>
+                     <p className="text-slate-500 text-xs leading-relaxed">Deepfake and presentation attack detection models initialized and ready.</p>
                   </div>
                 </div>
-                <div className="flex-1 w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={CHART_DATA} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorVerified" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorBlocked" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ff3366" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#ff3366" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="time" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="verified" stroke="#00d4ff" strokeWidth={2} fillOpacity={1} fill="url(#colorVerified)" />
-                      <Area type="monotone" dataKey="blocked" stroke="#ff3366" strokeWidth={2} fillOpacity={1} fill="url(#colorBlocked)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+
+                <div className="mt-12 flex gap-4">
+                   <Link href="/demo/enterprise" className="px-6 py-3 bg-white text-black font-bold rounded-xl text-sm transition-all hover:bg-slate-200 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                     Run Test Verification
+                   </Link>
+                   <Link href="/developer" className="px-6 py-3 bg-white/[0.05] border border-white/10 text-white font-bold rounded-xl text-sm transition-all hover:bg-white/[0.1]">
+                     View API Integration
+                   </Link>
                 </div>
               </div>
-
-              {/* Threat Intelligence Distribution */}
-              <div className="p-6 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5 h-[400px] flex flex-col">
-                <div className="mb-6">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-[#ffb800]" /> Threat Distribution
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">Blocked vectors breakdown.</p>
-                </div>
-                
-                <div className="flex-1 flex flex-col justify-center space-y-5">
-                  {THREAT_DISTRIBUTION.map((threat, i) => (
-                    <div key={i}>
-                      <div className="flex justify-between items-end mb-2">
-                        <span className="text-[13px] text-white font-medium">{threat.type}</span>
-                        <div className="text-right">
-                          <span className="text-[13px] font-mono text-white">{threat.percentage}%</span>
-                        </div>
+            ) : (
+              <>
+                {/* Real KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="relative p-5 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#00d4ff]/10 border border-[#00d4ff]/30">
+                        <Activity size={18} className="text-[#00d4ff]" />
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full rounded-full" 
-                          style={{ 
-                            width: `${threat.percentage}%`, 
-                            backgroundColor: threat.color,
-                            boxShadow: `0 0 10px ${threat.color}80`
-                          }} 
-                        />
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1 font-mono">{threat.count.toLocaleString()} mitigations</div>
                     </div>
-                  ))}
+                    <div>
+                      <div className="text-3xl font-bold text-white tracking-tight mb-1">{overview.total.toLocaleString()}</div>
+                      <div className="text-[12px] text-slate-400 uppercase tracking-wider font-semibold">Total Verifications</div>
+                    </div>
+                  </div>
+
+                  <div className="relative p-5 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#00ff88]/10 border border-[#00ff88]/30">
+                        <CheckCircle2 size={18} className="text-[#00ff88]" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white tracking-tight mb-1">{overview.successful.toLocaleString()}</div>
+                      <div className="text-[12px] text-slate-400 uppercase tracking-wider font-semibold">Successful</div>
+                    </div>
+                  </div>
+
+                  <div className="relative p-5 rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#ff3366]/10 border border-[#ff3366]/30">
+                        <ShieldAlert size={18} className="text-[#ff3366]" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white tracking-tight mb-1">{overview.failed.toLocaleString()}</div>
+                      <div className="text-[12px] text-slate-400 uppercase tracking-wider font-semibold">Spoofs Blocked</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-            </div>
-
-            {/* Live Operations Feed */}
-            <div className="rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5 overflow-hidden">
-              <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                  <Activity size={16} className="text-[#00d4ff]" /> Live Security Operations
-                </h3>
-                <span className="flex items-center gap-2 text-[11px] font-mono text-[#00ff88] bg-[#00ff88]/10 px-2 py-1 rounded border border-[#00ff88]/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> Live Stream
-                </span>
-              </div>
-              
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[11px] text-slate-500 uppercase tracking-widest font-semibold bg-white/[0.01]">
-                      <th className="p-4 font-medium">Request ID</th>
-                      <th className="p-4 font-medium">Time</th>
-                      <th className="p-4 font-medium">Location / IP</th>
-                      <th className="p-4 font-medium">Confidence</th>
-                      <th className="p-4 font-medium">Latency</th>
-                      <th className="p-4 font-medium text-right">Result</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[13px]">
-                    {LIVE_EVENTS.map((event, i) => (
-                      <tr key={event.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                        <td className="p-4 font-mono text-slate-300">{event.id}</td>
-                        <td className="p-4 text-slate-400 flex items-center gap-1.5"><Clock size={14} className="opacity-50" /> {event.time}</td>
-                        <td className="p-4">
-                          <div className="text-white">{event.location}</div>
-                          <div className="text-[11px] font-mono text-slate-500">{event.ip}</div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-white">{(event.score * 100).toFixed(1)}%</span>
-                            <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${event.score * 100}%`, backgroundColor: event.status === 'verified' ? '#00d4ff' : '#ff3366' }} />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-mono text-slate-400">{event.latency}ms</td>
-                        <td className="p-4 text-right">
-                          {event.status === 'verified' ? (
-                            <span className="inline-flex items-center gap-1.5 bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/20 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
-                              <CheckCircle2 size={12} /> Verified
-                            </span>
-                          ) : (
-                            <span className="inline-flex flex-col items-end gap-0.5">
-                              <span className="inline-flex items-center gap-1.5 bg-[#ff3366]/10 text-[#ff3366] border border-[#ff3366]/20 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
-                                <XCircle size={12} /> Blocked
-                              </span>
-                              <span className="text-[10px] text-slate-500 tracking-wider uppercase mt-1">{event.reason}</span>
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
+                {/* Real Live Operations Feed */}
+                <div className="rounded-2xl bg-[#050a17]/60 backdrop-blur-md border border-white/5 overflow-hidden">
+                  <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                      <Server size={16} className="text-[#00d4ff]" /> Real-Time Telemetry Feed
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <button onClick={fetchData} className="text-slate-400 hover:text-white transition-colors" title="Force Refresh">
+                        <RefreshCw size={14} />
+                      </button>
+                      <span className="flex items-center gap-2 text-[11px] font-mono text-[#00ff88] bg-[#00ff88]/10 px-2 py-1 rounded border border-[#00ff88]/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> Live Polling
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="w-full overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 bg-[#050a17] z-10 shadow-md">
+                        <tr className="border-b border-white/5 text-[11px] text-slate-500 uppercase tracking-widest font-semibold">
+                          <th className="p-4 font-medium">Session ID</th>
+                          <th className="p-4 font-medium">Time</th>
+                          <th className="p-4 font-medium">IP Address</th>
+                          <th className="p-4 font-medium">Liveness Score</th>
+                          <th className="p-4 font-medium">Processing Time</th>
+                          <th className="p-4 font-medium text-right">Verification Result</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-[13px]">
+                        {events.map((event) => {
+                          const isSuccess = event.status === 'VERIFIED' || event.status === 'IDENTITY MATCHED';
+                          const isSpoof = event.spoofFlag || event.status.includes('SPOOF');
+                          return (
+                            <tr key={event.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                              <td className="p-4 font-mono text-slate-300">{event.id}</td>
+                              <td className="p-4 text-slate-400 flex items-center gap-1.5">
+                                <Clock size={14} className="opacity-50" /> 
+                                {new Date(event.timestamp).toLocaleTimeString()}
+                              </td>
+                              <td className="p-4">
+                                <div className="text-[12px] font-mono text-slate-400">{event.ip}</div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-white">{(event.confidence * 100).toFixed(1)}%</span>
+                                  <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full rounded-full" 
+                                      style={{ 
+                                        width: `${event.confidence * 100}%`, 
+                                        backgroundColor: isSuccess ? '#00d4ff' : '#ff3366' 
+                                      }} 
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4 font-mono text-slate-400">{event.processingTimeMs.toFixed(0)}ms</td>
+                              <td className="p-4 text-right">
+                                {isSuccess ? (
+                                  <span className="inline-flex items-center gap-1.5 bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/20 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
+                                    <CheckCircle2 size={12} /> {event.status}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex flex-col items-end gap-0.5">
+                                    <span className="inline-flex items-center gap-1.5 bg-[#ff3366]/10 text-[#ff3366] border border-[#ff3366]/20 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider">
+                                      <XCircle size={12} /> {event.status}
+                                    </span>
+                                    {isSpoof && <span className="text-[10px] text-slate-500 tracking-wider uppercase mt-1">Spoof Detected</span>}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {events.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-slate-500 text-sm">
+                              No events found in the database.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>
