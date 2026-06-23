@@ -2,7 +2,7 @@
 
 import { Play, ArrowRight, Star, Plus, Shield, Globe, Zap, Headphones } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import BiometricCore3D from '@/components/BiometricCore3D';
 import StatisticsStrip from '@/components/StatisticsStrip';
@@ -16,6 +16,30 @@ import DeveloperExperience from '@/components/DeveloperExperience';
 export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+
+  // 3D Tilt Effect on Hero Text
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springConfig = { damping: 30, stiffness: 150, mass: 0.5 };
+  const smoothX = useSpring(mouseX, springConfig);
+  const smoothY = useSpring(mouseY, springConfig);
+
+  const rotateX = useTransform(smoothY, [-400, 400], [10, -10]);
+  const rotateY = useTransform(smoothX, [-400, 400], [-10, 10]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
 
   const steps = [
     "Searching for Face",
@@ -66,7 +90,12 @@ export default function HomePage() {
          <div className="max-w-[1400px] w-full mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 relative">
             
             {/* ─── LEFT SIDE CONTENT ─────────────────────────────────────── */}
-            <div className="flex flex-col items-start justify-center text-left pt-10 z-20">
+            <motion.div 
+               onMouseMove={handleMouseMove}
+               onMouseLeave={handleMouseLeave}
+               style={{ rotateX, rotateY, transformPerspective: 1000 }}
+               className="flex flex-col items-start justify-center text-left pt-10 z-20"
+            >
                
                {/* Badge */}
                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/[0.08] bg-[#020A1F] mb-8 shadow-[0_0_15px_rgba(0,229,255,0.15)]">
@@ -116,7 +145,7 @@ export default function HomePage() {
                   <Metric value="3 APIs" label="Products" />
                   <Metric value="MIT" label="License" />
                </div>
-            </div>
+            </motion.div>
 
             {/* ─── RIGHT SIDE VISUAL ─────────────────────────────────────── */}
             <div className="relative h-[600px] lg:h-auto w-full flex items-center justify-center z-10">
