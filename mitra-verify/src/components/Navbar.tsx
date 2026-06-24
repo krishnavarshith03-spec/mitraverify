@@ -83,6 +83,9 @@ export default function Navbar() {
             Demos
           </NavItem>
           <NavItem href="/about">About</NavItem>
+          {(user?.email === 'admin@mitraverify.com' || user?.role === 'admin') && (
+            <NavItem href="/admin">Admin Dashboard</NavItem>
+          )}
         </div>
 
         {/* Right Actions */}
