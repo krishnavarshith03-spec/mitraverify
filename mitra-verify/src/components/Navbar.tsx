@@ -113,6 +113,12 @@ export default function Navbar() {
                   </div>
                   
                   <div className="p-2 flex flex-col gap-1">
+                    {(user.email === 'admin@mitraverify.com' || user.role === 'admin') && (
+                      <Link href="/admin" prefetch={false} className="group/item px-3 py-2 text-[13px] text-[#00E5FF] hover:text-white hover:bg-[#00E5FF]/20 rounded-lg transition-all duration-200 flex items-center gap-3 font-semibold bg-[#00E5FF]/5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] shadow-[0_0_8px_#00E5FF] transition-all" />
+                        Admin Portal
+                      </Link>
+                    )}
                     <Link href="/dashboard" prefetch={false} className="group/item px-3 py-2 text-[13px] text-slate-300 hover:text-[#00E5FF] hover:bg-[#00E5FF]/10 rounded-lg transition-all duration-200 flex items-center gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-600 group-hover/item:bg-[#00E5FF] group-hover/item:shadow-[0_0_8px_#00E5FF] transition-all" />
                       Security Console
