@@ -52,7 +52,7 @@ function NavItem({ href, children, items }: { href?: string, children: React.Rea
 }
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
 
   return (
     <motion.nav 
