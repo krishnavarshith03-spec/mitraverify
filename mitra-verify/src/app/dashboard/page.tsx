@@ -97,7 +97,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
       const [overviewRes, eventsRes] = await Promise.all([
-        fetch('/api/analytics/overview'),
+        fetch(`/api/analytics/overview?timeframe=${timeframe}`),
         fetch('/api/events')
       ]);
       const overviewData = await overviewRes.json();
@@ -119,7 +119,7 @@ export default function DashboardPage() {
     fetchData();
     const interval = setInterval(() => fetchData(), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]);
 
   const filteredEvents = useMemo(() => {
     return events.filter(ev => {
