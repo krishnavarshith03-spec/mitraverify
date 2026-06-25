@@ -4,9 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { 
   Shield, Activity, CheckCircle2, ShieldAlert, Fingerprint, 
-  Eye, Key, Network, AlertTriangle, FileText, 
-  Cpu, Webhook, Box, Lock, Code, Link as LinkIcon, Terminal, 
-  Globe, Search, Filter, Download, ChevronLeft, ChevronRight,
+  Eye, Network, AlertTriangle, 
+  Lock, Search, Download, ChevronLeft, ChevronRight,
   Crosshair, Zap
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -14,7 +13,7 @@ import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 
 const BiometricCore3D = dynamic(() => import('@/components/BiometricCore3D'), { 
   ssr: false,
@@ -160,8 +159,8 @@ export default function DashboardPage() {
 
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen bg-[#02040a] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#00d4ff] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#01081A] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -170,15 +169,15 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#02040a] font-sans selection:bg-[#00d4ff]/30 text-slate-300 overflow-x-hidden relative">
+      <div className="min-h-screen bg-[#01081A] font-sans selection:bg-[#00E5FF]/30 text-slate-300 overflow-x-hidden relative">
         <Navbar />
 
         {/* Premium Animated Grid Background */}
         <div className="fixed inset-0 pointer-events-none z-0">
-           <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-[#00d4ff]/5 blur-[250px] rounded-full mix-blend-screen" />
+           <div className="absolute top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-[#00E5FF]/5 blur-[250px] rounded-full mix-blend-screen" />
            <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#0066ff]/5 blur-[250px] rounded-full mix-blend-screen" />
            
-           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" />
+           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" />
         </div>
 
         <main className="relative z-10 pt-32 pb-24 px-6 md:px-12 max-w-[1920px] mx-auto space-y-12">
@@ -197,41 +196,30 @@ export default function DashboardPage() {
                    Real-time biometric authentication, zero-trust liveness intelligence, and identity verification infrastructure.
                  </p>
               </motion.div>
-              
-
            </motion.section>
 
            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
               
-              {/* LEFT COLUMN: Operations (Col 1-8) */}
+              {/* LEFT COLUMN: Data & Operations (Col 1-8) */}
               <div className="xl:col-span-8 flex flex-col gap-8">
                  
-                 {/* SECTION 2: Live Verification Center (Cleaner, no heavy borders) */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="relative w-full h-[400px] rounded-2xl bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden ring-1 ring-white/5 group">
-                   
-                   {/* 3D Biometric Core Background */}
-                   <div className="absolute inset-0 z-0 opacity-60 group-hover:opacity-100 transition-opacity duration-1000 flex items-center justify-center">
-                      <div className="w-full h-full scale-[1.3] origin-center -translate-y-8">
-                         <BiometricCore3D />
-                      </div>
-                   </div>
-                   
-                   {/* Overlay UI */}
-                   <div className="absolute inset-0 pointer-events-none p-8 flex flex-col justify-end z-10 bg-gradient-to-t from-[#02040a] via-[#02040a]/40 to-transparent">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#00d4ff]/10 text-[#00d4ff]">
-                          <Shield size={16} />
-                        </div>
-                        <h2 className="text-3xl font-semibold text-white tracking-tight">Mission Control</h2>
-                      </div>
-                      <p className="text-slate-400 text-base max-w-xl font-light">Global edge network primed for ultra-low latency liveness detection and identity resolution.</p>
-                   </div>
+                 {/* Executive Summary (Moved to top of left column for immediate KPI access) */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-[#010A20]/60 ring-1 ring-white/5 rounded-2xl p-8 backdrop-blur-sm">
+                    <h3 className="text-lg font-semibold text-white tracking-tight mb-6">
+                      Executive Summary
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
+                      <SummaryStat label="Verified Sessions" value={telemetry?.executive_overview.successful_verifications.toLocaleString() || "0"} color="text-white" />
+                      <SummaryStat label="Blocked Spoofs" value={telemetry?.executive_overview.spoof_attempts_blocked.toLocaleString() || "0"} color="text-[#00E5FF]" />
+                      <SummaryStat label="Identity Matches" value={telemetry?.executive_overview.identity_matches.toLocaleString() || "0"} color="text-[#7c3aed]" />
+                      <SummaryStat label="Failed Sessions" value={telemetry?.executive_overview.failed_verifications.toLocaleString() || "0"} color="text-slate-500" />
+                    </div>
                  </motion.section>
 
-                 {/* SECTION 3: Animated Verification Pipeline */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="py-8">
-                   <h3 className="text-sm font-medium text-slate-300 mb-8 flex items-center gap-2">
-                     <Network size={16} className="text-[#00d4ff]" /> Live Verification Pipeline
+                 {/* Animated Verification Pipeline */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="py-8 bg-[#010A20]/40 ring-1 ring-white/5 rounded-2xl px-8 backdrop-blur-sm">
+                   <h3 className="text-sm font-medium text-slate-300 mb-10 flex items-center gap-2">
+                     <Network size={16} className="text-[#00E5FF]" /> Live Verification Pipeline
                    </h3>
                    <div className="relative flex items-center justify-between w-full px-4">
                       {/* Flowing animated line */}
@@ -239,10 +227,10 @@ export default function DashboardPage() {
                          <path d="M0,12 L2000,12" stroke="rgba(255,255,255,0.05)" strokeWidth="2" fill="none" />
                          {/* Animated Particles */}
                          <motion.circle 
-                           r="3" fill="#00d4ff" 
+                           r="3" fill="#00E5FF" 
                            animate={{ cx: ["0%", "100%"] }} 
                            transition={{ duration: 3, ease: "linear", repeat: Infinity }} 
-                           cy="12" className="shadow-[0_0_10px_#00d4ff]"
+                           cy="12" className="shadow-[0_0_10px_#00E5FF]"
                          />
                          <motion.circle 
                            r="3" fill="#00ff88" 
@@ -261,8 +249,8 @@ export default function DashboardPage() {
                         { name: 'Decision', icon: Zap },
                       ].map((node, i) => (
                         <div key={i} className="flex flex-col items-center relative z-10 group">
-                           <div className="w-12 h-12 rounded-2xl bg-[#0a0d14] ring-1 ring-white/10 flex items-center justify-center mb-4 group-hover:ring-[#00d4ff]/50 transition-all group-hover:-translate-y-1 shadow-lg bg-clip-padding backdrop-filter backdrop-blur-xl">
-                              <node.icon size={18} className="text-slate-400 group-hover:text-[#00d4ff] transition-colors" />
+                           <div className="w-12 h-12 rounded-2xl bg-[#010A20] ring-1 ring-white/10 flex items-center justify-center mb-4 group-hover:ring-[#00E5FF]/50 transition-all group-hover:-translate-y-1 shadow-lg bg-clip-padding backdrop-filter backdrop-blur-xl">
+                              <node.icon size={18} className="text-slate-400 group-hover:text-[#00E5FF] transition-colors" />
                            </div>
                            <div className="text-sm font-medium text-slate-200">{node.name}</div>
                         </div>
@@ -270,8 +258,8 @@ export default function DashboardPage() {
                    </div>
                  </motion.section>
 
-                 {/* SECTION 4: Real-time Verification Feed */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="flex-1 flex flex-col">
+                 {/* Real-time Verification Feed */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="flex-1 flex flex-col bg-[#010A20]/60 ring-1 ring-white/5 rounded-2xl backdrop-blur-sm p-8">
                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
                       <div>
                         <h3 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2 mb-2">
@@ -287,33 +275,33 @@ export default function DashboardPage() {
                               placeholder="Search ID..." 
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="bg-white/[0.02] ring-1 ring-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-[#00d4ff]/50 w-56 transition-all"
+                              className="bg-white/[0.02] ring-1 ring-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-[#00E5FF]/50 w-56 transition-all"
                             />
                          </div>
-                         <button onClick={exportCSV} disabled={events.length === 0} className="px-4 py-2.5 rounded-xl bg-transparent hover:bg-white/5 transition-colors text-sm font-medium text-slate-300 flex items-center gap-2">
+                         <button onClick={exportCSV} disabled={events.length === 0} className="px-4 py-2.5 rounded-xl bg-transparent hover:bg-white/5 transition-colors text-sm font-medium text-slate-300 flex items-center gap-2 ring-1 ring-white/5">
                             <Download size={14} /> Export
                          </button>
                       </div>
                    </div>
 
                    {!hasData ? (
-                      <div className="w-full h-64 rounded-2xl flex flex-col items-center justify-center text-center bg-white/[0.01] ring-1 ring-white/5">
+                      <div className="w-full h-64 rounded-xl flex flex-col items-center justify-center text-center bg-white/[0.01] ring-1 ring-white/5">
                         <Activity size={32} className="text-slate-600 mb-4 animate-pulse" />
                         <h4 className="text-lg font-medium text-white mb-2">Awaiting Telemetry</h4>
                         <p className="text-slate-500 text-sm font-light">Listening for incoming verification requests...</p>
                       </div>
                    ) : (
-                      <div className="flex-1 flex flex-col bg-white/[0.01] rounded-2xl ring-1 ring-white/5 overflow-hidden">
+                      <div className="flex-1 flex flex-col rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="w-full text-left whitespace-nowrap">
                              <thead className="bg-transparent text-slate-400 border-b border-white/5">
                                 <tr>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Timestamp</th>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Request ID</th>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Liveness</th>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Identity</th>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Latency</th>
-                                   <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider">Status</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Timestamp</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Request ID</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Liveness</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Identity</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Latency</th>
+                                   <th className="px-4 py-4 text-xs font-medium uppercase tracking-wider">Status</th>
                                 </tr>
                              </thead>
                              <tbody className="divide-y divide-white/5">
@@ -326,15 +314,15 @@ export default function DashboardPage() {
                                       key={ev.id} 
                                       className="hover:bg-white/[0.02] transition-colors group"
                                    >
-                                      <td className="px-6 py-4 text-sm text-slate-400">{new Date(ev.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 })}</td>
-                                      <td className="px-6 py-4 font-mono text-xs text-slate-300">{ev.id.substring(0, 18)}...</td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-4 py-4 text-sm text-slate-400">{new Date(ev.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits: 3 })}</td>
+                                      <td className="px-4 py-4 font-mono text-xs text-slate-300">{ev.id.substring(0, 18)}...</td>
+                                      <td className="px-4 py-4">
                                          <div className="flex items-center gap-2">
                                            <div className={`w-1.5 h-1.5 rounded-full ${ev.spoofFlag ? 'bg-[#ff3366]' : 'bg-[#00ff88]'}`} />
                                            <span className="text-sm font-medium text-slate-200">{Math.round(ev.confidence)}%</span>
                                          </div>
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-4 py-4">
                                          {ev.apiType === 'Enterprise' ? (
                                             <span className={`text-sm font-medium ${ev.identityMatchedFlag ? 'text-slate-200' : 'text-slate-500'}`}>
                                                {ev.identityMatchedFlag ? 'Matched' : 'N/A'}
@@ -343,8 +331,8 @@ export default function DashboardPage() {
                                             <span className="text-slate-600">-</span>
                                          )}
                                       </td>
-                                      <td className="px-6 py-4 font-mono text-xs text-slate-400">{ev.processingTimeMs}ms</td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-4 py-4 font-mono text-xs text-slate-400">{ev.processingTimeMs}ms</td>
+                                      <td className="px-4 py-4">
                                          <ResultBadge status={ev.status} spoofFlag={ev.spoofFlag} />
                                       </td>
                                    </motion.tr>
@@ -354,7 +342,7 @@ export default function DashboardPage() {
                           </table>
                         </div>
                         {/* Pagination Controls */}
-                        <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between text-sm text-slate-500 bg-[#02040a]/50">
+                        <div className="py-4 mt-2 border-t border-white/5 flex items-center justify-between text-sm text-slate-500">
                            <span>{((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredEvents.length)} of {filteredEvents.length} events</span>
                            <div className="flex gap-2">
                               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-white/5 disabled:opacity-30 transition-colors">
@@ -373,12 +361,34 @@ export default function DashboardPage() {
               {/* RIGHT COLUMN: Biometric Console & Telemetry (Col 9-12) */}
               <div className="xl:col-span-4 flex flex-col gap-8">
                  
-                 {/* SECTION 5: Live Biometric Console */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-gradient-to-b from-white/[0.03] to-transparent ring-1 ring-white/10 rounded-2xl p-8 relative overflow-hidden">
+                 {/* Mission Control 3D (Moved to right top) */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="relative w-full h-[300px] rounded-2xl bg-gradient-to-b from-white/[0.02] to-transparent overflow-hidden ring-1 ring-white/5 group bg-[#010A20]/60 backdrop-blur-sm">
+                   
+                   {/* 3D Biometric Core Background */}
+                   <div className="absolute inset-0 z-0 opacity-80 group-hover:opacity-100 transition-opacity duration-1000 flex items-center justify-center">
+                      <div className="w-full h-full scale-[1.1] origin-center -translate-y-4">
+                         <BiometricCore3D />
+                      </div>
+                   </div>
+                   
+                   {/* Overlay UI */}
+                   <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-end z-10 bg-gradient-to-t from-[#01081A] via-[#01081A]/40 to-transparent">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#00E5FF]/10 text-[#00E5FF]">
+                          <Shield size={14} />
+                        </div>
+                        <h2 className="text-xl font-semibold text-white tracking-tight">Mission Control</h2>
+                      </div>
+                      <p className="text-slate-400 text-xs max-w-xl font-light">Global edge network primed for ultra-low latency liveness detection.</p>
+                   </div>
+                 </motion.section>
+
+                 {/* Live Biometric Console */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-[#010A20]/60 ring-1 ring-white/5 rounded-2xl p-8 relative overflow-hidden backdrop-blur-sm">
                     <div className="absolute top-0 right-0 p-8 flex gap-1">
-                      <div className="w-1.5 h-4 bg-[#00d4ff] rounded-full animate-[pulse_1s_ease-in-out_infinite]" />
-                      <div className="w-1.5 h-4 bg-[#00d4ff] rounded-full animate-[pulse_1s_ease-in-out_infinite_0.2s]" />
-                      <div className="w-1.5 h-4 bg-[#00d4ff] rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]" />
+                      <div className="w-1.5 h-4 bg-[#00E5FF] rounded-full animate-[pulse_1s_ease-in-out_infinite]" />
+                      <div className="w-1.5 h-4 bg-[#00E5FF] rounded-full animate-[pulse_1s_ease-in-out_infinite_0.2s]" />
+                      <div className="w-1.5 h-4 bg-[#00E5FF] rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]" />
                     </div>
                     
                     <h3 className="text-lg font-semibold text-white tracking-tight mb-8">
@@ -416,8 +426,8 @@ export default function DashboardPage() {
                     </div>
                  </motion.section>
 
-                 {/* SECTION 6: Animated Telemetry Charts */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-white/[0.01] ring-1 ring-white/5 rounded-2xl p-8">
+                 {/* Animated Telemetry Charts */}
+                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-[#010A20]/60 ring-1 ring-white/5 rounded-2xl p-8 backdrop-blur-sm">
                    <div className="flex items-center justify-between mb-6">
                      <h3 className="text-lg font-semibold text-white tracking-tight">
                        System Telemetry
@@ -438,12 +448,12 @@ export default function DashboardPage() {
                            <AreaChart data={chartData}>
                              <defs>
                                <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
-                                 <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/>
-                                 <stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/>
+                                 <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3}/>
+                                 <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
                                </linearGradient>
                              </defs>
-                             <Tooltip contentStyle={{ backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#00d4ff' }} />
-                             <Area type="monotone" dataKey="latency" stroke="#00d4ff" strokeWidth={2} fillOpacity={1} fill="url(#colorLatency)" isAnimationActive={false} />
+                             <Tooltip contentStyle={{ backgroundColor: '#010A20', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#00E5FF' }} />
+                             <Area type="monotone" dataKey="latency" stroke="#00E5FF" strokeWidth={2} fillOpacity={1} fill="url(#colorLatency)" isAnimationActive={false} />
                            </AreaChart>
                          </ResponsiveContainer>
                        </div>
@@ -463,26 +473,13 @@ export default function DashboardPage() {
                                  <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
                                </linearGradient>
                              </defs>
-                             <Tooltip contentStyle={{ backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#7c3aed' }} />
+                             <Tooltip contentStyle={{ backgroundColor: '#010A20', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#7c3aed' }} />
                              <Area type="monotone" dataKey="throughput" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorThroughput)" isAnimationActive={false} />
                            </AreaChart>
                          </ResponsiveContainer>
                        </div>
                      </div>
                    </div>
-                 </motion.section>
-
-                 {/* SECTION 7: Executive Summary */}
-                 <motion.section variants={itemVariants} initial="hidden" animate="visible" className="bg-white/[0.01] ring-1 ring-white/5 rounded-2xl p-8">
-                    <h3 className="text-lg font-semibold text-white tracking-tight mb-6">
-                      Executive Summary
-                    </h3>
-                    <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                      <SummaryStat label="Verified Sessions" value={telemetry?.executive_overview.successful_verifications.toLocaleString() || "0"} color="text-white" />
-                      <SummaryStat label="Blocked Spoofs" value={telemetry?.executive_overview.spoof_attempts_blocked.toLocaleString() || "0"} color="text-[#00d4ff]" />
-                      <SummaryStat label="Identity Matches" value={telemetry?.executive_overview.identity_matches.toLocaleString() || "0"} color="text-[#7c3aed]" />
-                      <SummaryStat label="Failed Sessions" value={telemetry?.executive_overview.failed_verifications.toLocaleString() || "0"} color="text-slate-500" />
-                    </div>
                  </motion.section>
 
               </div>
