@@ -176,9 +176,9 @@ export default function DashboardPage() {
            {/* HERO SECTION */}
            <motion.section 
              variants={containerVariants} initial="hidden" animate="visible"
-             className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 pb-4"
+             className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 pb-4 relative"
            >
-              <motion.div variants={itemVariants} className="max-w-4xl">
+              <motion.div variants={itemVariants} className="max-w-4xl z-10">
                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00E5FF]/10 text-[#00E5FF] border border-[#00E5FF]/20 text-xs font-semibold uppercase tracking-wider mb-6">
                    <Globe size={14} /> Ecosystem Control Center
                  </div>
@@ -189,6 +189,13 @@ export default function DashboardPage() {
                  <p className="text-lg md:text-xl text-slate-400 font-light mb-8 max-w-2xl leading-relaxed">
                    Comprehensive telemetry across all MITRA VERIFY APIs. Monitor high-volume authentication, active anti-spoofing, and zero-trust identity deployments.
                  </p>
+              </motion.div>
+
+              {/* 3D Animation on the Right */}
+              <motion.div variants={itemVariants} className="hidden xl:flex relative w-[400px] h-[300px] items-center justify-center pointer-events-none z-0">
+                 <div className="absolute inset-[-50%] opacity-80 mix-blend-screen">
+                    <BiometricCore3D />
+                 </div>
               </motion.div>
            </motion.section>
 
