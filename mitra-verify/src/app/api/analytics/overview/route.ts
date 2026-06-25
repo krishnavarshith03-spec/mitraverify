@@ -6,7 +6,16 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const timeframe = searchParams.get('timeframe') || '24h';
-  const total = verificationEvents.length;
+  
+  const now = Date.now();
+  let cutoff = now - 24 * 60 * 60 * 1000;
+  if (timeframe === '7d') cutoff = now - 7 * 24 * 60 * 60 * 1000;
+  else if (timeframe === '30d') cutoff = now - 30 * 24 * 60 * 60 * 1000;
+  else if (timeframe === '90d') cutoff = now - 90 * 24 * 60 * 60 * 1000;
+
+  const filteredEvents = verificationEvents.filter(ev => new Date(ev.timestamp).getTime() >= cutoff);
+
+  const total = filteredEvents.length;
   let successful = 0;
   let failed = 0;
   let spoof = 0;
@@ -35,7 +44,7 @@ export async function GET(req: Request) {
   const temporalDataMap: Record<string, { time: string, verified: number, failed: number, spoof: number, faceLost: number, multipleFaces: number, count: number, totalLatency: number }> = {};
 
   // For audit logs, we map the most recent 10 events
-  const auditLogs = verificationEvents.slice(-10).reverse().map(ev => ({
+  const auditLogs = filteredEvents.slice(-10).reverse().map(ev => ({
     id: ev.id,
     timestamp: ev.timestamp,
     action: `Verification via ${ev.apiType} API`,
@@ -43,7 +52,7 @@ export async function GET(req: Request) {
     ip: ev.ip
   }));
 
-  for (const event of verificationEvents) {
+  for (const event of filteredEvents) {
     totalProcessingTime += event.processingTimeMs;
     
     // API Performance
@@ -101,12 +110,19 @@ export async function GET(req: Request) {
       identityMatches++;
     }
 
-    // Chart grouping
+    // Chart grouping based on timeframe
     const date = new Date(event.timestamp);
-    // Group by minute:seconds rounded to nearest 10s
-    const seconds = date.getSeconds();
-    const roundedSeconds = Math.floor(seconds / 10) * 10;
-    const timeKey = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${roundedSeconds.toString().padStart(2, '0')}`;
+    let timeKey = '';
+    
+    if (timeframe === '24h') {
+      // Group by minute:seconds rounded to nearest 10s for live-like view
+      const seconds = date.getSeconds();
+      const roundedSeconds = Math.floor(seconds / 10) * 10;
+      timeKey = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${roundedSeconds.toString().padStart(2, '0')}`;
+    } else {
+      // Group by YYYY-MM-DD
+      timeKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
     if (!temporalDataMap[timeKey]) {
       temporalDataMap[timeKey] = { time: timeKey, verified: 0, failed: 0, spoof: 0, faceLost: 0, multipleFaces: 0, count: 0, totalLatency: 0 };
@@ -135,7 +151,7 @@ export async function GET(req: Request) {
   const successRate = total > 0 ? (successful / total) * 100 : 0;
   const avgProcessingTime = total > 0 ? Math.round(totalProcessingTime / total) : 0;
   
-  let temporalData = Object.values(temporalDataMap).sort((a, b) => a.time.localeCompare(b.time)).slice(-20).map(t => ({
+  let temporalData = Object.values(temporalDataMap).sort((a, b) => a.time.localeCompare(b.time)).slice(-50).map(t => ({
     time: t.time,
     pass: t.verified,
     failed: t.failed,
@@ -145,32 +161,6 @@ export async function GET(req: Request) {
     latency: t.count > 0 ? Math.round(t.totalLatency / t.count) : 0,
     throughput: t.count * 360 // Extrapolate 10s count to req/hr
   }));
-
-  let multiplier = 1;
-  if (timeframe !== '24h') {
-    const points = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
-    multiplier = timeframe === '7d' ? 14 : timeframe === '30d' ? 60 : 180;
-    
-    temporalData = Array.from({ length: points }).map((_, i) => {
-      const basePass = 1500 + Math.random() * 1000;
-      const baseFail = 100 + Math.random() * 200;
-      
-      const d = new Date();
-      d.setDate(d.getDate() - (points - i - 1));
-      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
-      return {
-        time: dateStr,
-        pass: Math.floor(basePass),
-        failed: Math.floor(baseFail),
-        spoof: Math.floor(baseFail * 0.4),
-        faceLost: Math.floor(baseFail * 0.4),
-        multipleFaces: Math.floor(baseFail * 0.2),
-        latency: 200 + Math.random() * 50,
-        throughput: Math.floor(basePass + baseFail)
-      };
-    });
-  }
 
   const avgLatency = total > 0 ? Math.round(totalProcessingTime / total) : 0;
   
@@ -185,32 +175,39 @@ export async function GET(req: Request) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Build Recent Alerts dynamically
+  // Build Recent Alerts dynamically based purely on real metrics
   const recentAlerts = [];
-  if (successRate < 80) recentAlerts.push({ type: 'High Failure Rate', message: `Success rate dropped to ${successRate.toFixed(1)}%`, time: new Date().toISOString(), severity: 'warning' });
-  if (avgLatency > 500) recentAlerts.push({ type: 'API Latency Warning', message: `Average processing time is ${avgLatency}ms`, time: new Date().toISOString(), severity: 'warning' });
+  if (total > 10 && successRate < 80) recentAlerts.push({ type: 'High Failure Rate', message: `Success rate dropped to ${successRate.toFixed(1)}%`, time: new Date().toISOString(), severity: 'warning' });
+  if (total > 5 && avgLatency > 500) recentAlerts.push({ type: 'API Latency Warning', message: `Average processing time is ${avgLatency}ms`, time: new Date().toISOString(), severity: 'warning' });
   if (securityEvents.deepfake > 5) recentAlerts.push({ type: 'Repeated Spoof Attempts', message: `Multiple deepfakes detected`, time: new Date().toISOString(), severity: 'critical' });
-  if (Math.random() > 0.95) recentAlerts.push({ type: 'Webhook Offline', message: `Delivery delayed`, time: new Date().toISOString(), severity: 'critical' });
 
-  // Mock Verification Timeline (Heatmap)
-  const timelineHeatmap = Array.from({ length: 24 }).map((_, i) => ({
-    hour: `${i.toString().padStart(2, '0')}:00`,
-    volume: Math.floor(Math.random() * 500) + 50
+  // Real Verification Timeline (Heatmap)
+  const heatmapCounts: Record<string, number> = {};
+  for (let i = 0; i < 24; i++) heatmapCounts[`${i.toString().padStart(2, '0')}:00`] = 0;
+  
+  filteredEvents.forEach(ev => {
+    const h = new Date(ev.timestamp).getHours();
+    heatmapCounts[`${h.toString().padStart(2, '0')}:00`]++;
+  });
+  
+  const timelineHeatmap = Object.keys(heatmapCounts).map(k => ({
+    hour: k,
+    volume: heatmapCounts[k]
   }));
 
   return NextResponse.json({
     data: {
       executive_overview: {
-        total_verifications: total * multiplier + (multiplier > 1 ? 12483 * multiplier : 0),
-        successful_verifications: successful * multiplier + (multiplier > 1 ? 11024 * multiplier : 0),
-        failed_verifications: failed * multiplier + (multiplier > 1 ? 1459 * multiplier : 0),
-        spoof_attempts_blocked: spoof * multiplier + (multiplier > 1 ? 843 * multiplier : 0),
-        identity_matches: identityMatches * multiplier + (multiplier > 1 ? 1024 * multiplier : 0),
-        face_enrollments: (apiPerformance['Enterprise'].requests > 0 ? Math.floor(apiPerformance['Enterprise'].requests * 0.4) : 0) * multiplier,
-        webhook_deliveries: total * multiplier + (multiplier > 1 ? 12400 * multiplier : 0),
-        face_lost_events: noFace * multiplier + (multiplier > 1 ? 616 * multiplier : 0),
-        avg_processing_time_ms: avgProcessingTime || 215,
-        active_api_keys: 3,
+        total_verifications: total,
+        successful_verifications: successful,
+        failed_verifications: failed,
+        spoof_attempts_blocked: spoof,
+        identity_matches: identityMatches,
+        face_enrollments: apiPerformance['Enterprise'].requests > 0 ? Math.floor(apiPerformance['Enterprise'].requests * 0.4) : 0,
+        webhook_deliveries: total,
+        face_lost_events: noFace,
+        avg_processing_time_ms: avgProcessingTime || 0,
+        active_api_keys: 1,
       },
       analytics_chart: temporalData,
       security_events: securityEvents,
@@ -218,20 +215,14 @@ export async function GET(req: Request) {
       audit_logs: auditLogs,
       bottom_analytics: {
         face_quality: {
-          average: 98.4,
-          low_light: 4.2,
-          blur: 1.8,
-          occlusion: 2.0,
-          head_rotation_fail: 0.5
+          average: 0,
+          low_light: 0,
+          blur: 0,
+          occlusion: 0,
+          head_rotation_fail: 0
         },
         device_analytics: deviceAnalytics,
-        country_analytics: [
-          { country: 'India', value: 45 },
-          { country: 'USA', value: 25 },
-          { country: 'Germany', value: 15 },
-          { country: 'Singapore', value: 10 },
-          { country: 'Japan', value: 5 }
-        ]
+        country_analytics: []
       },
       system_health: {
         face_detection: 'Operational',
