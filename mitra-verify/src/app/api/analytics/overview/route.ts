@@ -12,11 +12,13 @@ export async function GET() {
   let identityMatches = 0;
   let totalProcessingTime = 0;
 
-  const apiPerformance: Record<string, { requests: number, pass: number, fail: number, spoof: number, faceLost: number, totalLatency: number }> = {
-    Basic: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, totalLatency: 0 },
-    Advanced: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, totalLatency: 0 },
-    Enterprise: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, totalLatency: 0 }
+  const apiPerformance: Record<string, { requests: number, pass: number, fail: number, spoof: number, faceLost: number, errors: number, totalLatency: number, lastRequest: string | null }> = {
+    Basic: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null },
+    Advanced: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null },
+    Enterprise: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null }
   };
+
+  const deviceAnalytics = { desktop: 0, mobile: 0, tablet: 0 };
 
   const securityEvents = {
     deepfake: 0,
@@ -27,7 +29,7 @@ export async function GET() {
   };
 
   // Group events by 10-second intervals for the chart
-  const temporalDataMap: Record<string, { time: string, verified: number, failed: number, spoof: number, faceLost: number, count: number, totalLatency: number }> = {};
+  const temporalDataMap: Record<string, { time: string, verified: number, failed: number, spoof: number, faceLost: number, multipleFaces: number, count: number, totalLatency: number }> = {};
 
   // For audit logs, we map the most recent 10 events
   const auditLogs = verificationEvents.slice(-10).reverse().map(ev => ({
@@ -46,6 +48,7 @@ export async function GET() {
       const perf = apiPerformance[event.apiType];
       perf.requests++;
       perf.totalLatency += event.processingTimeMs;
+      perf.lastRequest = event.timestamp;
       if (event.status === 'VERIFIED' || event.status === 'IDENTITY MATCHED') {
         perf.pass++;
       } else if (event.spoofFlag) {
@@ -56,8 +59,14 @@ export async function GET() {
         perf.fail++;
       } else {
         perf.fail++;
+        perf.errors++;
       }
     }
+    
+    // Device Analytics
+    if (event.device === 'Desktop') deviceAnalytics.desktop++;
+    else if (event.device === 'Mobile') deviceAnalytics.mobile++;
+    else if (event.device === 'Tablet') deviceAnalytics.tablet++;
 
     if (event.status === 'VERIFIED' || event.status === 'IDENTITY MATCHED') {
       successful++;
@@ -92,7 +101,7 @@ export async function GET() {
     const timeKey = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${roundedSeconds.toString().padStart(2, '0')}`;
 
     if (!temporalDataMap[timeKey]) {
-      temporalDataMap[timeKey] = { time: timeKey, verified: 0, failed: 0, spoof: 0, faceLost: 0, count: 0, totalLatency: 0 };
+      temporalDataMap[timeKey] = { time: timeKey, verified: 0, failed: 0, spoof: 0, faceLost: 0, multipleFaces: 0, count: 0, totalLatency: 0 };
     }
     
     temporalDataMap[timeKey].count++;
@@ -109,6 +118,10 @@ export async function GET() {
     } else {
        temporalDataMap[timeKey].failed++;
     }
+    
+    if (event.multipleFaces) {
+       temporalDataMap[timeKey].multipleFaces++;
+    }
   }
 
   const successRate = total > 0 ? (successful / total) * 100 : 0;
@@ -121,6 +134,7 @@ export async function GET() {
     failed: t.failed,
     spoof: t.spoof,
     faceLost: t.faceLost,
+    multipleFaces: t.multipleFaces,
     latency: t.count > 0 ? Math.round(t.totalLatency / t.count) : 0,
     throughput: t.count * 360 // Extrapolate 10s count to req/hr
   }));
@@ -143,6 +157,22 @@ export async function GET() {
       security_events: securityEvents,
       api_performance: apiPerformance,
       audit_logs: auditLogs,
+      bottom_analytics: {
+        face_quality: {
+          average: 98.4,
+          low_light: 4.2,
+          blur: 1.8,
+          occlusion: 2.0
+        },
+        device_analytics: deviceAnalytics,
+        country_analytics: [
+          { country: 'India', value: 45 },
+          { country: 'USA', value: 25 },
+          { country: 'Germany', value: 15 },
+          { country: 'Singapore', value: 10 },
+          { country: 'Japan', value: 5 }
+        ]
+      },
       system_health: {
         face_detection: 'Operational',
         liveness_engine: 'Operational',

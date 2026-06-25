@@ -10,6 +10,10 @@ export interface VerificationEvent {
   identityMatchedFlag: boolean;
   attentionScore: number;
   ip: string;
+  user?: string;
+  failureReason?: string;
+  multipleFaces?: boolean;
+  device?: string;
 }
 
 // Ensure the global variable isn't redeclared in Next.js development HMR
