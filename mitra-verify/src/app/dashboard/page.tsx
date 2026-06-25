@@ -330,7 +330,12 @@ export default function DashboardPage() {
                     >
                        <div className="flex justify-between items-center mb-5">
                           <h3 className="text-[14px] font-semibold text-white flex items-center gap-2">
-                            <Server size={14} style={{ color }} /> {label}
+                            <motion.div
+                              animate={{ opacity: [0.6, 1, 0.6] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                              <Server size={14} style={{ color }} />
+                            </motion.div> {label}
                           </h3>
                           <span className="text-[11px] font-medium text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20">
                             ▲ {trendVal}%
@@ -471,7 +476,12 @@ export default function DashboardPage() {
                   ].map((item) => (
                     <div key={item.name} className="flex items-center justify-between p-3 rounded-[10px] bg-[#070B17] border border-white/5">
                       <div className="flex items-center gap-3">
-                         <item.icon size={14} className="text-slate-400" />
+                         <motion.div
+                           animate={{ scale: [1, 1.15, 1], filter: [`drop-shadow(0 0 0px ${item.color}00)`, `drop-shadow(0 0 6px ${item.color}80)`, `drop-shadow(0 0 0px ${item.color}00)`] }}
+                           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                         >
+                           <item.icon size={14} style={{ color: item.color }} />
+                         </motion.div>
                          <span className="text-[13px] font-medium text-slate-300">{item.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -503,7 +513,16 @@ function KpiCard({ title, value, trend, trendUp, icon: Icon, lastUpdate, sparkli
       className="bg-[#0F172A] border border-white/5 rounded-[18px] p-5 shadow-sm flex flex-col justify-between h-[150px] relative overflow-hidden"
     >
        <div className="flex items-center gap-2 mb-2 relative z-10">
-          <Icon size={14} className="text-slate-400" />
+          <motion.div
+            animate={{ 
+              boxShadow: [`0px 0px 0px ${color}00`, `0px 0px 8px ${color}4D`, `0px 0px 0px ${color}00`] 
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="flex items-center justify-center w-6 h-6 rounded-md border"
+            style={{ backgroundColor: `${color}1A`, borderColor: `${color}33`, color }}
+          >
+             <Icon size={12} />
+          </motion.div>
           <span className="text-[13px] font-medium text-slate-400">{title}</span>
        </div>
        
