@@ -6,7 +6,7 @@ import {
   Shield, Activity, CheckCircle2, ShieldAlert, Fingerprint, 
   Eye, Network, AlertTriangle, 
   Lock, Search, Download, ChevronLeft, ChevronRight,
-  Crosshair, Zap, Server, Database, Code, GitBranch, Key
+  Crosshair, Zap, Server, Database, Code, GitBranch, Key, Globe
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
