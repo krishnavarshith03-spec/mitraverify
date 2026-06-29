@@ -138,7 +138,7 @@ export default function Navbar() {
                 </button>
                 
                 {/* Dropdown Menu */}
-                <div className="absolute top-full right-0 mt-3 opacity-0 pointer-events-none group-hover/profile:opacity-100 group-hover/profile:pointer-events-auto transition-all duration-300 translate-y-2 group-hover/profile:translate-y-0 z-50">
+                <div className="absolute top-full right-0 pt-2 opacity-0 pointer-events-none group-hover/profile:opacity-100 group-hover/profile:pointer-events-auto transition-all duration-300 translate-y-2 group-hover/profile:translate-y-0 z-50">
                   <div className="bg-[#010A20]/95 backdrop-blur-xl border border-white/[0.08] border-t-[#00E5FF]/40 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.6)] w-[220px] md:w-[240px] flex flex-col relative overflow-hidden">
                     {/* Inner subtle glow */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00E5FF]/50 to-transparent" />
