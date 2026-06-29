@@ -149,7 +149,7 @@ function VerificationFlow() {
           <section className="grid lg:grid-cols-3 gap-6 mb-24">
             {/* API 1 */}
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-cyan-500/30 transition-all overflow-hidden flex flex-col">
-              <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <div className="p-8 flex-1">
                 <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 mb-6">
                   <Zap className="w-5 h-5 text-cyan-400" />
@@ -170,7 +170,7 @@ function VerificationFlow() {
                   <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-cyan-400" /> Motion Detection</li>
                 </ul>
               </div>
-              <div className="p-4 border-t border-white/5 bg-white/[0.01] flex gap-3">
+              <div className="p-4 border-t border-white/5 bg-white/[0.01] flex gap-3 relative z-10">
                 <Link href="/demo/basic" className="flex-1 py-2 px-4 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-[#060B14] font-medium text-sm text-center transition-colors">View Demo</Link>
                 <Link href="/docs" className="flex-1 py-2 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-white font-medium text-sm text-center border border-white/10 transition-colors">API Docs</Link>
               </div>
@@ -178,7 +178,7 @@ function VerificationFlow() {
 
             {/* API 2 */}
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-violet-500/30 transition-all overflow-hidden flex flex-col">
-              <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <div className="p-8 flex-1">
                 <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20 mb-6">
                   <ShieldAlert className="w-5 h-5 text-violet-400" />
@@ -199,7 +199,7 @@ function VerificationFlow() {
                   <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-violet-400" /> Replay Detection</li>
                 </ul>
               </div>
-              <div className="p-4 border-t border-white/5 bg-white/[0.01] flex gap-3">
+              <div className="p-4 border-t border-white/5 bg-white/[0.01] flex gap-3 relative z-10">
                 <Link href="/demo/advanced" className="flex-1 py-2 px-4 rounded-lg bg-violet-500 hover:bg-violet-400 text-white font-medium text-sm text-center transition-colors">View Demo</Link>
                 <Link href="/docs" className="flex-1 py-2 px-4 rounded-lg bg-white/5 hover:bg-white/10 text-white font-medium text-sm text-center border border-white/10 transition-colors">API Docs</Link>
               </div>
@@ -207,7 +207,7 @@ function VerificationFlow() {
 
             {/* API 3 */}
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }} whileHover={{ y: -4, scale: 1.02 }} className="group relative rounded-2xl bg-[#0a101d] border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden flex flex-col hover:border-emerald-500">
-              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-100" />
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-100 pointer-events-none" />
               <div className="p-8 flex-1 relative z-10">
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 mb-6">
                   <Fingerprint className="w-5 h-5 text-emerald-400" />
