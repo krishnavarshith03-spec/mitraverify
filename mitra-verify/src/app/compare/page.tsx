@@ -258,7 +258,7 @@ function VerificationFlow() {
               <PerfChartRow label="Scalability" basic={{pct: 100, val: 'High'}} advanced={{pct: 90, val: 'High'}} enterprise={{pct: 70, val: 'Medium'}} />
               <PerfChartRow label="Latency" basic={{pct: 10, val: '<1s'}} advanced={{pct: 50, val: '2s'}} enterprise={{pct: 90, val: '4s'}} />
             </div>
-          </section>
+          </motion.section>
 
           {/* FEATURE MATRIX */}
           <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
@@ -302,7 +302,7 @@ function VerificationFlow() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </motion.section>
 
           {/* VERIFICATION PIPELINE */}
           <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
@@ -343,7 +343,7 @@ function VerificationFlow() {
                 ))}
               </div>
             </div>
-          </section>
+          </motion.section>
 
           {/* API COMPARISON CARDS */}
           <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
@@ -377,7 +377,7 @@ function VerificationFlow() {
                   </div>
                 ))}
              </div>
-          </section>
+          </motion.section>
 
           {/* BEST FOR */}
           <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
@@ -399,7 +399,7 @@ function VerificationFlow() {
                   </div>
                 ))}
              </div>
-          </section>
+          </motion.section>
 
           {/* CODE INTEGRATION */}
           <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
@@ -428,7 +428,7 @@ function VerificationFlow() {
                 </pre>
               </div>
             </div>
-          </section>
+          </motion.section>
 
           {/* CTA CARD */}
           <motion.section initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-16">
@@ -447,7 +447,7 @@ function VerificationFlow() {
                 </Link>
               </div>
             </div>
-          </section>
+          </motion.section>
 
         </main>
 
