@@ -148,13 +148,13 @@ function VerificationFlow() {
           {/* API CARDS (Premium grid) */}
           <section className="grid lg:grid-cols-3 gap-6 mb-24">
             {/* API 1 */}
-            <motion.div whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-cyan-500/30 transition-all overflow-hidden flex flex-col">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-cyan-500/30 transition-all overflow-hidden flex flex-col">
               <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="p-8 flex-1">
                 <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 mb-6">
                   <Zap className="w-5 h-5 text-cyan-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">API 1 — Fast Liveness</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Fast Liveness</h3>
                 <p className="text-sm text-slate-400 mb-6 min-h-[40px]">Ultra-fast passive detection. Best for frictionless logins.</p>
                 
                 <div className="space-y-3 mb-6">
@@ -177,13 +177,13 @@ function VerificationFlow() {
             </motion.div>
 
             {/* API 2 */}
-            <motion.div whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-violet-500/30 transition-all overflow-hidden flex flex-col">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-white/5 hover:border-violet-500/30 transition-all overflow-hidden flex flex-col">
               <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="p-8 flex-1">
                 <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20 mb-6">
                   <ShieldAlert className="w-5 h-5 text-violet-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">API 2 — Anti-Spoof</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Advanced Anti-Spoof</h3>
                 <p className="text-sm text-slate-400 mb-6 min-h-[40px]">Active challenge-response to prevent presentation attacks.</p>
                 
                 <div className="space-y-3 mb-6">
@@ -206,7 +206,7 @@ function VerificationFlow() {
             </motion.div>
 
             {/* API 3 */}
-            <motion.div whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden flex flex-col">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }} whileHover={{ y: -4 }} className="group relative rounded-2xl bg-[#0a101d] border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all overflow-hidden flex flex-col">
               <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-100" />
               <div className="absolute top-0 right-8 px-3 py-1 bg-emerald-500 text-[#060B14] text-[10px] font-bold tracking-widest uppercase rounded-b-lg shadow-lg">
                 Recommended
@@ -215,7 +215,7 @@ function VerificationFlow() {
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 mb-6">
                   <Fingerprint className="w-5 h-5 text-emerald-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">API 3 — Enterprise</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Enterprise</h3>
                 <p className="text-sm text-slate-400 mb-6 min-h-[40px]">Full verification with continuous session monitoring.</p>
                 
                 <div className="space-y-3 mb-6">
@@ -239,14 +239,14 @@ function VerificationFlow() {
           </section>
 
           {/* QUICK COMPARISON */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
             <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Quick Comparison</h2>
             <div className="bg-[#0a101d] rounded-2xl border border-white/5 p-2">
               <div className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-white/5 text-xs font-medium text-slate-500 uppercase tracking-wider">
                 <div className="col-span-3">Metric</div>
-                <div className="col-span-3">API 1</div>
-                <div className="col-span-3">API 2</div>
-                <div className="col-span-3">API 3</div>
+                <div className="col-span-3">Fast Liveness</div>
+                <div className="col-span-3">Advanced Anti-Spoof</div>
+                <div className="col-span-3">Enterprise</div>
               </div>
               <PerfChartRow label="Speed" basic={{pct: 95, val: 'Fastest'}} advanced={{pct: 60, val: 'Balanced'}} enterprise={{pct: 40, val: 'Thorough'}} />
               <PerfChartRow label="Security" basic={{pct: 40, val: 'Standard'}} advanced={{pct: 85, val: 'High'}} enterprise={{pct: 100, val: 'Maximum'}} />
@@ -261,16 +261,16 @@ function VerificationFlow() {
           </section>
 
           {/* FEATURE MATRIX */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
             <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Feature Matrix</h2>
             <div className="overflow-x-auto rounded-2xl border border-white/5 bg-[#0a101d]">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-[#0d1424] sticky top-0 z-10">
                   <tr>
                     <th className="p-5 font-medium text-slate-300 w-1/3 border-b border-white/10">Feature</th>
-                    <th className="p-5 font-medium text-cyan-400 border-b border-white/10">API 1</th>
-                    <th className="p-5 font-medium text-violet-400 border-b border-white/10">API 2</th>
-                    <th className="p-5 font-medium text-emerald-400 border-b border-white/10">API 3</th>
+                    <th className="p-5 font-medium text-cyan-400 border-b border-white/10">Fast Liveness</th>
+                    <th className="p-5 font-medium text-violet-400 border-b border-white/10">Adv. Anti-Spoof</th>
+                    <th className="p-5 font-medium text-emerald-400 border-b border-white/10">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
@@ -305,7 +305,7 @@ function VerificationFlow() {
           </section>
 
           {/* VERIFICATION PIPELINE */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
             <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Verification Pipeline</h2>
             <div className="relative bg-[#0a101d] rounded-2xl border border-white/5 p-12 overflow-x-auto hide-scrollbar">
               <div className="min-w-[900px] flex justify-between items-center relative">
@@ -346,13 +346,13 @@ function VerificationFlow() {
           </section>
 
           {/* API COMPARISON CARDS */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
              <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Detailed Breakdown</h2>
              <div className="grid lg:grid-cols-3 gap-6">
                 {[
-                  { name: "API 1", subtitle: "Fast Liveness", color: "cyan", colorCode: "#22d3ee", feats: "Passive Detection", time: "< 1.2s", acc: "92.0%", use: "Basic Auth", ind: "Social, Forums", tier: "Basic" },
-                  { name: "API 2", subtitle: "Anti-Spoof", color: "violet", colorCode: "#a78bfa", feats: "Active Challenge, Replay Det.", time: "2.5s", acc: "98.5%", use: "Financial KYC", ind: "FinTech, Crypto", tier: "Premium" },
-                  { name: "API 3", subtitle: "Enterprise Identity", color: "emerald", colorCode: "#34d399", feats: "Identity Match, Gaze Track", time: "3.8s", acc: "99.9%", use: "High-Risk Auth", ind: "Gov, Healthcare", tier: "Enterprise" }
+                  { name: "Fast Liveness", subtitle: "Passive Detection", color: "cyan", colorCode: "#22d3ee", feats: "Passive Detection", time: "< 1.2s", acc: "92.0%", use: "Basic Auth", ind: "Social, Forums", tier: "Basic" },
+                  { name: "Adv. Anti-Spoof", subtitle: "Active Challenge, Replay Det.", color: "violet", colorCode: "#a78bfa", feats: "Active Challenge, Replay Det.", time: "2.5s", acc: "98.5%", use: "Financial KYC", ind: "FinTech, Crypto", tier: "Premium" },
+                  { name: "Enterprise", subtitle: "Identity Match, Gaze Track", color: "emerald", colorCode: "#34d399", feats: "Identity Match, Gaze Track", time: "3.8s", acc: "99.9%", use: "High-Risk Auth", ind: "Gov, Healthcare", tier: "Enterprise" }
                 ].map((api, i) => (
                   <div key={i} className="bg-[#0a101d] rounded-2xl border border-white/5 p-6 flex flex-col">
                     <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
@@ -380,7 +380,7 @@ function VerificationFlow() {
           </section>
 
           {/* BEST FOR */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
              <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Recommendations</h2>
              <div className="grid md:grid-cols-3 gap-6">
                 {[
@@ -402,7 +402,7 @@ function VerificationFlow() {
           </section>
 
           {/* CODE INTEGRATION */}
-          <section className="mb-24">
+          <motion.section initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-24">
             <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Code Integration</h2>
             <div className="rounded-2xl border border-white/5 bg-[#0a101d] overflow-hidden">
               <div className="flex border-b border-white/5 bg-[#0d1424]">
@@ -431,7 +431,7 @@ function VerificationFlow() {
           </section>
 
           {/* CTA CARD */}
-          <section className="mb-16">
+          <motion.section initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-16">
             <div className="bg-gradient-to-r from-[#0a101d] to-[#0d1424] rounded-2xl border border-white/10 p-10 md:p-14 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
               <div>
