@@ -39,11 +39,11 @@ def decode_token(token: str) -> Optional[dict]:
 
 def decode_supabase_token(token: str) -> Optional[dict]:
     try:
-        # Supabase JWTs use HS256 and the JWT secret from the dashboard
+        # Supabase JWTs use HS256 (Legacy) or ES256/RS256 (New Asymmetric Keys)
         return jwt.decode(
             token, 
             settings.SUPABASE_JWT_SECRET, 
-            algorithms=["HS256"],
+            algorithms=["HS256", "ES256", "RS256"],
             options={"verify_aud": False}
         )
     except JWTError:
