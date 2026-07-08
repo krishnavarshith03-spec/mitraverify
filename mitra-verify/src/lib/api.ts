@@ -120,6 +120,8 @@ export const analyticsAPI = {
     faceDetectedFlag: boolean;
     identityMatchedFlag: boolean;
     attentionScore?: number;
+    user?: string;
+    device?: string;
   }) => axios.post('/api/events', data),
 };
 

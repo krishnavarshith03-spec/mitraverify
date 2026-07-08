@@ -89,22 +89,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshUser]);
 
-  // Backward compatibility if still using old authAPI
   const login = useCallback((token: string, userDetails: User) => {
-    console.log('[Auth] login() called manually for custom fallback:', userDetails.email);
-    setUser(userDetails);
-    setLoading(false);
+    // Legacy function, kept for signature but state is handled by onAuthStateChange
+    console.log('[Auth] Legacy login called');
   }, []);
 
   const logout = useCallback(async (callbackUrl?: string) => {
     console.log('[Auth] logout() via Supabase');
     setLoading(true);
     await supabase.auth.signOut();
-    try {
-      await authAPI.logout(); 
-    } catch (e) {
-      // ignore
-    }
     setUser(null);
     setLoading(false);
     window.location.href = callbackUrl || '/signin';

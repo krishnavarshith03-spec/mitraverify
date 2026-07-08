@@ -10,6 +10,7 @@ import PageTransition from '@/components/cyber/PageTransition';
 import TiltCard from '@/components/cyber/TiltCard';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 
 
 
@@ -52,6 +53,7 @@ function CheckBadge({ label, passed, checking }: { label: string; passed: boolea
 }
 
 export default function BasicDemoPage() {
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streaming, setStreaming] = useState(false);
@@ -679,6 +681,8 @@ export default function BasicDemoPage() {
           faceDetectedFlag: !!faceDetected,
           identityMatchedFlag: false,
           attentionScore: result === 'pass' ? 0.75 : 0.2,
+          user: user?.name || 'Unknown User',
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : /Tablet|iPad/i.test(navigator.userAgent) ? 'Tablet' : 'Desktop'
         }).catch(console.error);
       });
     }

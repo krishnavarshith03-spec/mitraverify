@@ -190,21 +190,18 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await authAPI.login({ email, password });
-      const token = res.data.access_token;
-      const userDetails = {
-        name: res.data.full_name || email.split('@')[0] || 'Developer',
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(email.split('@')[0])}`,
-        provider: 'credentials',
-      };
-      login(token, userDetails);
+        password,
+      });
+
+      if (error) throw error;
+      
       setSuccess('Redirecting...');
       const params = new URLSearchParams(window.location.search);
       window.location.href = params.get('redirect') || '/dashboard';
-    } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { detail?: string } } };
-      setError(apiErr?.response?.data?.detail || 'Authentication failed.');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed.');
       setLoading(false);
     }
   }

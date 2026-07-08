@@ -11,8 +11,8 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
 
-    const users = ['John', 'Alex', 'Emma', 'Sarah', 'Michael', 'David', 'Chris', 'Jessica'];
-    const devices = ['Desktop', 'Mobile', 'Tablet', 'Mobile'];
+    const user = data.user || 'Unknown User';
+    const device = data.device || 'Desktop';
     
     let failureReason = undefined;
     let multipleFaces = false;
@@ -46,8 +46,8 @@ export async function POST(request: Request) {
       identityMatchedFlag: !!data.identityMatchedFlag,
       attentionScore: typeof data.attentionScore === 'number' ? data.attentionScore : (data.faceDetectedFlag ? 0.9 : 0),
       ip: request.headers.get('x-forwarded-for') || '127.0.0.1',
-      user: users[Math.floor(Math.random() * users.length)],
-      device: devices[Math.floor(Math.random() * devices.length)],
+      user: user,
+      device: device,
       failureReason,
       multipleFaces
     };

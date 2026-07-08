@@ -9,6 +9,7 @@ import { processHeadPose } from '@/lib/headPose';
 import PageTransition from '@/components/cyber/PageTransition';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/context/AuthContext';
 
 const CHALLENGE_POOL = [
   { id: 'face_centered', label: 'Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },
@@ -27,6 +28,7 @@ const SpoofGauge = ({ value, label, color }: { value: number; label: string; col
 );
 
 export default function AdvancedDemoPage() {
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streaming, setStreaming] = useState(false);
@@ -550,6 +552,8 @@ export default function AdvancedDemoPage() {
           faceDetectedFlag: faceDetected,
           identityMatchedFlag: false,
           attentionScore: overallResult === 'pass' ? 0.8 : 0.2,
+          user: user?.name || 'Unknown User',
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : /Tablet|iPad/i.test(navigator.userAgent) ? 'Tablet' : 'Desktop'
         }).catch(console.error);
       });
     }

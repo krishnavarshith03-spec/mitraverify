@@ -349,6 +349,15 @@ export default function EnterpriseDemoPage() {
 
   // Verify helper indicating if verification is enabled/active
   const hasFaceEnrolled = useMemo(() => !!enrolledEmbedding, [enrolledEmbedding]);
+  
+  const enrollmentTimeRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (hasFaceEnrolled && !enrollmentTimeRef.current) {
+      enrollmentTimeRef.current = Date.now();
+    } else if (!hasFaceEnrolled) {
+      enrollmentTimeRef.current = null;
+    }
+  }, [hasFaceEnrolled]);
 
   // Track face mismatches (similarity score below threshold)
   const [mismatchCount, setMismatchCount] = useState<number>(() => {
@@ -677,6 +686,13 @@ export default function EnterpriseDemoPage() {
         setConsecutiveValidFrames(0);
         noseHistoryRef.current = [];
         setDetectionStability(0.0);
+        return;
+      }
+
+      // Grace period directly after face enrollment (3 seconds)
+      const timeSinceEnrollment = enrollmentTimeRef.current ? Date.now() - enrollmentTimeRef.current : 0;
+      if (hasFaceEnrolled && timeSinceEnrollment < 3000) {
+        console.log("[Face Verification] Skipping Face Lost check due to recent enrollment grace period");
         return;
       }
 
@@ -1117,6 +1133,8 @@ export default function EnterpriseDemoPage() {
           faceDetectedFlag: faceTrackingState !== 'FACE_LOST',
           identityMatchedFlag: overallResult === 'pass',
           attentionScore: gazeAvailable ? 0.95 : (overallResult === 'pass' ? 0.9 : 0.4),
+          user: user?.name || 'Unknown User',
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : /Tablet|iPad/i.test(navigator.userAgent) ? 'Tablet' : 'Desktop'
         }).catch(console.error);
         if (overallResult === 'pass') {
            console.log("Verification Complete");
