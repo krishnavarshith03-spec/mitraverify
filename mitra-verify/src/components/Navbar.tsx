@@ -132,7 +132,7 @@ export default function Navbar() {
                   </div>
                   <div className="hidden sm:flex flex-col items-start text-left">
                     <span className="text-[13px] font-semibold text-white leading-tight">{user.name}</span>
-                    <span className="text-[10px] text-[#00E5FF] font-mono leading-tight">{user.role || 'Admin'}</span>
+                    <span className="text-[10px] text-[#00E5FF] font-mono leading-tight">{user.role || 'User'}</span>
                   </div>
                   <ChevronDown size={14} className="text-slate-400 ml-1 group-hover/profile:text-white transition-transform group-hover/profile:rotate-180 duration-300 hidden sm:block" />
                 </button>

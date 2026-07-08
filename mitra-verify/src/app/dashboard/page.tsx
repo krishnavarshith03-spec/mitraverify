@@ -14,6 +14,7 @@ import {
   LineChart, Line
 } from 'recharts';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 
 // --- Types ---
 interface ApiPerf {
@@ -85,6 +86,7 @@ const hoverGlow = {
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
   const [events, setEvents] = useState<VerificationEvent[]>([]);
@@ -179,7 +181,7 @@ export default function DashboardPage() {
            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                  <h1 className="text-[22px] md:text-[28px] font-bold text-white tracking-tight leading-tight flex items-center gap-2">
-                   Welcome back, System Administrator 👋
+                   Welcome back, {user?.name || 'System Administrator'} 👋
                  </h1>
                  <p className="text-slate-400 text-[13px] md:text-[14px] mt-1">Here's what's happening with your verification platform today.</p>
               </div>
