@@ -65,6 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshUser();
 
+    // Listen for global 401 unauthorized errors from the API client
+    const handleUnauthorized = () => {
+      console.warn('[Auth] Detected 401 Unauthorized. Logging out...');
+      logout('/signin?error=session_expired');
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const sbUser = session.user;
@@ -86,8 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
-  }, [refreshUser]);
+  }, [refreshUser, logout]);
 
   const login = useCallback((token: string, userDetails: User) => {
     // Legacy function, kept for signature but state is handled by onAuthStateChange

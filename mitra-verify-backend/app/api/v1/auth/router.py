@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from datetime import datetime, timedelta
 from app.core.database import get_db
-from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token, decode_token
+from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token, decode_token, decode_supabase_token
 from app.models.models import User, Session as UserSession, AuditLog
 from app.schemas.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 import uuid
@@ -13,14 +13,46 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
+    # First, try to decode as internal access token
     payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user_id = payload.get("sub")
+    user_id = None
+    if payload and payload.get("type") == "access":
+        user_id = payload.get("sub")
+    
+    # If internal fails, try Supabase JWT
+    if not user_id:
+        supabase_payload = decode_supabase_token(token)
+        if supabase_payload:
+            user_id = supabase_payload.get("sub")
+            if user_id:
+                # JIT User Provisioning for Supabase Auth
+                result = await db.execute(select(User).where(User.id == user_id))
+                user = result.scalar_one_or_none()
+                if not user:
+                    # Create the user on the fly
+                    email = supabase_payload.get("email", "unknown@supabase.com")
+                    user = User(
+                        id=user_id,
+                        email=email,
+                        password_hash="supabase_managed",
+                        full_name=supabase_payload.get("user_metadata", {}).get("full_name"),
+                        role="user",
+                        email_verified=supabase_payload.get("email_verified", False),
+                        is_active=True,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+                    return user
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+        
     result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
 
 @router.post("/register", response_model=UserOut, status_code=201)

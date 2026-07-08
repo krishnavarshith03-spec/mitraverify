@@ -65,7 +65,9 @@ export default function LoginPage() {
       const reason = params.get('reason') || params.get('message') || params.get('error');
       if (reason) {
         const timer = setTimeout(() => {
-          if (reason === 'verification_lost' || reason.includes('lost') || reason.includes('session')) {
+          if (reason === 'session_expired') {
+            setNotification('Your session has expired. Please sign in again.');
+          } else if (reason === 'verification_lost' || reason.includes('lost')) {
             setNotification('Authentication session ended. Face verification lost.');
           } else if (reason === 'unauthenticated' || reason.includes('auth')) {
             setNotification('Please sign in to access this protected route.');

@@ -37,6 +37,18 @@ def decode_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
+def decode_supabase_token(token: str) -> Optional[dict]:
+    try:
+        # Supabase JWTs use HS256 and the JWT secret from the dashboard
+        return jwt.decode(
+            token, 
+            settings.SUPABASE_JWT_SECRET, 
+            algorithms=["HS256"],
+            options={"verify_aud": False}
+        )
+    except JWTError:
+        return None
+
 def generate_api_key(api_type: str) -> tuple[str, str]:
     """Returns (plaintext_key, key_hash)"""
     prefix_map = {"basic": "mv_basic", "advanced": "mv_adv", "enterprise": "mv_ent"}

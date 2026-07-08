@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     DATABASE_URL: str = "sqlite+aiosqlite:///./mitra_verify.db"
+    SUPABASE_JWT_SECRET: str = "your-supabase-jwt-secret"
     
     def __init__(self, **values):
         import os

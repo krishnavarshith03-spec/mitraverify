@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from './supabase';
 
 // Read API URL from environment variable
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
@@ -17,11 +18,15 @@ const api = axios.create({
 
 // ── Request interceptor: inject auth token ────────────────────────────────────
 api.interceptors.request.use(
-  config => {
+  async config => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('mv_access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          config.headers.Authorization = `Bearer ${session.access_token}`;
+        }
+      } catch (err) {
+        console.error('[API] Failed to get Supabase session', err);
       }
     }
     const url = `${config.baseURL || ''}${config.url || ''}`;
@@ -44,6 +49,14 @@ api.interceptors.response.use(
     const config = err.config;
     const status = err.response?.status;
     const url = `${config?.baseURL || ''}${config?.url || ''}`;
+
+    if (status === 401) {
+      console.warn(`[API] ✗ 401 Unauthorized ${url} - Dispatching auth:unauthorized event`);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
+      return Promise.reject(err);
+    }
 
     // Only retry on network errors or 5xx — never on 4xx
     const isRetryable = !err.response || status >= 500;
@@ -85,19 +98,16 @@ export const keysAPI = {
 };
 
 // ── Liveness ──────────────────────────────────────────────────────────────────
-// Liveness calls use raw axios (no auth token) with an X-API-Key header
-const rawAxios = axios.create({ timeout: 15000 });
-
 export const livenessAPI = {
   basic: (apiKey: string, image: string, sessionId?: string) =>
-    rawAxios.post(`${API_BASE}/liveness/basic`, { image, session_id: sessionId },
-      { headers: { 'X-API-Key': apiKey, 'Bypass-Tunnel-Reminder': 'true' } }),
+    api.post(`/liveness/basic`, { image, session_id: sessionId },
+      { headers: { 'X-API-Key': apiKey } }),
   advanced: (apiKey: string, image: string, challengeType?: string, sessionId?: string) =>
-    rawAxios.post(`${API_BASE}/liveness/advanced`, { image, challenge_type: challengeType, session_id: sessionId },
-      { headers: { 'X-API-Key': apiKey, 'Bypass-Tunnel-Reminder': 'true' } }),
+    api.post(`/liveness/advanced`, { image, challenge_type: challengeType, session_id: sessionId },
+      { headers: { 'X-API-Key': apiKey } }),
   identity: (apiKey: string, image: string, subjectId?: string, sessionId?: string) =>
-    rawAxios.post(`${API_BASE}/identity/verify`, { image, subject_id: subjectId, session_id: sessionId },
-      { headers: { 'X-API-Key': apiKey, 'Bypass-Tunnel-Reminder': 'true' } }),
+    api.post(`/identity/verify`, { image, subject_id: subjectId, session_id: sessionId },
+      { headers: { 'X-API-Key': apiKey } }),
   startSession: (apiType: string) => api.post('/liveness/session/start', { api_type: apiType }),
   processDemoFrame: (image: string, sessionId?: string, challengeType?: string, enrolledEmbedding?: number[], apiType?: string) =>
     api.post('/liveness/demo/process', { image, session_id: sessionId, challenge_type: challengeType, enrolled_embedding: enrolledEmbedding, api_type: apiType }),
