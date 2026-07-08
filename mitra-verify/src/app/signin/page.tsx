@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Mail, Lock, ArrowRight, RefreshCw, CheckCircle2, Shield, Eye, EyeOff, ShieldCheck, Activity, Key, Database, Fingerprint } from 'lucide-react';
+import { Mail, Lock, ArrowRight, RefreshCw, CheckCircle2, Shield, Eye, EyeOff, ShieldCheck, Activity, Key, Database, Fingerprint, Server, Globe } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
