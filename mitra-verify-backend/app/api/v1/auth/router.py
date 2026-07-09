@@ -45,6 +45,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
                     await db.commit()
                     await db.refresh(user)
                     return user
+                
+                # Ensure the hardcoded admin always retains admin privileges
+                if user.email == "admin@mitraverify.com" and user.role != "admin":
+                    user.role = "admin"
+                    await db.commit()
+                    await db.refresh(user)
+                    
                 return user
     
     if not user_id:
@@ -54,6 +61,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+        
+    # Ensure the hardcoded admin always retains admin privileges
+    if user.email == "admin@mitraverify.com" and user.role != "admin":
+        user.role = "admin"
+        await db.commit()
+        await db.refresh(user)
+        
     return user
 
 @router.post("/register", response_model=UserOut, status_code=201)
