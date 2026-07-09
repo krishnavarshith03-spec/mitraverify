@@ -289,6 +289,7 @@ async def start_session(data: SessionStartRequest):
 @router.post("/demo/process", tags=["Demo"])
 async def demo_process(
     data: DemoProcessRequest,
+    request: Request,
     current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -383,7 +384,7 @@ async def demo_process(
                     checks_performed=cv_result,
                     spoof_score=float(spoof_val),
                     deepfake_risk=float(deepfake_val),
-                    ip_address="127.0.0.1",
+                    ip_address=request.client.host if request.client else "127.0.0.1",
                     created_at=datetime.utcnow()
                 )
                 db.add(log)
@@ -403,8 +404,9 @@ class LogEventRequest(BaseModel):
     api_type: str
 
 @router.post("/demo/log_event", tags=["Demo"])
-async def log_demo_event(
+async def demo_log_event(
     data: LogEventRequest,
+    request: Request,
     current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -448,7 +450,7 @@ async def log_demo_event(
         checks_performed={"manual_event": data.event_type},
         spoof_score=1.0 if data.event_type in ("SPOOF_DETECTED", "CAMERA_LOST") else 0.0,
         deepfake_risk=0.0,
-        ip_address="127.0.0.1",
+        ip_address=request.client.host if request.client else "127.0.0.1",
         created_at=datetime.utcnow()
     )
     db.add(log)

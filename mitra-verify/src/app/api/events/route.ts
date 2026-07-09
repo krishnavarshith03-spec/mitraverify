@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       faceDetectedFlag: !!data.faceDetectedFlag,
       identityMatchedFlag: !!data.identityMatchedFlag,
       attentionScore: typeof data.attentionScore === 'number' ? data.attentionScore : (data.faceDetectedFlag ? 0.9 : 0),
-      ip: request.headers.get('x-forwarded-for') || '127.0.0.1',
+      ip: request.headers.get('x-forwarded-for') || 'Unknown',
       user: user,
       device: device,
       failureReason,

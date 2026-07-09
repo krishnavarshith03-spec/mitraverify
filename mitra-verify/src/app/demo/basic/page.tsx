@@ -110,7 +110,6 @@ export default function BasicDemoPage() {
   const [diagnosticInfo, setDiagnosticInfo] = useState<{ url: string; status: number | string; body: string; reason?: string } | null>(null);
 
   useEffect(() => {
-    console.log("NEXT_PUBLIC_API_URL =", process.env.NEXT_PUBLIC_API_URL);
     async function performHealthCheck() {
       try {
         const res = await checkHealth();
@@ -137,6 +136,15 @@ export default function BasicDemoPage() {
       }
     }
     performHealthCheck();
+  }, []);
+
+  const [jwtToken, setJwtToken] = useState<string | null>(null);
+  useEffect(() => {
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data }) => {
+        setJwtToken(data.session?.access_token || null);
+      });
+    });
   }, []);
 
   const [cameraStatus, setCameraStatus] = useState<'Active' | 'Inactive'>('Inactive');
@@ -1106,18 +1114,19 @@ export default function BasicDemoPage() {
                 <button
                   className="btn-primary"
                   onClick={startCamera}
-                  disabled={backendHealthy !== true}
                   style={{
                     flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    opacity: backendHealthy === true ? 1 : 0.6,
-                    cursor: backendHealthy === true ? 'pointer' : 'not-allowed'
+                    cursor: 'pointer'
                   }}
                 >
-                  <Camera size={16} /> {backendHealthy === null ? 'Checking Backend...' : 'Start Camera'}
+                  <Camera size={16} /> 
+                  {backendHealthy === null ? '🟡 Waking Backend...' : 
+                   backendHealthy === true ? '✅ Start Camera (Backend Online)' : 
+                   '🔴 Start Camera (Backend Offline)'}
                 </button>
               ) : (
                 <>
@@ -1125,6 +1134,11 @@ export default function BasicDemoPage() {
                   <button className="btn-ghost" onClick={() => setShowDebug(!showDebug)} style={{ color: showDebug ? 'var(--brand-cyan)' : 'var(--text-secondary)' }}>
                     <Terminal size={16} /> Debug Panel
                   </button>
+                  {backendHealthy === false && (
+                    <div style={{ color: '#ff3366', fontSize: 13, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px 0', gap: 8 }}>
+                      <AlertCircle size={14} /> Camera Connected • Backend Unavailable
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1197,6 +1211,15 @@ export default function BasicDemoPage() {
                   className="terminal" style={{ fontSize: 11, overflow: 'hidden' }}>
                   <div style={{ color: 'var(--brand-cyan)', marginBottom: 8, fontSize: 10, letterSpacing: '0.08em', fontWeight: 700 }}>DEVELOPER DEBUG PANEL</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'monospace' }}>
+                    <div>Current API URL: <span style={{ color: '#f8fafc' }}>{API_BASE}</span></div>
+                    <div>Backend Status: <span style={{ color: backendHealthy ? 'var(--brand-green)' : 'var(--brand-red)' }}>{backendHealthy ? 'ONLINE' : 'OFFLINE'}</span></div>
+                    <div>Authentication Status: <span style={{ color: user ? 'var(--brand-green)' : 'var(--brand-red)' }}>{user ? 'AUTHENTICATED' : 'UNAUTHENTICATED'}</span></div>
+                    <div>Current JWT: <span style={{ color: '#f8fafc' }}>{jwtToken ? `${jwtToken.substring(0, 10)}...${jwtToken.substring(jwtToken.length - 10)}` : 'NULL'}</span></div>
+                    <div>API Latency: <span style={{ color: '#f8fafc' }}>{processingTime.toFixed(0)}ms</span></div>
+                    <div>Environment: <span style={{ color: '#f8fafc' }}>Production</span></div>
+                    
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                    <div style={{ color: 'var(--brand-cyan)', fontWeight: 'bold' }}>PIPELINE METRICS:</div>
                     <div>Detected Faces: <span style={{ color: '#f8fafc' }}>{detectedFaces}</span></div>
                     <div>Landmark Count: <span style={{ color: '#f8fafc' }}>{landmarkCount}</span></div>
                     <div>Face Confidence: <span style={{ color: '#f8fafc' }}>{(confidence * 100).toFixed(1)}%</span></div>

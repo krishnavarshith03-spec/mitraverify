@@ -12,7 +12,7 @@ console.log(`[MITRA VERIFY] API Base URL: ${API_BASE || 'MISSING — set NEXT_PU
 // ── Shared axios instance for all authenticated API calls ─────────────────────
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15000, // 15s — Railway cold starts can be slow
+  timeout: 15000, // 15s — Render cold starts can be slow
   headers: {
     'Content-Type': 'application/json',
     'Bypass-Tunnel-Reminder': 'true',
@@ -84,10 +84,10 @@ api.interceptors.response.use(
     const isRetryable = !err.response || status >= 500;
     const retryCount = config?.__retryCount ?? 0;
 
-    if (isRetryable && config && retryCount < 2) {
+    if (isRetryable && config && retryCount < 3) {
       config.__retryCount = retryCount + 1;
-      const delay = config.__retryCount * 1000; // 1s, 2s
-      console.warn(`[API] Retrying ${url} in ${delay}ms (attempt ${config.__retryCount}/2)`);
+      const delay = Math.pow(2, config.__retryCount) * 1000; // 2s, 4s, 8s
+      console.warn(`[API] Retrying ${url} in ${delay}ms (attempt ${config.__retryCount}/3)`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return api(config);
     }
@@ -96,6 +96,7 @@ api.interceptors.response.use(
       console.warn(`[API] ✗ ${status} ${url}`, err.response?.data);
     } else {
       console.warn(`[API] ✗ Network error ${url}`, err.message);
+      console.error(`[API] Stack:`, err.stack);
     }
 
     return Promise.reject(err);
@@ -170,11 +171,11 @@ export { API_BASE };
 export const checkHealth = () => api.get('/health');
 
 export function parseNetworkError(error: unknown, targetUrl: string): string {
-  if (!error) return 'Unknown Connection Error';
+  if (!error) return 'Internal Server Error';
   const err = error as { code?: string; message?: string; response?: { status: number; data: unknown } };
 
   if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-    return `Connection Timeout: Backend took too long to respond (limit: 15s). Railway may be cold-starting.`;
+    return `Backend Sleeping: Backend took too long to respond (limit: 15s). Render may be cold-starting.`;
   }
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return `Offline: Your device is not connected to the internet.`;
@@ -183,8 +184,13 @@ export function parseNetworkError(error: unknown, targetUrl: string): string {
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && targetUrl.startsWith('http:')) {
       return `Mixed Content Blocked: HTTPS frontend cannot call HTTP backend.`;
     }
-    return `Network Error: Cannot reach ${targetUrl}. Check CORS or backend availability.`;
+    return `CORS Blocked / Backend Offline: Cannot reach ${targetUrl}.`;
   }
+  
+  if (err.response.status === 401) return `Authentication Failed: Token Missing or Expired`;
+  if (err.response.status === 404) return `API Endpoint Not Found: ${targetUrl}`;
+  if (err.response.status >= 500) return `Internal Server Error: Backend encountered an error`;
+  
   return `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`;
 }
 

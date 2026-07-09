@@ -5,5 +5,9 @@
     {
       "root": "mitra-verify-backend"
     }
+  ],
+  "extraPaths": [
+    "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend",
+    "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.12/site-packages"
   ]
 }

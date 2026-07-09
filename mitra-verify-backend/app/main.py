@@ -148,11 +148,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list + [
+        "https://mitraverify.vercel.app",
         "https://krishnavarshith21-co-mitra-vrify.vercel.app",
         "https://krishnavarshith21-co-mitra-vrfiy.vercel.app",
         "https://krishnavarshith21-co-mitra-vrify-git-main-krishnavarshith21-cos-projects.vercel.app",
-        "http://localhost:3006",
-        "http://127.0.0.1:3006"
+        "http://localhost:3000",
     ],
     allow_origin_regex="https://.*\\.vercel\\.app",
     allow_credentials=True,
@@ -199,6 +199,7 @@ async def root():
     }
 
 @app.get("/health")
+@app.get("/api/health")
 @app.get("/api/v1/health")
 async def health():
     return {"status": "ok", "version": "1.0"}
