@@ -36,18 +36,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
                         email=email,
                         password_hash="supabase_managed",
                         full_name=supabase_payload.get("user_metadata", {}).get("full_name"),
-                        role="admin", # AUTO-PROMOTED TO ADMIN
+                        role="admin" if supabase_payload.get("email") == "admin@mitraverify.com" else "user",
                         email_verified=supabase_payload.get("email_verified", False),
                         is_active=True,
                         created_at=datetime.utcnow()
                     )
                     db.add(user)
-                    await db.commit()
-                    await db.refresh(user)
-                    return user
-                elif user.role != "admin":
-                    # Upgrade existing demo users to admin automatically
-                    user.role = "admin"
                     await db.commit()
                     await db.refresh(user)
                     return user

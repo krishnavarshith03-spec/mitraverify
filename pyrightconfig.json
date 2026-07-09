@@ -1,0 +1,9 @@
+{
+  "venvPath": "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend",
+  "venv": "venv",
+  "executionEnvironments": [
+    {
+      "root": "mitra-verify-backend"
+    }
+  ]
+}
