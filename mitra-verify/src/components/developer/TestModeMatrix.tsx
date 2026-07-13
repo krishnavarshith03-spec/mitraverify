@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface TestModeMatrixProps {
   telemetry: {
@@ -33,25 +35,39 @@ export function TestModeMatrix({ telemetry }: TestModeMatrixProps) {
     </div>
   );
 
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <div style={{
+    <motion.div 
+      drag 
+      dragMomentum={false}
+      style={{
       position: 'absolute',
       left: '20px',
       top: '80px',
-      width: '260px',
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+      width: isCollapsed ? 'auto' : '260px',
+      backgroundColor: 'rgba(10, 10, 10, 0.6)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
       color: '#fff',
-      border: '1px solid #aaa',
-      borderRadius: '8px',
+      border: '1px solid rgba(255,255,255,0.2)',
+      borderRadius: '12px',
       padding: '12px',
       fontFamily: 'monospace',
       fontSize: '12px',
       zIndex: 9999,
-      boxShadow: '0 0 10px rgba(255,255,255,0.1)'
+      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      cursor: 'move'
     }}>
-      <div style={{ borderBottom: '1px solid #555', paddingBottom: '8px', marginBottom: '8px' }}>
+      <div style={{ borderBottom: isCollapsed ? 'none' : '1px solid #555', paddingBottom: isCollapsed ? '0' : '8px', marginBottom: isCollapsed ? '0' : '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: '14px', textTransform: 'uppercase', color: '#ffcc00' }}>[TEST MODE] Edge Cases</h3>
+        <button onClick={() => setIsCollapsed(!isCollapsed)} style={{ background: 'transparent', border: 'none', color: '#ffcc00', cursor: 'pointer', padding: '4px' }} onPointerDown={(e) => e.stopPropagation()}>
+          {isCollapsed ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+        </button>
       </div>
+
+      {!isCollapsed && (
+        <>
       
       {renderCheck('Face Detection (No Face)', isNoFace)}
       {renderCheck('Multiple Faces', isMultipleFaces)}
@@ -63,6 +79,8 @@ export function TestModeMatrix({ telemetry }: TestModeMatrixProps) {
       <div style={{ marginTop: '12px', fontSize: '10px', color: '#888' }}>
         Simulate real-world conditions by obscuring the camera, bringing a second person into frame, or moving out of bounds. The system must immediately intercept FAIL states.
       </div>
-    </div>
+      </>
+      )}
+    </motion.div>
   );
 }

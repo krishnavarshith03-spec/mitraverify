@@ -210,7 +210,6 @@ CHALLENGES_METADATA = {
     "turn_right": { "label": "Turn Head Right", "instruction": "Turn your head to the right", "icon": "👉" },
     "look_up": { "label": "Look Up", "instruction": "Look up with your head", "icon": "👆" },
     "look_down": { "label": "Look Down", "instruction": "Look down with your head", "icon": "👇" },
-    "raise_eyebrows": { "label": "Raise Eyebrows", "instruction": "Raise your eyebrows upward", "icon": "🤨" },
     "nod_head": { "label": "Nod Head", "instruction": "Nod your head up and down", "icon": "👍" },
     "shake_head": { "label": "Shake Head", "instruction": "Shake your head left and right", "icon": "👎" },
     "look_left": { "label": "Look Left", "instruction": "Look left with your eyes", "icon": "👀" },
@@ -233,8 +232,8 @@ class DemoProcessRequest(BaseModel):
 async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
     
-    advanced_pool = ['blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'raise_eyebrows', 'smile', 'look_up', 'look_down']
-    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'turn_left', 'turn_right', 'look_up', 'look_down', 'raise_eyebrows', 'nod_head', 'shake_head', 'look_left', 'look_right', 'hold_still']
+    advanced_pool = ['blink_once', 'blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up', 'look_down']
+    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up', 'look_down']
     
     if data.api_type == "enterprise":
         num_challenges = secrets.choice([7, 8])

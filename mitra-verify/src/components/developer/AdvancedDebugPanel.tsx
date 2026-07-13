@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface AdvancedDebugPanelProps {
   telemetry: {
@@ -36,6 +38,7 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
   const frameCountRef = useRef(0);
   const lastFpsTimeRef = useRef(performance.now());
   const [memory, setMemory] = useState<number | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -63,27 +66,41 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
   }, []);
 
   return (
-    <div style={{
+    <motion.div 
+      drag 
+      dragMomentum={false}
+      style={{
       position: 'absolute',
       right: '20px',
       top: '80px',
-      width: '320px',
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+      width: isCollapsed ? 'auto' : '320px',
+      backgroundColor: 'rgba(10, 10, 10, 0.6)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
       color: '#00ffcc',
-      border: '1px solid #00ffcc',
-      borderRadius: '8px',
+      border: '1px solid rgba(0,255,204,0.3)',
+      borderRadius: '12px',
       padding: '12px',
       fontFamily: 'monospace',
       fontSize: '12px',
       maxHeight: 'calc(100vh - 100px)',
       overflowY: 'auto',
       zIndex: 9999,
-      boxShadow: '0 0 10px rgba(0,255,204,0.3)'
+      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      cursor: 'move'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '8px', marginBottom: '8px' }}>
-        <h3 style={{ margin: 0, fontSize: '14px', textTransform: 'uppercase' }}>Advanced Telemetry</h3>
-        <span style={{ backgroundColor: '#00ffcc', color: '#000', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>{telemetry.apiVersion}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isCollapsed ? 'none' : '1px solid rgba(255,255,255,0.1)', paddingBottom: isCollapsed ? '0' : '8px', marginBottom: isCollapsed ? '0' : '8px' }}>
+        <h3 style={{ margin: 0, fontSize: '14px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Advanced Telemetry
+          {!isCollapsed && <span style={{ backgroundColor: '#00ffcc', color: '#000', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>{telemetry.apiVersion}</span>}
+        </h3>
+        <button onClick={() => setIsCollapsed(!isCollapsed)} style={{ background: 'transparent', border: 'none', color: '#00ffcc', cursor: 'pointer', padding: '4px' }} onPointerDown={(e) => e.stopPropagation()}>
+          {isCollapsed ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+        </button>
       </div>
+
+      {!isCollapsed && (
+        <>
 
       {/* Performance Section */}
       <div style={{ marginBottom: '12px' }}>
@@ -185,6 +202,8 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
         Download Session JSON
       </button>
 
-    </div>
+      </>
+      )}
+    </motion.div>
   );
 }

@@ -405,6 +405,7 @@ export default function EnterpriseDemoPage() {
   const [landmarkCount, setLandmarkCount] = useState(0);
   const [detectedFaces, setDetectedFaces] = useState(0);
   const [sessionTime, setSessionTime] = useState(0);
+  const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [bbox, setBbox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [ear, setEar] = useState(0);
   const [mar, setMar] = useState(0);
@@ -536,22 +537,10 @@ export default function EnterpriseDemoPage() {
     if (!streaming || overallResult || challenges.length === 0 || currentChallenge >= challenges.length) return;
     const interval = setInterval(() => {
       const now = Date.now();
-      const elapsedInStep = (now - stepStartTimeRef.current) / 1000;
-      if (currentChallenge === 0) {
-        if (elapsedInStep > 10.0) {
-          console.warn("FACE_CENTERED_FAILED: Face centering took too long (>10s).");
-          triggerSessionTermination("FACE_CENTERED_TIMEOUT");
-        }
-      } else {
-        if (elapsedInStep > 10.0) {
-          console.warn(`CHALLENGE_TIMEOUT: Stuck on Challenge ${currentChallenge + 1} for more than 10 seconds.`);
-          triggerSessionTermination("CHALLENGE_TIMEOUT");
-        }
-      }
+      // Removed local challenge timeout logic. Backend handles challenge timeout / face lost states.
     }, 100);
     return () => clearInterval(interval);
-  }, [streaming, currentChallenge, overallResult, challenges]);
-
+  }, [streaming, overallResult, challenges.length, currentChallenge]);
   useEffect(() => { const t = setTimeout(() => setIsMounted(true), 0); return () => clearTimeout(t); }, []);
 
   const triggerSessionTermination = useCallback((reason: string, shouldRedirect: boolean = false) => {
@@ -651,20 +640,6 @@ export default function EnterpriseDemoPage() {
 
       let state: 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' = faceLostDuration < 2.0 ? 'FACE_WARNING' : faceLostDuration < 5.0 ? 'FACE_RECOVERY' : 'FACE_LOST';
       setFaceTrackingState(state); prevTrackingStateRef.current = state;
-
-      if (faceLostDuration > 5.0) {
-        setDetectedFaces(0); setLandmarkCount(0); setConfidence(0);
-        setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
-        faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setConsecutiveValidFrames(0);
-        noseHistoryRef.current = [];
-        setFaceTrackingState('SESSION_TERMINATED'); prevTrackingStateRef.current = 'SESSION_TERMINATED';
-        let exactReason = 'No Face Detected';
-        if (data && data.detected_faces > 1) exactReason = 'Multiple Faces';
-        else if (data && data.face_confidence <= 0.50) exactReason = 'Low Detection Confidence';
-        else if (data && !data.face_present) exactReason = 'Tracking Lost';
-        else if (!data) exactReason = 'Camera Interrupted';
-        triggerSessionTermination(exactReason, false);
-      }
     };
 
     try {
@@ -685,28 +660,25 @@ export default function EnterpriseDemoPage() {
       if (data.result === 'pass') {
         setOverallResult('pass');
       } else if (data.result === 'fail') {
-        triggerSessionTermination('VERIFICATION FAILED', false);
+        triggerSessionTermination(data.status || 'VERIFICATION FAILED', false);
         return;
       }
 
-      // Enterprise terminal alerts
+      // Enterprise terminal alerts exclusively from backend
       const terminalStatuses: Record<string, string> = {
         "MULTIPLE_FACES_DETECTED": "MULTIPLE FACES DETECTED",
         "REPLAY_ATTACK_DETECTED": "REPLAY ATTACK DETECTED",
         "DEEPFAKE_SUSPECTED": "DEEPFAKE SUSPECTED",
         "CAMERA_FEED_FROZEN": "SESSION TERMINATED",
         "UNAUTHORIZED_PERSON": "UNAUTHORIZED PERSON",
-        "IDENTITY_CHANGED": "UNAUTHORIZED PERSON"
+        "IDENTITY_CHANGED": "UNAUTHORIZED PERSON",
+        "SPOOF_DETECTED": "SPOOF DETECTED",
+        "FACE_LOST": "FACE LOST"
       };
 
       if (data.status && data.status in terminalStatuses) {
         triggerSessionTermination(terminalStatuses[data.status], false);
         return;
-      }
-
-      if (streaming && !overallResult) {
-        if (data.detected_faces > 1) { triggerSessionTermination('Multiple Faces Detected', false); return; }
-        if (data.spoof_score > 0.45 && data.face_present) { triggerSessionTermination('Spoof Detected', false); return; }
       }
 
       // Update enterprise analytics
@@ -867,13 +839,7 @@ export default function EnterpriseDemoPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [streaming, currentChallenge, challenges, hasFaceEnrolled, overallResult]);
 
-  // Enforce fail state
-  useEffect(() => {
-    if (streaming && hasFaceEnrolled && !overallResult) {
-      if (detectedFaces > 1) { const t = setTimeout(() => triggerSessionTermination('Multiple Faces Detected', false), 0); return () => clearTimeout(t); }
-      else if (spoofScore > 0.45 && faceVisibleDuration >= 2.0) { const t = setTimeout(() => triggerSessionTermination('Spoof Detected', false), 0); return () => clearTimeout(t); }
-    }
-  }, [detectedFaces, spoofScore, faceVisibleDuration, streaming, hasFaceEnrolled, overallResult, triggerSessionTermination]);
+  // Removed frontend face and spoof logic. Backend enforces MULTIPLE_FACES_DETECTED and SPOOF_DETECTED
 
   // Analytics logging
   useEffect(() => {
@@ -1053,9 +1019,29 @@ export default function EnterpriseDemoPage() {
               Multi-layer biometric verification with advanced embeddings, fraud detection, passive liveness, and continuous identity monitoring.
             </p>
           </div>
-          <div className="text-left sm:text-right">
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#00ff88' }}>99.9%</div>
-            <div style={{ fontSize: 11, color: '#475569' }}>Enterprise Accuracy</div>
+          <div className="text-left sm:text-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button 
+                onClick={() => setIsDeveloperMode(!isDeveloperMode)} 
+                style={{ 
+                  background: isDeveloperMode ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.05)', 
+                  color: isDeveloperMode ? '#00ff88' : '#94a3b8', 
+                  border: `1px solid ${isDeveloperMode ? 'rgba(0,255,136,0.5)' : 'rgba(255,255,255,0.1)'}`, 
+                  padding: '6px 12px', 
+                  borderRadius: 20, 
+                  fontSize: 11, 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Developer Mode: {isDeveloperMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#00ff88' }}>99.9%</div>
+              <div style={{ fontSize: 11, color: '#475569' }}>Enterprise Accuracy</div>
+            </div>
           </div>
         </div>
 
@@ -1074,58 +1060,17 @@ export default function EnterpriseDemoPage() {
           </div>
         )}
 
-        {/* Main Grid: 3-column layout */}
+        {/* Main Grid: Full Width Camera, Metrics Below */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           
-          {/* LEFT SIDEBAR — Security Metrics */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
-            {/* Identity Score */}
-            <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 8 }}>IDENTITY MATCH</div>
-              <IdentityScoreRing score={similarity * 100} label="Match" size={110} />
-            </div>
-
-            {/* Security Metrics */}
-            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
-              <MetricBar label="Confidence" value={confidence * 100} />
-              <MetricBar label="Face Quality" value={faceQuality} />
-              <MetricBar label="Pose Quality" value={poseQuality} />
-              <MetricBar label="Lighting" value={lightingQuality * 100} />
-              <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
-                <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
-                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
-                  {(spoofScore * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            {/* Threat Radar */}
-            <div className="glass" style={{ padding: 14, borderRadius: 14 }}>
-              <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
-            </div>
-
-            {/* Session Shield */}
-            <div className="glass" style={{ padding: 14, borderRadius: 14, textAlign: 'center' }}>
-              <SessionShield authenticated={isVerified} invalidated={sessionTerminated} color={accentColor} />
-              <div style={{ fontSize: 10, color: accentColor, fontWeight: 600, marginTop: 4 }}>
-                {sessionTerminated ? 'SESSION INVALIDATED' : isVerified ? 'AUTHENTICATED' : streaming ? 'VERIFYING' : 'STANDBY'}
-              </div>
-              <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', marginTop: 4 }}>
-                {formatTime(sessionTime)}
-              </div>
-            </div>
-          </div>
-
           {/* CENTER — Camera Feed */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-12">
             <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: '#0a0a0a', border: `1px solid ${accentColor}22`, aspectRatio: '4/3' }}>
               <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: streaming ? 'block' : 'none', transform: 'scaleX(-1)' }} muted playsInline />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
 
               {/* Developer Ecosystem Components */}
-              {streaming && (
+              {streaming && isDeveloperMode && (
                 <>
                   <CameraCanvasOverlay
                     landmarks={rawLandmarks}
@@ -1260,8 +1205,57 @@ export default function EnterpriseDemoPage() {
             )}
           </div>
 
+          {/* LEFT SIDEBAR — Security Metrics */}
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {/* Identity Score */}
+              <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>IDENTITY MATCH</div>
+                <IdentityScoreRing score={similarity * 100} label="Match" size={120} />
+              </div>
+
+              {/* Threat Radar */}
+              {isDeveloperMode && (
+                <div className="glass" style={{ padding: 14, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
+                </div>
+              )}
+            </div>
+
+            {/* Security Metrics */}
+            {isDeveloperMode && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
+              <MetricBar label="Confidence" value={confidence * 100} />
+              <MetricBar label="Face Quality" value={faceQuality} />
+              <MetricBar label="Pose Quality" value={poseQuality} />
+              <MetricBar label="Lighting" value={lightingQuality * 100} />
+              <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
+              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
+                <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
+                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
+                  {(spoofScore * 100).toFixed(1)}%
+                </span>
+              </div>
+              </div>
+            )}
+
+            {/* Session Shield */}
+            {isDeveloperMode && (
+              <div className="glass" style={{ padding: 14, borderRadius: 14, textAlign: 'center' }}>
+                <SessionShield authenticated={isVerified} invalidated={sessionTerminated} color={accentColor} />
+                <div style={{ fontSize: 10, color: accentColor, fontWeight: 600, marginTop: 4 }}>
+                  {sessionTerminated ? 'SESSION INVALIDATED' : isVerified ? 'AUTHENTICATED' : streaming ? 'VERIFYING' : 'STANDBY'}
+                </div>
+                <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', marginTop: 4 }}>
+                  {formatTime(sessionTime)}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* RIGHT SIDEBAR — Challenges, Fraud, Timeline */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
+          <div className="lg:col-span-6 flex flex-col gap-4">
             
             {/* Challenge Progress */}
             <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
@@ -1281,8 +1275,9 @@ export default function EnterpriseDemoPage() {
             </div>
 
             {/* Fraud Detection Panel */}
-            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>FRAUD DETECTION</div>
+            {isDeveloperMode && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>FRAUD DETECTION</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <FraudCheckItem label="Printed Photo" detected={fraudDetection?.printed_photo?.detected ?? false} icon="🖼️" />
                 <FraudCheckItem label="Replay Attack" detected={fraudDetection?.replay_attack?.detected ?? false} icon="📱" />
@@ -1301,10 +1296,12 @@ export default function EnterpriseDemoPage() {
                   </span>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Verification Timeline */}
-            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+            {isDeveloperMode && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
               <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>VERIFICATION TIMELINE</div>
               <VerificationTimeline stages={[
                 { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
@@ -1313,10 +1310,11 @@ export default function EnterpriseDemoPage() {
                 { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
                 { label: 'Authenticated', complete: isVerified, active: challengePassed.every(Boolean) && !isVerified },
               ]} />
-            </div>
+              </div>
+            )}
 
             {/* Landmark Geometry */}
-            {landmarkGeometry && landmarkGeometry.regions && (
+            {isDeveloperMode && landmarkGeometry && landmarkGeometry.regions && (
               <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
                 <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>LANDMARK GEOMETRY</div>
                 <MetricBar label="Eye Geometry" value={landmarkGeometry.regions.eye_geometry * 100} />

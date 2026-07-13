@@ -90,7 +90,7 @@ export default function AdvancedDemoPage() {
 
   // Flow control
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const [challengeTimer, setChallengeTimer] = useState(30); // 30 seconds per challenge
   
   const fpsCountRef = useRef(0);
@@ -214,24 +214,9 @@ export default function AdvancedDemoPage() {
           setFaceMissingCountdown(Math.max(0, 5.0 - missingTime / 1000));
         }
       }
-
-      const elapsedInStep = (now - stepStartTimeRef.current) / 1000;
-      
-      if (currentChallenge === 0) {
-        if (elapsedInStep > 10.0) {
-          console.warn("FACE_CENTERED_FAILED: Face centering took too long (>10s).");
-          setOverallResult('fail');
-        }
-      } else {
-        if (elapsedInStep > 10.0) {
-          console.warn(`CHALLENGE_TIMEOUT: Stuck on Challenge ${currentChallenge + 1} for more than 10 seconds. Explanation: Action not registered or face lost.`);
-          setOverallResult('fail');
-        }
-      }
     }, 100);
-    
     return () => clearInterval(interval);
-  }, [streaming, currentChallenge, overallResult, challenges, spoofScore]);
+  }, [streaming, overallResult, challenges.length, currentChallenge, noFaceTimeoutError]);
 
   // E2E frame capturer and processor
   const sendFrameToBackend = useCallback(async () => {
@@ -344,9 +329,6 @@ export default function AdvancedDemoPage() {
         setFaceMissingCountdown(5.0);
 
         setDetectedFaces(data.detected_faces);
-        if (data.detected_faces > 1) {
-          setOverallResult('fail');
-        }
         setLandmarkCount(data.landmark_count);
         setConfidence(data.face_confidence);
         
@@ -515,14 +497,7 @@ export default function AdvancedDemoPage() {
     };
   }, []);
 
-  // Spoof checking override
-  useEffect(() => {
-    if (!streaming || overallResult) return;
-    if (spoofScore > 0.5) {
-      const t = setTimeout(() => setOverallResult('spoof'), 0);
-      return () => clearTimeout(t);
-    }
-  }, [streaming, overallResult, spoofScore]);
+  // Spoof checking entirely delegated to the backend stream
 
 
   // Single Source of Truth Analytics Logging
@@ -699,7 +674,7 @@ export default function AdvancedDemoPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Camera View */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-12">
             <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', aspectRatio: '4/3' }}>
               <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: streaming ? 'block' : 'none', transform: 'scaleX(-1)' }} muted playsInline />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -932,7 +907,7 @@ export default function AdvancedDemoPage() {
           </div>
 
           {/* Challenge Panel */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
+          <div className="lg:col-span-12 flex flex-col gap-4">
             {/* Liveness Verification Status Card */}
             {streaming && (
               <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
@@ -1057,35 +1032,7 @@ export default function AdvancedDemoPage() {
               <SpoofGauge value={streaming ? deepfakeRisk : 0} label="Deepfake Risk" color={deepfakeRisk > 0.3 ? '#ff3366' : '#00ff88'} />
             </div>
 
-            {/* Developer Debug Panel */}
-            <AnimatePresence>
-              {showDebug && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  className="terminal" style={{ fontSize: 11, overflow: 'hidden' }}>
-                  <div style={{ color: 'var(--brand-cyan)', marginBottom: 8, fontSize: 10, letterSpacing: '0.08em', fontWeight: 700 }}>DEVELOPER DEBUG PANEL</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'monospace' }}>
-                    <div>Detected Faces: <span style={{ color: '#f8fafc' }}>{detectedFaces}</span></div>
-                    <div>Landmark Count: <span style={{ color: '#f8fafc' }}>{landmarkCount}</span></div>
-                    <div>Face Confidence: <span style={{ color: '#f8fafc' }}>{(confidence * 100).toFixed(1)}%</span></div>
-                    <div>Liveness Score: <span style={{ color: '#f8fafc' }}>{((1.0 - spoofScore) * 100).toFixed(1)}%</span></div>
-                    <div>Spoof Risk: <span style={{ color: '#f8fafc' }}>{(spoofScore * 100).toFixed(1)}%</span></div>
-                    <div>Deepfake Risk: <span style={{ color: '#f8fafc' }}>{(deepfakeRisk * 100).toFixed(1)}%</span></div>
-                    <div>Blink Count: <span style={{ color: '#f8fafc' }}>{blinkCount}</span></div>
-                    <div>Eye Aspect Ratio: <span style={{ color: '#f8fafc' }}>{ear.toFixed(4)}</span></div>
-                    <div>Mouth Ratio: <span style={{ color: '#f8fafc' }}>{mar.toFixed(4)}</span></div>
-                    <div>Jaw Ratio: <span style={{ color: '#f8fafc' }}>{jawRatio.toFixed(4)}</span></div>
-                    <div>Raw Yaw: <span style={{ color: '#f8fafc' }}>{rawYaw.toFixed(1)}°</span></div>
-                    <div>Corrected Yaw: <span style={{ color: '#f8fafc' }}>{yaw.toFixed(1)}°</span></div>
-                    <div>Direction: <span style={{ color: '#f8fafc' }}>{yawDirection}</span></div>
-                    <div>Yaw: <span style={{ color: '#f8fafc' }}>{yaw.toFixed(2)}°</span></div>
-                    <div>Pitch: <span style={{ color: '#f8fafc' }}>{pitch.toFixed(2)}°</span></div>
-                    <div>Roll: <span style={{ color: '#f8fafc' }}>{roll.toFixed(2)}°</span></div>
-                    <div>Face Visible Time: <span style={{ color: '#f8fafc' }}>{faceVisibleDuration.toFixed(1)}s</span></div>
-                    <div>Challenge Progress: <span style={{ color: '#f8fafc' }}>{challenges.length > 0 ? Math.round((currentChallenge / challenges.length) * 100) : 0}%</span></div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Legacy inline Developer Debug Panel removed in favor of floating AdvancedDebugPanel */}
 
             {/* Instruction Banner */}
             {streaming && !overallResult && challenges.length > 0 && (

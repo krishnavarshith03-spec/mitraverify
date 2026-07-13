@@ -326,9 +326,6 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
 
 def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=None) -> dict:
     left_ear = _ear(landmarks, LEFT_EYE_INDICES, w, h)
-    right_ear = _ear(landmarks, RIGHT_EYE_INDICES, w, h)
-    avg_ear = (left_ear + right_ear) / 2.0
-    mar = _mar(landmarks, w, h)
     yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
     
     p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
@@ -352,65 +349,132 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
     right_brow_dist = right_eyelid_y - right_brow_y
     avg_brow_dist = (left_brow_dist + right_brow_dist) / 2.0
     face_height = abs(landmarks[152].y - landmarks[10].y)
-    eyebrow_ratio = avg_brow_dist / face_height if face_height > 0.001 else 0.18
-    
-    jaw_x_diff = landmarks[152].x - landmarks[1].x
-    jaw_ratio = jaw_x_diff / face_width if face_width > 0.001 else 0.0
     
     passed = False
     detected = ""
     
-    if challenge_type == "blink_twice":
+    if challenge_type in ("blink_once", "blink_twice"):
         if history:
-            ears = history["ear"]
-            blinks = 0
-            in_blink = False
-            for val in ears:
-                if val < 0.22:
-                    if not in_blink:
-                        in_blink = True
-                else:
-                    if in_blink:
-                        blinks += 1
-                        in_blink = False
-            passed = blinks >= 2
-            detected = f"Blinks={blinks}"
+            # We want: DROP -> RECOVER -> DONE
+            # Check current EAR
+            # if EAR < 0.22, state -> DROPPED
+            # if EAR > 0.25 and state == DROPPED, state -> RECOVERED (passed)
+            st = history.get("blink_state", "WAITING")
+            df = history.get("blink_drop_frames", 0)
+            avg_ear = (_ear(landmarks, LEFT_EYE_INDICES, w, h) + _ear(landmarks, RIGHT_EYE_INDICES, w, h)) / 2
+            
+            if avg_ear < 0.22:
+                if st == "WAITING":
+                    history["blink_state"] = "DROPPED"
+                    history["blink_drop_frames"] = 1
+                elif st == "DROPPED":
+                    history["blink_drop_frames"] += 1
+            elif avg_ear > 0.25:
+                if st == "DROPPED":
+                    # Must be dropped for at least 2 frames (prevent noise) but not > 20 (closed eyes)
+                    if 1 <= df <= 20:
+                        history["blink_state"] = "RECOVERED"
+                    else:
+                        # Reset if closed too long
+                        history["blink_state"] = "WAITING"
+                        history["blink_drop_frames"] = 0
+
+            passed = history["blink_state"] == "RECOVERED"
+            detected = f"BlinkState={history['blink_state']}"
         else:
-            passed = avg_ear < 0.22
-            detected = f"EAR={avg_ear:.3f}"
+            passed = False
+            detected = f"EAR={(_ear(landmarks, LEFT_EYE_INDICES, w, h) + _ear(landmarks, RIGHT_EYE_INDICES, w, h)) / 2:.3f}"
     elif challenge_type == "open_mouth":
-        passed = mar > 0.20
-        detected = f"MAR={mar:.3f}"
+        if history:
+            mars = history["mar"]
+            opened = False
+            closed = False
+            for val in mars:
+                if val > 0.20:
+                    opened = True
+                elif val < 0.15:
+                    if opened:
+                        closed = True
+            passed = opened and closed
+            detected = f"Opened={opened}, Closed={closed}"
+        else:
+            passed = False
+            detected = f"MAR={_mar(landmarks, w, h):.3f}"
     elif challenge_type == "turn_left":
-        passed = yaw < -12.0
-        detected = f"Yaw={yaw:.1f}°"
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            # Look for progressive motion: must cross -15, and not jump instantly from 0 to -20 in 1 frame
+            passed = False
+            if len(yaws) >= 5:
+                min_yaw = min(yaws)
+                if min_yaw < -15.0:
+                    # check if we returned to neutral
+                    if yaws[-1] > -5.0:
+                        passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
     elif challenge_type == "turn_right":
-        passed = yaw > 12.0
-        detected = f"Yaw={yaw:.1f}°"
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 5:
+                max_yaw = max(yaws)
+                if max_yaw > 15.0:
+                    if yaws[-1] < 5.0:
+                        passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
     elif challenge_type == "look_up":
-        passed = pitch > 10.0
-        detected = f"Pitch={pitch:.1f}°"
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            pitches = history["pitch"]
+            passed = False
+            if len(pitches) >= 5:
+                max_pitch = max(pitches)
+                if max_pitch > 15.0:
+                    if pitches[-1] < 5.0:
+                        passed = True
+            detected = f"Pitch={pitch:.1f}°"
+        else:
+            passed = False
+            detected = f"Pitch={pitch:.1f}°"
     elif challenge_type == "look_down":
-        passed = pitch < -10.0
-        detected = f"Pitch={pitch:.1f}°"
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            pitches = history["pitch"]
+            passed = False
+            if len(pitches) >= 5:
+                min_pitch = min(pitches)
+                if min_pitch < -15.0:
+                    if pitches[-1] > -5.0:
+                        passed = True
+            detected = f"Pitch={pitch:.1f}°"
+        else:
+            passed = False
+            detected = f"Pitch={pitch:.1f}°"
     elif challenge_type == "smile":
-        passed = smile_score > 0.45
-        detected = f"Smile={smile_score:.2f}"
-    elif challenge_type == "raise_eyebrows":
-        passed = eyebrow_ratio > 0.20
-        detected = f"BrowRatio={eyebrow_ratio:.3f}"
-    elif challenge_type == "move_jaw_left":
-        passed = jaw_ratio > 0.03
-        detected = f"JawRatio={jaw_ratio:.3f}"
-    elif challenge_type == "move_jaw_right":
-        passed = jaw_ratio < -0.03
-        detected = f"JawRatio={jaw_ratio:.3f}"
-    elif challenge_type == "close_left_eye":
-        passed = left_ear < 0.20 and right_ear > 0.25
-        detected = f"LeftEAR={left_ear:.3f}, RightEAR={right_ear:.3f}"
-    elif challenge_type == "close_right_eye":
-        passed = right_ear < 0.20 and left_ear > 0.25
-        detected = f"LeftEAR={left_ear:.3f}, RightEAR={right_ear:.3f}"
+        if history:
+            baseline = history.get("baseline_smile_ratio")
+            if baseline:
+                # Require 15% increase over baseline for a smile
+                smiled = False
+                for r in history["smile_ratios"]:
+                    if r > baseline * 1.15:
+                        smiled = True
+                passed = smiled
+                detected = f"Smile detected={smiled}"
+            else:
+                passed = False
+                detected = "Calibrating..."
+        else:
+            passed = False
+            detected = f"Smile={smile_score:.2f}"
         
     return {"passed": bool(passed), "detected": detected}
 
@@ -418,37 +482,6 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
 # ─────────────────────────────────────────────────────────────
 # ENTERPRISE IDENTITY ENGINE
 # ─────────────────────────────────────────────────────────────
-
-
-def _compute_face_signature(landmarks) -> np.ndarray:
-    """Extract a simplified 64-element face descriptor from landmarks."""
-    key_points = [0, 1, 4, 5, 6, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52,
-                  53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80, 81, 82, 84,
-                  87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133, 136,
-                  144, 145, 146, 148, 149, 150, 152, 153, 154, 155, 157, 158,
-                  159, 160, 161, 162, 163, 172, 173]
-    pts = [(landmarks[i].x, landmarks[i].y, landmarks[i].z) for i in key_points[:64] if i < len(landmarks)]
-    sig = np.array([v for pt in pts for v in pt[:2]], dtype=float)
-    if len(sig) < 64:
-        sig = np.pad(sig, (0, 64 - len(sig)))
-    return sig[:64]
-
-
-def _match_identity(face_sig: np.ndarray, subject_id: Optional[str]) -> dict:
-    """Match face signature against stored embeddings (stub — returns realistic structure)."""
-    norm = np.linalg.norm(face_sig)
-    if norm > 0:
-        similarity = 0.0 # Without actual comparison, we cannot return a match
-    else:
-        similarity = 0.0
-
-    return {
-        "matched": False,
-        "subject_id": subject_id or "unknown",
-        "similarity_score": round(similarity, 4),
-        "embedding_distance": round(1.0 - similarity, 4)
-    }
-
 
 # ─────────────────────────────────────────────────────────────
 # Fallback responses (when CV deps not installed)
@@ -542,6 +575,10 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
             "roll": [],
             "eyebrow_ratios": [],
             "baseline_eyebrow_ratio": None,
+            "smile_ratios": [],
+            "baseline_smile_ratio": None,
+            "blink_state": "WAITING",  # WAITING, DROPPED, RECOVERED
+            "blink_drop_frames": 0,
             "current_challenge": challenge_type,
             "created_at": time.time(),
             "last_active": time.time()
@@ -559,8 +596,11 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
         cache["pitch"] = []
         cache["roll"] = []
         cache["eyebrow_ratios"] = []
+        cache["smile_ratios"] = []
+        cache["blink_state"] = "WAITING"
+        cache["blink_drop_frames"] = 0
     
-    # Store history for last 20 frames
+    # Store history for last 30 frames (approx 1 second at 30 FPS)
     cache["landmarks"].append([(lm.x, lm.y, lm.z) for lm in landmarks])
     cache["ear"].append(ear)
     cache["mar"].append(mar)
@@ -580,7 +620,14 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     eyebrow_ratio = avg_brow_dist / face_height if face_height > 0.001 else 0.18
     cache["eyebrow_ratios"].append(eyebrow_ratio)
     
-    if len(cache["landmarks"]) > 20:
+    # Smile ratio (Lip corner distance vs face width)
+    if len(landmarks) > 291:
+        w_mouth = np.linalg.norm(np.array([landmarks[291].x, landmarks[291].y]) - np.array([landmarks[61].x, landmarks[61].y]))
+        w_face = np.linalg.norm(np.array([landmarks[454].x, landmarks[454].y]) - np.array([landmarks[234].x, landmarks[234].y]))
+        smile_ratio = float(w_mouth / w_face if w_face > 0.001 else 0.32)
+        cache["smile_ratios"].append(smile_ratio)
+    
+    if len(cache["landmarks"]) > 30:
         cache["landmarks"].pop(0)
         cache["ear"].pop(0)
         cache["mar"].pop(0)
@@ -588,17 +635,18 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
         cache["pitch"].pop(0)
         cache["roll"].pop(0)
         cache["eyebrow_ratios"].pop(0)
+        if cache["smile_ratios"]: cache["smile_ratios"].pop(0)
         
-    # Baseline distance calibration for the first 2 seconds (10 frames)
+    # Baseline distance calibration for the first 2 seconds (10 frames approx at slow fps, 60 at fast)
     # Baseline calibration: use median (more robust to outliers than mean)
-    if cache["baseline_eyebrow_ratio"] is None:
+    if cache["baseline_eyebrow_ratio"] is None or cache["baseline_smile_ratio"] is None:
         elapsed = time.time() - cache["created_at"]
         if elapsed >= 2.0:
-            if cache["eyebrow_ratios"]:
-                import numpy as np  # pyrefly: ignore [missing-import]
-                cache["baseline_eyebrow_ratio"] = float(np.median(cache["eyebrow_ratios"]))
-            else:
-                cache["baseline_eyebrow_ratio"] = 0.18
+            import numpy as np  # pyrefly: ignore [missing-import]
+            if cache["baseline_eyebrow_ratio"] is None:
+                cache["baseline_eyebrow_ratio"] = float(np.median(cache["eyebrow_ratios"])) if cache["eyebrow_ratios"] else 0.18
+            if cache["baseline_smile_ratio"] is None:
+                cache["baseline_smile_ratio"] = float(np.median(cache["smile_ratios"])) if cache["smile_ratios"] else 0.32
         
     # Periodic cleanup of stale sessions (> 3 minutes inactive)
     now = time.time()
@@ -807,100 +855,6 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> float:
 # healthcare, airports, and secure access systems.
 # ─────────────────────────────────────────────────────────────
 
-# Extended landmark sets for 128-dim embedding
-_ADVANCED_FEATURE_NODES = [
-    # Nose bridge & tip (7)
-    1, 2, 4, 5, 6, 197, 94,
-    # Left eye contour (12)
-    33, 133, 159, 145, 46, 53, 70, 107, 160, 158, 153, 144,
-    # Right eye contour (12)
-    263, 362, 386, 374, 276, 283, 300, 336, 385, 387, 373, 380,
-    # Left eyebrow (5)
-    63, 105, 66, 107, 55,
-    # Right eyebrow (5)
-    296, 334, 285, 295, 282,
-    # Mouth outer (10)
-    61, 291, 13, 14, 78, 308, 17, 87, 317, 82,
-    # Mouth inner (4)
-    312, 80, 81, 88,
-    # Jawline & outline (10)
-    10, 152, 234, 454, 109, 338, 58, 288, 136, 365,
-    # Cheeks (4)
-    116, 345, 187, 411,
-    # Forehead & temples (4)
-    67, 297, 21, 251,
-    # Iris centers (4)
-    468, 473, 474, 476,
-]
-
-
-def _calculate_advanced_embedding(landmarks) -> list[float]:
-    """Generate a 128-dimensional face embedding using extended landmark set.
-    
-    Uses 77 key landmarks with 3D coordinates (x, y, z) normalized against
-    face width (jaw-to-jaw distance) and centered on nose tip.
-    Produces richer biometric signature than basic 46-dim embedding.
-    """
-    center_x = landmarks[1].x
-    center_y = landmarks[1].y
-    center_z = landmarks[1].z
-
-    p_left = np.array([landmarks[234].x, landmarks[234].y, landmarks[234].z])
-    p_right = np.array([landmarks[454].x, landmarks[454].y, landmarks[454].z])
-    scale = float(np.linalg.norm(p_right - p_left))
-    if scale < 0.001:
-        scale = 1.0
-
-    embedding: list[float] = []
-    for idx in _ADVANCED_FEATURE_NODES:
-        if idx < len(landmarks):
-            lm = landmarks[idx]
-            rx = (lm.x - center_x) / scale
-            ry = (lm.y - center_y) / scale
-            rz = (lm.z - center_z) / scale
-            embedding.extend([float(rx), float(ry), float(rz)])
-
-    # Pad or truncate to exactly 128 dimensions
-    if len(embedding) < 128:
-        embedding.extend([0.0] * (128 - len(embedding)))
-    return embedding[:128]
-
-
-def _euclidean_distance_validation(emb_a: list[float], emb_b: list[float]) -> dict:
-    """Secondary distance metric for cross-validation of identity match.
-    
-    Returns euclidean distance and a normalized similarity score.
-    Used alongside cosine similarity for higher confidence decisions.
-    """
-    import json
-    if isinstance(emb_a, str):
-        try: emb_a = json.loads(emb_a)
-        except Exception: pass
-    if isinstance(emb_b, str):
-        try: emb_b = json.loads(emb_b)
-        except Exception: pass
-
-    a = np.array(emb_a, dtype=float)
-    b = np.array(emb_b, dtype=float)
-
-    # Align dimensions
-    min_len = min(len(a), len(b))
-    if min_len == 0:
-        return {"distance": float('inf'), "similarity": 0.0, "valid": False}
-    a, b = a[:min_len], b[:min_len]
-
-    distance = float(np.linalg.norm(a - b))
-    # Normalize: max expected distance for unit-normalized vectors is ~sqrt(2) ≈ 1.414
-    max_dist = math.sqrt(min_len) * 0.15  # empirical upper bound for same-person
-    similarity = float(np.clip(1.0 - (distance / max(max_dist, 0.01)), 0.0, 1.0))
-
-    return {
-        "distance": round(distance, 6),
-        "similarity": round(similarity, 4),
-        "valid": distance < max_dist
-    }
-
-
 def _validate_multi_angle_pose(history: dict) -> dict:
     """Validate identity consistency across multiple viewing angles.
     
@@ -999,7 +953,6 @@ def _validate_landmark_geometry(landmarks, w: int, h: int) -> dict:
     eye_center_y = (landmarks[159].y + landmarks[386].y) / 2.0
     nose_tip_y = landmarks[1].y
     chin_y = landmarks[152].y
-    forehead_y = landmarks[10].y
 
     upper = nose_tip_y - eye_center_y
     lower = chin_y - nose_tip_y
@@ -1057,7 +1010,6 @@ def _passive_liveness_analysis(history: dict, landmarks, w: int, h: int) -> dict
     mars = history.get("mar", [])
     yaws = history.get("yaw", [])
     pitches = history.get("pitch", [])
-    rolls = history.get("roll", [])
 
     # 1. Blink analysis
     blinks = 0
@@ -1197,7 +1149,6 @@ def _validate_enrollment_quality(landmarks, frame, w: int, h: int) -> dict:
         checks["front_pose"],
         checks["eyes_open"],
         checks["good_lighting"],
-        checks["neutral_expression"],
         checks["adequate_size"]
     ])
 
@@ -1486,14 +1437,10 @@ def process_demo_frame(
             "gaze_direction": None,
             "gaze_available": False,
             "smile_score": 0.0,
-            "eyebrow_ratio": 0.0,
             "eyebrow_raised": False,
-            "jaw_ratio": 0.0,
             "jaw_left": False,
             "jaw_right": False,
             "jaw_open": False,
-            "ear": 0.0,
-            "mar": 0.0,
             "spoof_score": 0.0,
             "deepfake_risk": 0.0,
             "challenge_passed": False,
@@ -1522,14 +1469,10 @@ def process_demo_frame(
             "gaze_direction": None,
             "gaze_available": False,
             "smile_score": 0.0,
-            "eyebrow_ratio": 0.0,
             "eyebrow_raised": False,
-            "jaw_ratio": 0.0,
             "jaw_left": False,
             "jaw_right": False,
             "jaw_open": False,
-            "ear": 0.0,
-            "mar": 0.0,
             "spoof_score": 0.0,
             "deepfake_risk": 0.0,
             "challenge_passed": False,
@@ -1554,7 +1497,7 @@ def process_demo_frame(
         
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
     if not multi_face_landmarks:
-        if session_id and session_id in SESSION_CACHE and api_type != "enterprise":
+        if session_id and session_id in SESSION_CACHE:
             session = SESSION_CACHE[session_id]
             if "last_face_seen" not in session:
                 session["last_face_seen"] = session.get("created_at", time.time())
@@ -1578,14 +1521,10 @@ def process_demo_frame(
             "gaze_direction": None,
             "gaze_available": False,
             "smile_score": 0.0,
-            "eyebrow_ratio": 0.0,
             "eyebrow_raised": False,
-            "jaw_ratio": 0.0,
             "jaw_left": False,
             "jaw_right": False,
             "jaw_open": False,
-            "ear": 0.0,
-            "mar": 0.0,
             "spoof_score": 0.0,
             "deepfake_risk": 0.0,
             "challenge_passed": False,
@@ -1618,14 +1557,10 @@ def process_demo_frame(
             "gaze_direction": None,
             "gaze_available": False,
             "smile_score": 0.0,
-            "eyebrow_ratio": 0.0,
             "eyebrow_raised": False,
-            "jaw_ratio": 0.0,
             "jaw_left": False,
             "jaw_right": False,
             "jaw_open": False,
-            "ear": 0.0,
-            "mar": 0.0,
             "spoof_score": 0.0,
             "deepfake_risk": 0.0,
             "challenge_passed": False,
@@ -1638,6 +1573,7 @@ def process_demo_frame(
 
     landmarks = multi_face_landmarks[0].landmark  # type: ignore
     landmark_count = len(landmarks)
+    face_confidence = _calculate_face_confidence(landmarks, w, h) if detected_faces > 0 else 0.0
     
     # 1. Bounding box & guidance checks
     bbox = _calculate_bbox(landmarks, w, h)
@@ -1784,98 +1720,80 @@ def process_demo_frame(
     if challenge_type and history and detected_faces == 1 and face_confidence_check > 0:
         if challenge_type == "face_centered":
             challenge_passed = abs(yaw) < 8.0 and abs(pitch) < 8.0 and 0.35 < (bbox["x"] + bbox["w"]/2) < 0.65
-        elif challenge_type == "blink_once":
+        elif challenge_type == "blink_once" or challenge_type == "blink_twice":
+            # Blink detection must require EAR drops below threshold -> EAR returns above threshold -> within valid duration
+            target_blinks = 1 if challenge_type == "blink_once" else 2
             ears = history["ear"]
             blinks = 0
             in_blink = False
-            for val in ears:
+            blink_start = 0
+            for i, val in enumerate(ears):
                 if val < 0.22:
                     if not in_blink:
                         in_blink = True
+                        blink_start = i
                 else:
                     if in_blink:
-                        blinks += 1
+                        # Required to be closed for at least 2 frames and less than 30 frames (1 second) to be a valid blink, not sleeping
+                        duration = i - blink_start
+                        if 1 <= duration <= 30:
+                            blinks += 1
                         in_blink = False
-            challenge_passed = blinks >= 1
-        elif challenge_type == "blink_twice":
-            ears = history["ear"]
-            blinks = 0
-            in_blink = False
-            for val in ears:
-                if val < 0.22:
-                    if not in_blink:
-                        in_blink = True
-                else:
-                    if in_blink:
-                        blinks += 1
-                        in_blink = False
-            challenge_passed = blinks >= 2
+            challenge_passed = blinks >= target_blinks and not in_blink
         elif challenge_type == "open_mouth":
-            if smoothed_mar > 0.45:
-                if history.get("mouth_open_start_time") is None:
-                    history["mouth_open_start_time"] = time.time()
-                elapsed = time.time() - history["mouth_open_start_time"]
-                if elapsed >= 0.5:
-                    challenge_passed = True
-            elif smoothed_mar < 0.25:
-                history["mouth_open_start_time"] = None
-                challenge_passed = False
-            else:
-                if history.get("mouth_open_start_time") is not None:
-                    elapsed = time.time() - history["mouth_open_start_time"]
-                    if elapsed >= 0.5:
-                        challenge_passed = True
+            # MAR increase -> MAR decrease (must open then close)
+            mars = history["mar"]
+            opened = False
+            closed = False
+            for val in mars:
+                if val > 0.45:
+                    opened = True
+                elif opened and val < 0.25:
+                    closed = True
+            challenge_passed = opened and closed
         elif challenge_type == "smile":
+            # Uses lip corner movement (mouth_width / face_width)
             challenge_passed = smile_score > 0.45
         elif challenge_type == "turn_left":
-            challenge_passed = yaw < -15.0
+            # Verify continuous movement (yaw decreasing over frames)
+            yaws = history["yaw"]
+            if len(yaws) >= 10 and yaw < -15.0:
+                recent_yaws = yaws[-10:]
+                # Check that it moved at least 10 degrees in the last 10 frames
+                challenge_passed = (recent_yaws[0] - recent_yaws[-1]) > 10.0
         elif challenge_type == "turn_right":
-            challenge_passed = yaw > 15.0
+            yaws = history["yaw"]
+            if len(yaws) >= 10 and yaw > 15.0:
+                recent_yaws = yaws[-10:]
+                # Check that it moved at least 10 degrees right
+                challenge_passed = (recent_yaws[-1] - recent_yaws[0]) > 10.0
         elif challenge_type == "look_up":
-            challenge_passed = pitch > 10.0
+            pitches = history["pitch"]
+            if len(pitches) >= 10 and pitch > 10.0:
+                recent_pitches = pitches[-10:]
+                challenge_passed = (recent_pitches[-1] - recent_pitches[0]) > 8.0
         elif challenge_type == "look_down":
-            challenge_passed = pitch < -10.0
-        elif challenge_type == "raise_eyebrows":
-            challenge_passed = eyebrow_raised
-        elif challenge_type == "nod_head":
-            if len(history["pitch"]) >= 5:
-                pitch_range = max(history["pitch"]) - min(history["pitch"])
-                challenge_passed = pitch_range > 8.0
-        elif challenge_type == "shake_head":
-            if len(history["yaw"]) >= 5:
-                yaw_range = max(history["yaw"]) - min(history["yaw"])
-                challenge_passed = yaw_range > 12.0
-        elif challenge_type == "look_left":
-            if gaze_available and gaze_direction:
-                challenge_passed = gaze_direction["x"] < 0.45
-        elif challenge_type == "look_right":
-            if gaze_available and gaze_direction:
-                challenge_passed = gaze_direction["x"] > 0.55
-        elif challenge_type == "hold_still":
-            if len(history["yaw"]) >= 5:
-                last_yaw = history["yaw"][-15:]
-                last_pitch = history["pitch"][-15:]
-                last_roll = history["roll"][-15:]
-                std_yaw = float(np.std(last_yaw))
-                std_pitch = float(np.std(last_pitch))
-                std_roll = float(np.std(last_roll))
-                if std_yaw < 3.0 and std_pitch < 3.0 and std_roll < 3.0:
-                    if history.get("hold_still_start_time") is None:
-                        history["hold_still_start_time"] = time.time()
-                    elapsed = time.time() - history["hold_still_start_time"]
-                    if elapsed >= 3.0:
-                        challenge_passed = True
-                else:
-                    history["hold_still_start_time"] = None
+            pitches = history["pitch"]
+            if len(pitches) >= 10 and pitch < -10.0:
+                recent_pitches = pitches[-10:]
+                challenge_passed = (recent_pitches[0] - recent_pitches[-1]) > 8.0
 
     # Calculate spoof score dynamically passing the challenge details
     spoof_score = _calculate_spoof_risk(frame, landmarks, history, texture_score, replay_score, challenge_type, challenge_passed)
             
-    if api_type == "enterprise" and (spoof_score > 0.7 or replay_score > 0.7):
-        return {
-            "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
-            "bbox": bbox, "status": "REPLAY_ATTACK_DETECTED", "challenge_passed": False, "enrolled_matched": False
-        }
+    if api_type == "enterprise":
+        # Strict temporal spoof enforcement
+        if history:
+            elapsed = time.time() - history.get("created_at", time.time())
+            if spoof_score > 0.45 or replay_score > 0.6:
+                history["spoof_frames"] = history.get("spoof_frames", 0) + 1
+                if elapsed >= 2.0 and history["spoof_frames"] >= 5:
+                    return {
+                        "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
+                        "bbox": bbox, "status": "SPOOF_DETECTED", "challenge_passed": False, "enrolled_matched": False
+                    }
+            else:
+                history["spoof_frames"] = 0
 
     # 12. Face signature & matching
     current_signature = _calculate_face_embedding(landmarks)
@@ -1930,8 +1848,6 @@ def process_demo_frame(
                 }
     else:
         status = "no_enrolled_identity"
-        
-    face_confidence = _calculate_face_confidence(landmarks, w, h) if detected_faces > 0 else 0.0
 
     # ── Enterprise Advanced Analytics ──────────────────────────────
     enterprise_report = None

@@ -14,28 +14,23 @@ export async function POST(request: Request) {
     const user = data.user || 'Unknown User';
     const device = data.device || 'Desktop';
     
-    let failureReason = undefined;
-    let multipleFaces = false;
+    let failureReason = data.failureReason || undefined;
+    let multipleFaces = !!data.multipleFaces;
     
     const incomingStatus = data.status || 'FAILED';
     const isSpoof = !!data.spoofFlag || incomingStatus === 'SPOOF ATTEMPT';
     const isNoFace = incomingStatus === 'NO FACE DETECTED' || (data.faceDetectedFlag === false);
     
-    if (isSpoof) {
-       failureReason = Math.random() > 0.5 ? 'Printed Photo' : 'Digital Screen';
-    } else if (isNoFace) {
-       failureReason = 'User Left Camera';
-    } else if (incomingStatus === 'FAILED') {
-       if (Math.random() > 0.7) {
-          multipleFaces = true;
-          failureReason = 'Multiple Faces Detected';
-       } else {
-          failureReason = 'Low Light / Blurry';
-       }
+    if (isSpoof && !failureReason) {
+       failureReason = 'Spoof Detected';
+    } else if (isNoFace && !failureReason) {
+       failureReason = 'No Face Detected';
+    } else if (incomingStatus === 'FAILED' && !failureReason) {
+       failureReason = 'Verification Failed';
     }
 
     const newEvent: VerificationEvent = {
-      id: Math.random().toString(36).substring(2, 10),
+      id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       apiType: data.apiType || 'Basic',
       status: incomingStatus,

@@ -105,7 +105,7 @@ export default function BasicDemoPage() {
   // Session results
   const [result, setResult] = useState<'pass' | 'fail' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const [apiResponse, setApiResponse] = useState<any>(null);
   const [noFaceTimeoutError, setNoFaceTimeoutError] = useState<boolean>(false);
   const [faceMissingCountdown, setFaceMissingCountdown] = useState<number>(5.0);
@@ -872,7 +872,7 @@ export default function BasicDemoPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Camera + Overlay Canvas */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-12">
             <div style={{
               position: 'relative', borderRadius: 'var(--radius-xl)', overflow: 'hidden',
               background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)',
@@ -1121,7 +1121,7 @@ export default function BasicDemoPage() {
           </div>
 
           {/* Metrics Panel */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
+          <div className="lg:col-span-12 flex flex-col gap-4">
             {/* Score cards */}
             <div className="grid grid-cols-2 gap-3">
               <MetricCard label="Confidence" value={streaming ? `${(confidence * 100).toFixed(0)}` : '0'} unit="%" color="#00d4ff" icon={Activity} />

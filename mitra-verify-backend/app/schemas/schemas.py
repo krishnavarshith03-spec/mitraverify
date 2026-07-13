@@ -97,6 +97,7 @@ class IdentityVerifyResponse(BaseModel):
 class IdentityEnrollRequest(BaseModel):
     image: str
     subject_id: Optional[str] = None
+    session_id: Optional[str] = None
 
 
 class IdentityEnrollResponse(BaseModel):
