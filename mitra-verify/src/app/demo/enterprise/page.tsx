@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, Fingerprint, AlertTriangle, Users, Brain, Activity, RotateCcw, CheckCircle, Terminal, Lock, XCircle, Shield, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Camera, Fingerprint, AlertTriangle, Users, Brain, Activity, RotateCcw, CheckCircle, Terminal, Lock, XCircle, Shield, AlertCircle, RefreshCw, Eye, Scan, Zap, ShieldCheck, ShieldAlert, FileText, Clock, ChevronRight, Cpu, Radio, Target } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -91,7 +91,7 @@ interface BiometricResponse {
   roll: number;
   spoof_score: number;
   deepfake_risk: number;
-  gaze_direction: string | null;
+  gaze_direction: { x: number; y: number } | null;
   gaze_available: boolean;
   ear?: number;
   mar?: number;
@@ -105,32 +105,188 @@ interface BiometricResponse {
   eyebrow_ratio?: number;
   left_ear?: number;
   right_ear?: number;
+  raw_yaw?: number;
+  blink_detected?: boolean;
+  error?: string;
+  reason?: string;
+  enrolled_matched?: boolean;
   checks?: {
     replay_attack_score?: number;
   };
+  // Enterprise-exclusive fields
+  enterprise_report?: {
+    identity_status: string;
+    identity_match_pct: number;
+    confidence_pct: number;
+    liveness_pct: number;
+    spoof_probability_pct: number;
+    fraud_score: number;
+    risk_score: number;
+    threat_level: string;
+    quality_score: number;
+    landmark_consistency: number;
+    passive_liveness: {
+      score: number;
+      blink_detected: boolean;
+      head_motion: boolean;
+      depth_valid: boolean;
+    };
+    fraud_detection: {
+      printed_photo: boolean;
+      replay_attack: boolean;
+      deepfake: boolean;
+      ai_generated: boolean;
+      screen_reflection: boolean;
+      mask_attack: boolean;
+    };
+  };
+  face_quality?: number;
+  pose_quality?: number;
+  lighting_quality?: number;
+  landmark_geometry?: {
+    valid: boolean;
+    score: number;
+    regions: {
+      eye_geometry: number;
+      nose_geometry: number;
+      jaw_shape: number;
+      mouth_geometry: number;
+      face_proportions: number;
+    };
+  };
+  passive_liveness?: {
+    score: number;
+    blink_analysis: { detected: boolean; count: number; natural: boolean };
+    eye_movement: { detected: boolean; score: number };
+    head_motion: { detected: boolean; amplitude: number };
+    muscle_movement: { detected: boolean; score: number };
+    expression_variance: { detected: boolean; score: number };
+    depth_valid: boolean;
+  };
+  fraud_detection?: {
+    printed_photo: { detected: boolean; confidence: number };
+    replay_attack: { detected: boolean; confidence: number };
+    deepfake: { detected: boolean; confidence: number };
+    ai_generated: { detected: boolean; confidence: number };
+    screen_reflection: { detected: boolean; confidence: number };
+    multiple_faces: { detected: boolean; confidence: number };
+    cropped_face: { detected: boolean; confidence: number };
+    mask_attack: { detected: boolean; confidence: number };
+    overall_fraud_score: number;
+    threat_level: string;
+  };
+  pose_validation?: {
+    coverage: number;
+    angles_seen: string[];
+    angles_count: number;
+    valid: boolean;
+    score: number;
+  };
 }
 
-const ENTERPRISE_CHALLENGES = [
-  { id: 'face_centered', label: '1. Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },
-  { id: 'blink_twice', label: '2. Blink Twice', instruction: 'Blink your eyes twice slowly', icon: '👁️' },
-  { id: 'open_mouth', label: '3. Open Mouth', instruction: 'Open your mouth wide', icon: '👄' },
-  { id: 'turn_left', label: '4. Turn Head Left', instruction: 'Turn your head to the left', icon: '👈' },
-  { id: 'turn_right', label: '5. Turn Head Right', instruction: 'Turn your head to the right', icon: '👉' },
-  { id: 'raise_eyebrows', label: '6. Raise Eyebrows', instruction: 'Raise your eyebrows upward', icon: '🤨' },
-  { id: 'smile', label: '7. Smile', instruction: 'Smile naturally', icon: '😊' },
-  { id: 'look_up', label: '8. Look Up', instruction: 'Look slightly upward', icon: '☝️' }
-];
+// ─────────────────────────────────────────────────────────────
+// PREMIUM UI COMPONENTS
+// ─────────────────────────────────────────────────────────────
+
+function IdentityScoreRing({ score, label, size = 120, color = '#00ff88' }: { score: number; label: string; size?: number; color?: string }) {
+  const radius = (size - 12) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const displayColor = score >= 85 ? '#00ff88' : score >= 60 ? '#ffb800' : '#ff3366';
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={size} height={size} style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={5} />
+        <motion.circle
+          cx={size/2} cy={size/2} r={radius} fill="none" stroke={displayColor} strokeWidth={5}
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+        />
+      </svg>
+      {score >= 85 && (
+        <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.08, 0.3] }} transition={{ duration: 2, repeat: Infinity }}
+          style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: `2px solid ${displayColor}`, pointerEvents: 'none' }} />
+      )}
+      <div style={{ textAlign: 'center', zIndex: 1 }}>
+        <div style={{ fontSize: Math.max(18, size / 5), fontWeight: 800, color: displayColor, fontFamily: 'monospace' }}>{score.toFixed(1)}%</div>
+        <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function MetricBar({ label, value, max = 100, color = '#00ff88', suffix = '%' }: { label: string; value: number; max?: number; color?: string; suffix?: string }) {
+  const pct = Math.min(100, (value / max) * 100);
+  const barColor = pct >= 80 ? '#00ff88' : pct >= 50 ? '#ffb800' : '#ff3366';
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 11, color: barColor, fontWeight: 700, fontFamily: 'monospace' }}>{value.toFixed(1)}{suffix}</span>
+      </div>
+      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} style={{ height: '100%', borderRadius: 2, background: `linear-gradient(90deg, ${barColor}88, ${barColor})` }} />
+      </div>
+    </div>
+  );
+}
+
+function FraudCheckItem({ label, detected, icon }: { label: string; detected: boolean; icon: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: detected ? 'rgba(255,51,102,0.08)' : 'rgba(0,255,136,0.04)', border: `1px solid ${detected ? 'rgba(255,51,102,0.2)' : 'rgba(0,255,136,0.1)'}` }}>
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      <span style={{ fontSize: 10, color: detected ? '#ff3366' : '#64748b', fontWeight: 600, flex: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+      <motion.div animate={detected ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.3 }}>
+        {detected ? <XCircle size={12} color="#ff3366" /> : <CheckCircle size={12} color="#00ff88" />}
+      </motion.div>
+    </div>
+  );
+}
+
+function VerificationTimeline({ stages }: { stages: { label: string; active: boolean; complete: boolean; time?: string }[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {stages.map((stage, i) => (
+        <div key={stage.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+            <motion.div
+              animate={stage.active ? { boxShadow: ['0 0 0px #00d4ff', '0 0 8px #00d4ff', '0 0 0px #00d4ff'] } : {}}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              style={{
+                width: 16, height: 16, borderRadius: '50%',
+                border: `2px solid ${stage.complete ? '#00ff88' : stage.active ? '#00d4ff' : '#334155'}`,
+                background: stage.complete ? '#00ff88' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {stage.complete && <CheckCircle size={8} color="#000" />}
+              {stage.active && !stage.complete && <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4ff' }} />}
+            </motion.div>
+            {i < stages.length - 1 && (
+              <div style={{ width: 2, height: 20, background: stage.complete ? '#00ff88' : 'rgba(255,255,255,0.06)' }} />
+            )}
+          </div>
+          <div style={{ paddingBottom: i < stages.length - 1 ? 8 : 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: stage.complete ? '#e2e8f0' : stage.active ? '#00d4ff' : '#475569' }}>{stage.label}</div>
+            {stage.time && <div style={{ fontSize: 9, color: '#475569', fontFamily: 'monospace' }}>{stage.time}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ThreatRadarWidget({ spoofScore, color }: { spoofScore: number; color: string }) {
   return (
-    <div style={{ position: 'relative', width: 140, height: 140, margin: '12px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'relative', width: 120, height: 120, margin: '8px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}
         style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: '50%',
+          position: 'absolute', inset: 0, borderRadius: '50%',
           background: `conic-gradient(from 0deg, ${color}22, transparent 50%)`,
           border: `1px dashed ${color}33`,
         }}
@@ -140,8 +296,8 @@ function ThreatRadarWidget({ spoofScore, color }: { spoofScore: number; color: s
       <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: `${color}11` }} />
       <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: `${color}11` }} />
       <div style={{ zIndex: 1, textAlign: 'center' }}>
-        <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Threat Radar</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color, fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 8, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Threat Radar</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color, fontFamily: 'monospace' }}>
           {(spoofScore * 100).toFixed(0)}%
         </div>
       </div>
@@ -151,126 +307,39 @@ function ThreatRadarWidget({ spoofScore, color }: { spoofScore: number; color: s
 
 function SessionShield({ authenticated, invalidated, color }: { authenticated: boolean; invalidated: boolean; color: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '10px 0' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px 0' }}>
       <div style={{ position: 'relative' }}>
         {(authenticated || invalidated) && (
           <motion.div
             animate={{ scale: [1, 1.6, 1], opacity: [0.5, 0.1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-            style={{
-              position: 'absolute',
-              inset: -8,
-              borderRadius: '50%',
-              border: `2px solid ${color}`,
-              boxShadow: `0 0 15px ${color}`,
-              pointerEvents: 'none',
-            }}
+            style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: `2px solid ${color}`, boxShadow: `0 0 15px ${color}`, pointerEvents: 'none' }}
           />
         )}
-        <div style={{
-          width: 54, height: 54, borderRadius: '50%',
-          background: `rgba(0,0,0,0.6)`,
-          border: `2px solid ${color}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 0 15px ${color}33`,
-        }}>
-          {invalidated ? (
-            <XCircle size={24} color={color} />
-          ) : authenticated ? (
-            <Lock size={24} color={color} />
-          ) : (
-            <Shield size={24} color={color} />
-          )}
+        <div style={{ width: 48, height: 48, borderRadius: '50%', background: `rgba(0,0,0,0.6)`, border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 15px ${color}33` }}>
+          {invalidated ? <XCircle size={22} color={color} /> : authenticated ? <Lock size={22} color={color} /> : <Shield size={22} color={color} />}
         </div>
       </div>
     </div>
   );
 }
 
-function AuthSequenceTracker({
-  faceDetected,
-  landmarkGenerated,
-  livenessPassed,
-  identityMatch,
-  sessionActive,
-  color
-}: {
-  faceDetected: boolean;
-  landmarkGenerated: boolean;
-  livenessPassed: boolean;
-  identityMatch: boolean;
-  sessionActive: boolean;
-  color: string;
-}) {
-  const stages = [
-    { label: 'Face Detected', passed: faceDetected },
-    { label: 'Landmark Generated', passed: landmarkGenerated },
-    { label: 'Liveness Passed', passed: livenessPassed },
-    { label: 'Identity Match', passed: identityMatch },
-    { label: 'Session Active', passed: sessionActive }
-  ];
-
-  return (
-    <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-      <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 12 }}>
-        AUTHENTICATION SEQUENCE
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {stages.map((st, idx) => (
-          <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              <motion.div
-                animate={st.passed ? { scale: [1, 1.2, 1], backgroundColor: color } : { scale: 1 }}
-                style={{
-                  width: 14, height: 14, borderRadius: '50%',
-                  border: `2px solid ${st.passed ? color : '#475569'}`,
-                  background: st.passed ? color : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                {st.passed && (
-                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#000' }} />
-                )}
-              </motion.div>
-              {idx < stages.length - 1 && (
-                <div style={{ width: 1.5, height: 14, background: st.passed ? color : 'rgba(255,255,255,0.06)', marginTop: 4 }} />
-              )}
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: st.passed ? '#f8fafc' : '#475569' }}>
-              {st.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
-
 function CheckBadge({ label, passed, checking }: { label: string; passed: boolean; checking: boolean }) {
   const color = checking ? '#00d4ff' : passed ? '#00ff88' : '#475569';
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-      borderRadius: 10, background: `${color}0a`, border: `1px solid ${color}22`,
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: `${color}0a`, border: `1px solid ${color}22` }}>
       <motion.div animate={{ scale: passed ? [1, 1.2, 1] : 1 }} transition={{ duration: 0.3 }}>
-        <CheckCircle size={16} color={color} />
+        <CheckCircle size={14} color={color} />
       </motion.div>
-      <span style={{ fontSize: 13, color: checking ? '#00d4ff' : passed ? '#94a3b8' : '#475569', fontWeight: passed ? 500 : 400 }}>
-        {label}
-      </span>
-      {checking && (
-        <motion.div
-          animate={{ opacity: [1, 0.3, 1] }}
-          transition={{ duration: 1, repeat: Infinity }}
-          style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#00d4ff' }}
-        />
-      )}
+      <span style={{ fontSize: 11, color: checking ? '#00d4ff' : passed ? '#94a3b8' : '#475569', fontWeight: passed ? 500 : 400 }}>{label}</span>
+      {checking && <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} style={{ marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%', background: '#00d4ff' }} />}
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// MAIN ENTERPRISE DEMO PAGE
+// ─────────────────────────────────────────────────────────────
 
 export default function EnterpriseDemoPage() {
   const router = useRouter();
@@ -294,22 +363,12 @@ export default function EnterpriseDemoPage() {
           setBackendHealthy(true);
         } else {
           setBackendHealthy(false);
-          setDiagnosticInfo({
-            url: `${API_BASE}/health`,
-            status: res.status || 'unknown',
-            body: JSON.stringify(res.data),
-            reason: 'Health endpoint returned non-ok status'
-          });
+          setDiagnosticInfo({ url: `${API_BASE}/health`, status: res.status || 'unknown', body: JSON.stringify(res.data), reason: 'Health endpoint returned non-ok status' });
         }
       } catch (err: any) {
         console.warn('Backend health check failed', err);
         setBackendHealthy(false);
-        setDiagnosticInfo({
-          url: `${API_BASE}/health`,
-          status: err.response?.status || 'network_error',
-          body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused'),
-          reason: parseNetworkError(err, `${API_BASE}/health`)
-        });
+        setDiagnosticInfo({ url: `${API_BASE}/health`, status: err.response?.status || 'network_error', body: err.response ? JSON.stringify(err.response.data) : (err.message || 'Connection Refused'), reason: parseNetworkError(err, `${API_BASE}/health`) });
       }
     }
     performHealthCheck();
@@ -341,13 +400,22 @@ export default function EnterpriseDemoPage() {
   const [ear, setEar] = useState(0);
   const [mar, setMar] = useState(0);
 
+  // Enterprise analytics state
+  const [enterpriseReport, setEnterpriseReport] = useState<BiometricResponse['enterprise_report'] | null>(null);
+  const [faceQuality, setFaceQuality] = useState(0);
+  const [poseQuality, setPoseQuality] = useState(0);
+  const [lightingQuality, setLightingQuality] = useState(0);
+  const [landmarkGeometry, setLandmarkGeometry] = useState<BiometricResponse['landmark_geometry'] | null>(null);
+  const [passiveLiveness, setPassiveLiveness] = useState<BiometricResponse['passive_liveness'] | null>(null);
+  const [fraudDetection, setFraudDetection] = useState<BiometricResponse['fraud_detection'] | null>(null);
+  const [poseValidation, setPoseValidation] = useState<BiometricResponse['pose_validation'] | null>(null);
+
   // Enrollment states
   const [enrolledEmbedding, setEnrolledEmbedding] = useState<number[] | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [isStabilizing, setIsStabilizing] = useState(false);
   const [enrollmentSnapshot, setEnrollmentSnapshot] = useState<string | null>(null);
 
-  // Verify helper indicating if verification is enabled/active
   const hasFaceEnrolled = useMemo(() => !!enrolledEmbedding, [enrolledEmbedding]);
   
   const enrollmentTimeRef = useRef<number | null>(null);
@@ -359,7 +427,7 @@ export default function EnterpriseDemoPage() {
     }
   }, [hasFaceEnrolled]);
 
-  // Track face mismatches (similarity score below threshold)
+  // Track face mismatches
   const [mismatchCount, setMismatchCount] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('mv_mismatch_count');
@@ -383,23 +451,16 @@ export default function EnterpriseDemoPage() {
   const noseHistoryRef = useRef<[number, number][]>([]);
 
   // Challenge sequence states
-  const [challenges, setChallenges] = useState<typeof ENTERPRISE_CHALLENGES>([]);
-  const [currentChallenge, setCurrentChallenge] = useState(0); // 0: Face Centered, 1: Blink, 2: Mouth, 3: Head, 4: Complete
-  const [challengePassed, setChallengePassed] = useState<boolean[]>([false, false, false, false]);
+  const [challenges, setChallenges] = useState<{ id: string; label: string; instruction: string; icon: string }[]>([]);
+  const [currentChallenge, setCurrentChallenge] = useState(0);
+  const [challengePassed, setChallengePassed] = useState<boolean[]>([]);
   const challengeProgress = challenges.length > 0 ? Math.round((currentChallenge / challenges.length) * 100) : 0;
   const [overallResult, setOverallResult] = useState<'pass' | 'fail' | null>(null);
 
   // State machine steps
   const [isFacePrepared, setIsFacePrepared] = useState(false);
-  const [hasBlinked, setHasBlinked] = useState(false);
-  const [hasMovedMouth, setHasMovedMouth] = useState(false);
-  const [hasRotatedHead, setHasRotatedHead] = useState(false);
-  const [hasRaisedEyebrows, setHasRaisedEyebrows] = useState(false);
-  const [hasSmiled, setHasSmiled] = useState(false);
-  const [hasLookedUp, setHasLookedUp] = useState(false);
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(false);
 
-  // useRef mirror for consecutiveValidFrames to prevent stale closure bugs
   const consecutiveValidFramesRef = useRef(0);
   const currentChallengeRef = useRef(0);
 
@@ -410,9 +471,9 @@ export default function EnterpriseDemoPage() {
 
   // Flow control
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showDebug, setShowDebug] = useState(true);
-  const [challengeTimer, setChallengeTimer] = useState(30); // 30 seconds per challenge
+  const [challengeTimer, setChallengeTimer] = useState(30);
   const [apiResponse, setApiResponse] = useState<BiometricResponse | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   const fpsCountRef = useRef(0);
   const lastFpsTime = useRef(0);
@@ -421,7 +482,6 @@ export default function EnterpriseDemoPage() {
   const wasBlinkingRef = useRef(false);
   const transitioningRef = useRef(false);
 
-  // Debug HUD overlay additions
   const [cameraStatus, setCameraStatus] = useState<'Active' | 'Inactive'>('Inactive');
   const [modelStatus, setModelStatus] = useState<'Loading' | 'Loaded' | 'Failed'>('Loading');
   const searchingForFaceStartRef = useRef<number | null>(null);
@@ -437,11 +497,9 @@ export default function EnterpriseDemoPage() {
   const centerTimerStartTimeRef = useRef<number>(0);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Enterprise Tracking State Machine
   const [faceTrackingState, setFaceTrackingState] = useState<'FACE_PRESENT' | 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' | 'SESSION_TERMINATED'>('FACE_PRESENT');
   const prevTrackingStateRef = useRef<'FACE_PRESENT' | 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' | 'SESSION_TERMINATED'>('FACE_PRESENT');
 
-  // Debug metrics
   const [faceConfidenceMetric, setFaceConfidenceMetric] = useState(0);
   const [trackingConfidence, setTrackingConfidence] = useState(1.0);
   const [lostFrames, setLostFrames] = useState(0);
@@ -456,6 +514,7 @@ export default function EnterpriseDemoPage() {
   const recoveredFramesRef = useRef<number>(0);
   const faceDetectionHistoryRef = useRef<boolean[]>([]);
   const similarityHistoryRef = useRef<number[]>([]);
+
   useEffect(() => {
     if (streaming) {
       stepStartTimeRef.current = Date.now();
@@ -463,111 +522,66 @@ export default function EnterpriseDemoPage() {
     }
   }, [streaming, currentChallenge]);
 
-  // Timers: 3-second auto-complete for Face Centered, 5-second max duration for other challenges
+  // Timers: auto-advance stuck challenges
   useEffect(() => {
     if (!streaming || overallResult || challenges.length === 0 || currentChallenge >= challenges.length) return;
-    
     const interval = setInterval(() => {
       const now = Date.now();
       const elapsedInStep = (now - stepStartTimeRef.current) / 1000;
-      
       if (currentChallenge === 0) {
         if (elapsedInStep > 3.0) {
-          console.warn("FACE_CENTERED_FAILED: Face centering took too long (>3s). Reason: Face position outside guides or confidence too low. Automatically advancing.");
-          console.log("CHALLENGE_1_COMPLETE");
           setIsFacePrepared(true);
-          setChallengePassed(prev => {
-            const next = [...prev];
-            next[0] = true;
-            return next;
-          });
+          setChallengePassed(prev => { const next = [...prev]; next[0] = true; return next; });
           currentChallengeRef.current = 1;
           setCurrentChallenge(1);
           stepStartTimeRef.current = Date.now();
         }
       } else {
         if (elapsedInStep > 5.0) {
-          console.warn(`CHALLENGE_TIMEOUT: Stuck on Challenge ${currentChallenge + 1} for more than 5 seconds. Explanation: Action not registered or face lost. Automatically advancing.`);
           const activeChallenge = challenges[currentChallenge];
           if (activeChallenge) {
-            console.log(`${activeChallenge.id.toUpperCase()}_DETECTED`);
-            console.log(`CHALLENGE_${currentChallenge + 1}_COMPLETE`);
-            
-            if (activeChallenge.id === 'blink_twice') setHasBlinked(true);
-            if (activeChallenge.id === 'open_mouth') setHasMovedMouth(true);
-            if (activeChallenge.id === 'turn_left' || activeChallenge.id === 'turn_right') setHasRotatedHead(true);
-            if (activeChallenge.id === 'raise_eyebrows') setHasRaisedEyebrows(true);
-            if (activeChallenge.id === 'smile') setHasSmiled(true);
-            if (activeChallenge.id === 'look_up') setHasLookedUp(true);
-            
-            setChallengePassed(prev => {
-              const next = [...prev];
-              next[currentChallenge] = true;
-              return next;
-            });
-            
+            setChallengePassed(prev => { const next = [...prev]; next[currentChallenge] = true; return next; });
             const nextStep = currentChallenge + 1;
             currentChallengeRef.current = nextStep;
             setCurrentChallenge(nextStep);
-            if (nextStep >= challenges.length) {
-              console.log("LIVENESS_COMPLETE");
-            }
+            if (nextStep >= challenges.length) console.log("LIVENESS_COMPLETE");
           }
           stepStartTimeRef.current = Date.now();
         }
       }
     }, 100);
-    
     return () => clearInterval(interval);
   }, [streaming, currentChallenge, overallResult, challenges]);
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setIsMounted(true);
-    }, 0);
-    return () => clearTimeout(t);
-  }, []);
+  useEffect(() => { const t = setTimeout(() => setIsMounted(true), 0); return () => clearTimeout(t); }, []);
 
   const triggerSessionTermination = useCallback((reason: string, shouldRedirect: boolean = false) => {
     setSessionTerminated(true);
     setTerminationReason(reason);
     setOverallResult('fail');
     
-    // Map reason to database event type
     let eventType = 'SESSION_TERMINATED';
     const normReason = reason.toLowerCase();
-    if (normReason.includes('face lost') || normReason.includes('no face') || normReason.includes('searching_for_face')) {
-      eventType = 'NO_FACE_DETECTED';
-    } else if (normReason.includes('multiple faces')) {
-      eventType = 'MULTIPLE_FACE';
-    } else if (normReason.includes('spoof') || normReason.includes('replay') || normReason.includes('deepfake')) {
-      eventType = 'SPOOF_DETECTED';
-    } else if (normReason.includes('unauthorized') || normReason.includes('identity changed') || normReason.includes('mismatch')) {
-      eventType = 'IDENTITY_MISMATCH';
-    } else if (normReason.includes('frozen') || normReason.includes('camera lost') || normReason.includes('camera feed frozen')) {
-      eventType = 'CAMERA_LOST';
-    }
+    if (normReason.includes('face lost') || normReason.includes('no face') || normReason.includes('searching_for_face')) eventType = 'NO_FACE_DETECTED';
+    else if (normReason.includes('multiple faces')) eventType = 'MULTIPLE_FACE';
+    else if (normReason.includes('spoof') || normReason.includes('replay') || normReason.includes('deepfake')) eventType = 'SPOOF_DETECTED';
+    else if (normReason.includes('unauthorized') || normReason.includes('identity changed') || normReason.includes('mismatch')) eventType = 'IDENTITY_MISMATCH';
+    else if (normReason.includes('frozen') || normReason.includes('camera lost') || normReason.includes('camera feed frozen')) eventType = 'CAMERA_LOST';
     
     livenessAPI.logEvent(sessionId, eventType, 'enterprise').catch(console.error);
 
-    // Stop camera
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       videoRef.current.srcObject = null;
     }
     setStreaming(false);
 
-    console.log(`[Face Verification] Session terminated. Reason: ${reason}. Logout redirect: ${shouldRedirect}`);
-
-    // Auto logout flow: Token Revoked, Redirect to Login via AuthContext logout after 3s
     if (shouldRedirect) {
-      setTimeout(() => {
-        logout('/signin?reason=verification_lost');
-      }, 3000);
+      setTimeout(() => { logout('/signin?reason=verification_lost'); }, 3000);
     }
   }, [logout, sessionId]);
 
-  // Load enrollment signature from API or localStorage
+  // Load enrollment
   useEffect(() => {
     const loadEnrolled = async () => {
       try {
@@ -575,206 +589,101 @@ export default function EnterpriseDemoPage() {
         if (res.data && res.data.enrolled && res.data.embedding_vector) {
           setEnrolledEmbedding(res.data.embedding_vector);
           localStorage.setItem('enrolledEmbedding', JSON.stringify(res.data.embedding_vector));
-          console.log("Enrollment embedding generated");
-          console.log(res.data.embedding_vector.length);
           return;
         }
-      } catch (e) {
-        console.warn('Failed to fetch enrolled face from backend', e);
-      }
+      } catch (e) { console.warn('Failed to fetch enrolled face from backend', e); }
 
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('enrolledEmbedding') || localStorage.getItem('mv_enrolled_signature');
         if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            setEnrolledEmbedding(parsed);
-            console.log("Enrollment embedding generated");
-            console.log(parsed.length);
-          } catch (e) {
-            console.warn('Failed to parse enrolled signature', e);
-          }
+          try { setEnrolledEmbedding(JSON.parse(stored)); } catch (e) { console.warn('Failed to parse', e); }
         }
       }
     };
     loadEnrolled();
   }, []);
 
-  // Helper to choose 9 challenges
-  const generateRandomChallenges = () => {
-    return ENTERPRISE_CHALLENGES;
-  };
-
-  // E2E frame capturer and processor
+  // Frame processor
   const sendFrameToBackend = useCallback(async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || !streaming || isProcessing || overallResult) return;
-
-    // Verify video frame has dimensions before processing
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      console.warn("[Biometric Pipeline] Skipped frame capture: videoWidth/videoHeight is 0.");
-      return;
-    }
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     setIsProcessing(true);
 
-    // Draw video frame to small canvas for efficient transfer (320x240)
     canvas.width = 320;
     canvas.height = 240;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Calculate FPS
     const now = Date.now();
     fpsCountRef.current++;
-    if (now - lastFpsTime.current >= 1000) {
-      fpsCountRef.current = 0;
-      lastFpsTime.current = now;
-    }
+    if (now - lastFpsTime.current >= 1000) { fpsCountRef.current = 0; lastFpsTime.current = now; }
 
     const handleFrameInvalid = (data: BiometricResponse | null) => {
-      const currentFaceDetected = !!(
-        data &&
-        data.face_present &&
-        data.face_confidence > 0.50 &&
-        data.landmark_count > 0 &&
-        Math.abs(data.yaw || 0) <= 45 &&
-        Math.abs(data.pitch || 0) <= 30 &&
-        Math.abs(data.roll || 0) <= 30
-      );
-
-      // Maintain rolling history of last 15 frames for face detection
+      const currentFaceDetected = !!(data && data.face_present && data.face_confidence > 0.50 && data.landmark_count > 0 && Math.abs(data.yaw || 0) <= 45 && Math.abs(data.pitch || 0) <= 30 && Math.abs(data.roll || 0) <= 30);
       faceDetectionHistoryRef.current.push(currentFaceDetected);
-      if (faceDetectionHistoryRef.current.length > 15) {
-        faceDetectionHistoryRef.current.shift();
-      }
-
-      // Smooth face presence: only mark face lost if majority of frames indicate no face (i.e. <= 7 / 15 detected)
+      if (faceDetectionHistoryRef.current.length > 15) faceDetectionHistoryRef.current.shift();
       const smoothFaceDetected = faceDetectionHistoryRef.current.filter(Boolean).length >= 8;
 
-      if (smoothFaceDetected) {
-        faceLostStartRef.current = null;
-        setFaceMissingDuration(0);
-      } else {
-        if (faceLostStartRef.current === null) {
-          faceLostStartRef.current = Date.now();
-        }
-      }
+      if (smoothFaceDetected) { faceLostStartRef.current = null; setFaceMissingDuration(0); }
+      else { if (faceLostStartRef.current === null) faceLostStartRef.current = Date.now(); }
 
       const faceLostDuration = faceLostStartRef.current ? (Date.now() - faceLostStartRef.current) / 1000 : 0;
 
-      // Log current tracking and confidence metrics
-      const currentConfidence = data?.face_confidence ?? 0.0;
-      console.log(`[Face Lost Tracker] Confidence: ${currentConfidence.toFixed(2)}, Detected: ${currentFaceDetected ? 'YES' : 'NO'}, SmoothDetected: ${smoothFaceDetected ? 'YES' : 'NO'}, FaceLostTimer: ${faceLostDuration.toFixed(1)}s, Reason: ${data?.status || 'No face detected'}`);
-
-      // If we are not enrolled, face loss persistence rules don't apply for session termination
       if (!hasFaceEnrolled) {
         setFaceTrackingState('FACE_LOST');
         prevTrackingStateRef.current = 'FACE_LOST';
-        setDetectedFaces(0);
-        setLandmarkCount(0);
-        setConfidence(0);
-        setGazeDirection(null);
-        setGazeAvailable(false);
-        setFaceInsideGuide(false);
-        faceVisibleStartRef.current = null;
-        setFaceVisibleDuration(0);
-        setSimilarity(0);
-        setConsecutiveValidFrames(0);
-        noseHistoryRef.current = [];
-        setDetectionStability(0.0);
+        setDetectedFaces(0); setLandmarkCount(0); setConfidence(0);
+        setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
+        faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setSimilarity(0);
+        setConsecutiveValidFrames(0); noseHistoryRef.current = []; setDetectionStability(0.0);
         return;
       }
 
-      // Grace period directly after face enrollment (3 seconds)
       const timeSinceEnrollment = enrollmentTimeRef.current ? Date.now() - enrollmentTimeRef.current : 0;
-      if (hasFaceEnrolled && timeSinceEnrollment < 3000) {
-        console.log("[Face Verification] Skipping Face Lost check due to recent enrollment grace period");
-        return;
-      }
+      if (hasFaceEnrolled && timeSinceEnrollment < 3000) return;
 
-      // We are enrolled, apply warning state machine
-      recoveredFramesRef.current = 0;
-      setRecoveredFrames(0);
-      lostFramesRef.current += 1;
-      setLostFrames(lostFramesRef.current);
-      setFaceConfidenceMetric(0);
-      setTrackingConfidence(0.0);
+      recoveredFramesRef.current = 0; setRecoveredFrames(0);
+      lostFramesRef.current += 1; setLostFrames(lostFramesRef.current);
+      setFaceConfidenceMetric(0); setTrackingConfidence(0.0); setTimeSinceFaceSeen(faceLostDuration);
 
-      setTimeSinceFaceSeen(faceLostDuration);
+      let state: 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' = faceLostDuration < 2.0 ? 'FACE_WARNING' : faceLostDuration < 5.0 ? 'FACE_RECOVERY' : 'FACE_LOST';
+      setFaceTrackingState(state); prevTrackingStateRef.current = state;
 
-      let state: 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' = 'FACE_WARNING';
-      if (faceLostDuration < 2.0) {
-        state = 'FACE_WARNING';
-      } else if (faceLostDuration >= 2.0 && faceLostDuration < 5.0) {
-        state = 'FACE_RECOVERY';
-      } else {
-        state = 'FACE_LOST';
-      }
-
-      setFaceTrackingState(state);
-      prevTrackingStateRef.current = state;
-
-      // Terminate ONLY after 5 continuous seconds of face lost
       if (faceLostDuration > 5.0) {
-        setDetectedFaces(0);
-        setLandmarkCount(0);
-        setConfidence(0);
-        setGazeDirection(null);
-        setGazeAvailable(false);
-        setFaceInsideGuide(false);
-        faceVisibleStartRef.current = null;
-        setFaceVisibleDuration(0);
-        setConsecutiveValidFrames(0);
+        setDetectedFaces(0); setLandmarkCount(0); setConfidence(0);
+        setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
+        faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setConsecutiveValidFrames(0);
         noseHistoryRef.current = [];
-        setFaceTrackingState('SESSION_TERMINATED');
-        prevTrackingStateRef.current = 'SESSION_TERMINATED';
-        
+        setFaceTrackingState('SESSION_TERMINATED'); prevTrackingStateRef.current = 'SESSION_TERMINATED';
         let exactReason = 'No Face Detected';
         if (data && data.detected_faces > 1) exactReason = 'Multiple Faces';
         else if (data && data.face_confidence <= 0.50) exactReason = 'Low Detection Confidence';
         else if (data && !data.face_present) exactReason = 'Tracking Lost';
         else if (!data) exactReason = 'Camera Interrupted';
-
-        console.log(`[Face Verification] Face lost timer exceeded. Terminating session. Reason: ${exactReason}`);
         triggerSessionTermination(exactReason, false);
       }
     };
 
     try {
       const base64Image = canvas.toDataURL('image/jpeg', 0.65);
-      console.log("FRAME_RECEIVED: Captured frame for processing");
-      console.log("FACE_DETECTION_STARTED");
-
       const activeChallengeId = currentChallenge < challenges.length ? challenges[currentChallenge].id : undefined;
-      const res = await livenessAPI.processDemoFrame(
-        base64Image,
-        sessionId,
-        activeChallengeId,
-        hasFaceEnrolled ? (enrolledEmbedding || undefined) : undefined,
-        'enterprise'
-      );
+      const res = await livenessAPI.processDemoFrame(base64Image, sessionId, activeChallengeId, hasFaceEnrolled ? (enrolledEmbedding || undefined) : undefined, 'enterprise');
       const data = res?.data;
       setApiResponse(data);
-
       if (!data) return;
 
-      // Model loading checks
       if (data.status === "cv_engine_unavailable" || data.error?.includes("CV engine not available")) {
-        setModelStatus("Failed");
-        setError("Face detection model failed to load on the server.");
+        setModelStatus("Failed"); setError("Face detection model failed to load on the server.");
       } else {
         setModelStatus("Loaded");
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
-        }
+        if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
       }
 
-      // Enterprise Security Terminal Alerts Checks
+      // Enterprise terminal alerts
       const terminalStatuses: Record<string, string> = {
         "MULTIPLE_FACES_DETECTED": "MULTIPLE FACES DETECTED",
         "REPLAY_ATTACK_DETECTED": "REPLAY ATTACK DETECTED",
@@ -784,32 +693,26 @@ export default function EnterpriseDemoPage() {
         "IDENTITY_CHANGED": "UNAUTHORIZED PERSON"
       };
 
-      if (data.status in terminalStatuses) {
+      if (data.status && data.status in terminalStatuses) {
         triggerSessionTermination(terminalStatuses[data.status], false);
         return;
       }
 
-      console.log(`[Face Verification] Status: enrollment_status=${hasFaceEnrolled}, similarity=${data.similarity_score}, spoof_score=${data.spoof_score}, mismatch_count=${mismatchCount}`);
-
       if (streaming && hasFaceEnrolled && !overallResult) {
-        if (data.detected_faces > 1) {
-          triggerSessionTermination('Multiple Faces Detected', false);
-          return;
-        }
-        if (data.spoof_score > 0.45 && data.face_present) {
-          triggerSessionTermination('Spoof Detected', false);
-          return;
-        }
+        if (data.detected_faces > 1) { triggerSessionTermination('Multiple Faces Detected', false); return; }
+        if (data.spoof_score > 0.45 && data.face_present) { triggerSessionTermination('Spoof Detected', false); return; }
       }
 
-      const isFacePresent = !!(
-        data.face_present &&
-        data.face_confidence > 0.50 &&
-        data.landmark_count > 0 &&
-        Math.abs(data.yaw || 0) <= 45 &&
-        Math.abs(data.pitch || 0) <= 30 &&
-        Math.abs(data.roll || 0) <= 30
-      );
+      // Update enterprise analytics
+      if (data.enterprise_report) setEnterpriseReport(data.enterprise_report);
+      if (data.face_quality !== undefined) setFaceQuality(data.face_quality * 100);
+      if (data.pose_quality !== undefined) setPoseQuality(data.pose_quality * 100);
+      if (data.lighting_quality !== undefined) setLightingQuality(data.lighting_quality * 100);
+      if (data.landmark_geometry) setLandmarkGeometry(data.landmark_geometry);
+      if (data.passive_liveness) setPassiveLiveness(data.passive_liveness);
+      if (data.fraud_detection) setFraudDetection(data.fraud_detection);
+      if (data.pose_validation) setPoseValidation(data.pose_validation);
+
       const isFacePresentAndValid = data.face_present && data.face_confidence > 0.50;
       const box = data.bbox;
       setBbox(box || null);
@@ -817,54 +720,27 @@ export default function EnterpriseDemoPage() {
       if (data.mar !== undefined) setMar(data.mar);
       const face_center_x = data.landmarks && data.landmarks[1] ? data.landmarks[1][0] : (box ? box.x + box.w / 2 : 0.5);
       const face_center_y = data.landmarks && data.landmarks[1] ? data.landmarks[1][1] : (box ? box.y + box.h / 2 : 0.5);
-      const inside = box &&
-                     Math.abs(face_center_x - 0.5) <= 0.15 &&
-                     Math.abs(face_center_y - 0.5) <= 0.15;
+      const inside = box && Math.abs(face_center_x - 0.5) <= 0.15 && Math.abs(face_center_y - 0.5) <= 0.15;
 
-      const isFrameValid = 
-         isFacePresentAndValid &&
-        data.detected_faces === 1 &&
-        inside &&
-        (!hasFaceEnrolled || isStabilizing || (
-          data.spoof_score < 0.45 &&
-          data.deepfake_risk < 0.30 &&
-          data.similarity_score >= 0.75
-        ));
+      const isFrameValid = isFacePresentAndValid && data.detected_faces === 1 && inside &&
+        (!hasFaceEnrolled || isStabilizing || (data.spoof_score < 0.45 && data.deepfake_risk < 0.30 && (data.similarity_score ?? 0) >= 0.75));
 
       if (isFrameValid) {
         setFaceConfidenceMetric(data.face_confidence);
         setTrackingConfidence(Math.min(1.0, data.face_confidence + 0.1));
-        
-        lostFramesRef.current = 0;
-        setLostFrames(0);
-        recoveredFramesRef.current += 1;
-        setRecoveredFrames(recoveredFramesRef.current);
-        lastFaceSeenTimeRef.current = Date.now();
-        setTimeSinceFaceSeen(0);
+        lostFramesRef.current = 0; setLostFrames(0);
+        recoveredFramesRef.current += 1; setRecoveredFrames(recoveredFramesRef.current);
+        lastFaceSeenTimeRef.current = Date.now(); setTimeSinceFaceSeen(0);
 
         if (data.landmarks && data.landmarks.length > 0) {
           const liveEmb = calculateFaceEmbedding(data.landmarks);
           if (liveEmb && liveEmb.length > 0) {
             setLiveEmbedding(liveEmb);
-            console.log("Live embedding generated");
-            console.log(liveEmb.length);
-            
             if (enrolledEmbedding) {
               const sim = cosineSimilarity(enrolledEmbedding, liveEmb);
-              if (!isStabilizing) {
-                 console.log(`Identity Match Score: ${(sim * 100).toFixed(0)}%`);
-                 if (sim >= 0.85) {
-                    console.log("Identity Match Passed");
-                 }
-              }
-              console.log("Similarity:", sim);
-              
               similarityHistoryRef.current.push(sim);
-              if (similarityHistoryRef.current.length > 15) {
-                similarityHistoryRef.current.shift();
-              }
+              if (similarityHistoryRef.current.length > 15) similarityHistoryRef.current.shift();
               const smoothedSim = similarityHistoryRef.current.reduce((a, b) => a + b, 0) / similarityHistoryRef.current.length;
-              
               setSimilarity(smoothedSim);
               setLastMatchTime(Date.now());
             }
@@ -872,321 +748,161 @@ export default function EnterpriseDemoPage() {
         }
 
         if (recoveredFramesRef.current >= 5) {
-          if (prevTrackingStateRef.current === 'FACE_WARNING' || prevTrackingStateRef.current === 'FACE_RECOVERY') {
-            console.log("FACE_REACQUIRED: Restoring previous session automatically.");
-          }
-          setFaceTrackingState('FACE_PRESENT');
-          prevTrackingStateRef.current = 'FACE_PRESENT';
-        }
-        console.log("FACE_DETECTED: YES");
-        if (isFacePresentAndValid) {
-           console.log("Face Detected");
-        }
-        console.log(`LANDMARKS_FOUND: count=${data.landmark_count}`);
-        console.log("EMBEDDING_GENERATED");
-        if (hasFaceEnrolled && data.similarity_score >= 0.85) {
-          console.log("MATCH_SUCCESS");
+          setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
         }
         searchingForFaceStartRef.current = null;
-
-        // Reset face/identity lost persistence timers and mismatch warnings
-        faceLostStartRef.current = null;
-        setFaceMissingDuration(0);
-        setMismatchCount(0);
-
-        setDetectedFaces(data.detected_faces);
-        setLandmarkCount(data.landmark_count);
-        setConfidence(data.face_confidence);
+        faceLostStartRef.current = null; setFaceMissingDuration(0); setMismatchCount(0);
+        setDetectedFaces(data.detected_faces); setLandmarkCount(data.landmark_count); setConfidence(data.face_confidence);
         
-        // Correct yaw using processHeadPose utility (Task 4)
         const pose = processHeadPose(data.yaw, data.raw_yaw);
-        setYaw(pose.correctedYaw);
-        setRawYaw(pose.rawYaw);
-        setYawDirection(pose.direction);
+        setYaw(pose.correctedYaw); setRawYaw(pose.rawYaw); setYawDirection(pose.direction);
+        setPitch(data.pitch); setRoll(data.roll);
+        setSpoofScore(data.spoof_score); setDeepfakeRisk(data.deepfake_risk);
+        setGazeDirection(data.gaze_direction); setGazeAvailable(data.gaze_available); setFaceInsideGuide(true);
 
-        setPitch(data.pitch);
-        setRoll(data.roll);
-        setSpoofScore(data.spoof_score);
-        setDeepfakeRisk(data.deepfake_risk);
-        setGazeDirection(data.gaze_direction);
-        setGazeAvailable(data.gaze_available);
-        setFaceInsideGuide(true);
-
-        // Detection stability calculation using landmark nose history
         if (data.landmarks && data.landmarks[1]) {
           const nose = data.landmarks[1];
           const hist = noseHistoryRef.current;
           hist.push([nose[0], nose[1]]);
-          if (hist.length > 10) {
-            hist.shift();
-          }
+          if (hist.length > 10) hist.shift();
           if (hist.length >= 2) {
             let totalDist = 0;
             for (let i = 1; i < hist.length; i++) {
-              const dx = hist[i][0] - hist[i-1][0];
-              const dy = hist[i][1] - hist[i-1][1];
+              const dx = hist[i][0] - hist[i-1][0]; const dy = hist[i][1] - hist[i-1][1];
               totalDist += Math.sqrt(dx * dx + dy * dy);
             }
             const avgDist = totalDist / (hist.length - 1);
-            const stab = Math.max(0.0, Math.min(100.0, 100.0 - avgDist * 500.0));
-            setDetectionStability(stab);
-          } else {
-            setDetectionStability(95.0);
+            setDetectionStability(Math.max(0.0, Math.min(100.0, 100.0 - avgDist * 500.0)));
           }
         }
 
-        wasBlinkingRef.current = data.blink_detected;
+        wasBlinkingRef.current = data.blink_detected ?? false;
+        if (hasFaceEnrolled) { consecutiveValidFramesRef.current += 1; setConsecutiveValidFrames(consecutiveValidFramesRef.current); }
 
-        if (hasFaceEnrolled) {
-          consecutiveValidFramesRef.current += 1;
-          setConsecutiveValidFrames(consecutiveValidFramesRef.current);
-        }
+        if (faceVisibleStartRef.current === null) { faceVisibleStartRef.current = Date.now(); setFaceVisibleDuration(0); }
+        else { setFaceVisibleDuration((Date.now() - faceVisibleStartRef.current) / 1000); }
 
-        // Check if confidence >= 0.90 AND inside guide to increment duration
-        if (faceVisibleStartRef.current === null) {
-          faceVisibleStartRef.current = Date.now();
-          setFaceVisibleDuration(0);
-        } else {
-          const dur = (Date.now() - faceVisibleStartRef.current) / 1000;
-          setFaceVisibleDuration(dur);
-        }
-
-        // const durVal = faceVisibleStartRef.current ? (Date.now() - faceVisibleStartRef.current) / 1000 : 0; // removed unused variable
-
-        // State Machine progression logic based on data:
+        // State machine progression
         if (currentChallenge === 0) {
-          // Face Centered Challenge
           if (data.face_confidence > 0.50 && inside && data.detected_faces === 1) {
             if (!centerTimerStartedRef.current) {
-              centerTimerStartedRef.current = true;
-              centerTimerStartTimeRef.current = Date.now();
-              console.log("CENTER_TIMER_STARTED");
+              centerTimerStartedRef.current = true; centerTimerStartTimeRef.current = Date.now();
             } else {
               const centeredDur = (Date.now() - centerTimerStartTimeRef.current) / 1000;
               setFaceVisibleDuration(centeredDur);
               if (centeredDur >= 2.0) {
-                console.log("CENTER_TIMER_COMPLETE");
-                console.log("FACE_CENTERED");
-                console.log("CHALLENGE_1_COMPLETE");
                 setIsFacePrepared(true);
-                setChallengePassed(prev => {
-                  const next = [...prev];
-                  next[0] = true;
-                  return next;
-                });
-                currentChallengeRef.current = 1;
-                setCurrentChallenge(1);
+                setChallengePassed(prev => { const next = [...prev]; next[0] = true; return next; });
+                currentChallengeRef.current = 1; setCurrentChallenge(1);
               }
             }
-          } else {
-            centerTimerStartedRef.current = false;
-            setFaceVisibleDuration(0);
-          }
+          } else { centerTimerStartedRef.current = false; setFaceVisibleDuration(0); }
         } else {
           const activeChallenge = challenges[currentChallenge];
-          if (activeChallenge) {
-            if (data.challenge_passed) {
-              console.log(`${activeChallenge.id.toUpperCase()}_DETECTED`);
-              console.log(`CHALLENGE_${currentChallenge + 1}_COMPLETE`);
-              
-              if (activeChallenge.id === 'blink_twice') setHasBlinked(true);
-              if (activeChallenge.id === 'open_mouth') setHasMovedMouth(true);
-              if (activeChallenge.id === 'turn_left' || activeChallenge.id === 'turn_right') setHasRotatedHead(true);
-              if (activeChallenge.id === 'raise_eyebrows') setHasRaisedEyebrows(true);
-              if (activeChallenge.id === 'smile') setHasSmiled(true);
-              if (activeChallenge.id === 'look_up') setHasLookedUp(true);
-              
-              setChallengePassed(prev => {
-                const next = [...prev];
-                next[currentChallenge] = true;
-                return next;
-              });
-              
-              const nextStep = currentChallenge + 1;
-              currentChallengeRef.current = nextStep;
-              setCurrentChallenge(nextStep);
-              stepStartTimeRef.current = Date.now();
-              if (nextStep >= challenges.length) {
-                console.log("LIVENESS_COMPLETE");
-                console.log("Liveness Passed");
-              }
-            }
+          if (activeChallenge && data.challenge_passed) {
+            setChallengePassed(prev => { const next = [...prev]; next[currentChallenge] = true; return next; });
+            const nextStep = currentChallenge + 1;
+            currentChallengeRef.current = nextStep; setCurrentChallenge(nextStep);
+            stepStartTimeRef.current = Date.now();
+            if (nextStep >= challenges.length) console.log("LIVENESS_COMPLETE");
           }
         }
       } else {
-        console.log(`Face detection failure reason: ${data.status || 'No face detected'}`);
-        if (searchingForFaceStartRef.current === null) {
-          searchingForFaceStartRef.current = Date.now();
-        } else if (Date.now() - searchingForFaceStartRef.current > 3000) {
-          console.warn(`[Biometric Pipeline] Stuck in 'Searching For Face' state for over 3 seconds. Status: ${data.status || 'No face found'}`);
-          searchingForFaceStartRef.current = Date.now(); // throttle logs
-        }
+        if (searchingForFaceStartRef.current === null) searchingForFaceStartRef.current = Date.now();
+        else if (Date.now() - searchingForFaceStartRef.current > 3000) searchingForFaceStartRef.current = Date.now();
         handleFrameInvalid(data);
       }
     } catch (err: any) {
       console.warn('Frame processing failed', err);
       setModelStatus("Failed");
-      const errorMsg = err.response ? `Backend returned status ${err.response.status}: ${JSON.stringify(err.response.data)}` : (err.message || 'Unknown network error');
-      setError(`Failed to connect to backend biometric services. Reason: ${errorMsg}`);
+      setError(`Failed to connect to backend biometric services.`);
       handleFrameInvalid(null);
     } finally {
       setIsProcessing(false);
     }
-  }, [streaming, sessionId, hasFaceEnrolled, enrolledEmbedding, currentChallenge, challenges, isProcessing, overallResult, triggerSessionTermination, mismatchCount]);
+  }, [streaming, sessionId, hasFaceEnrolled, enrolledEmbedding, currentChallenge, challenges, isProcessing, overallResult, triggerSessionTermination, mismatchCount, isStabilizing]);
 
-  // Throttled requestAnimationFrame loop
+  // Animation loop
   const requestRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(0);
   const streamingRef = useRef(false);
+  useEffect(() => { streamingRef.current = streaming; }, [streaming]);
 
-  useEffect(() => {
-    streamingRef.current = streaming;
-  }, [streaming]);
-  // Throttled requestAnimationFrame loop
   function animationLoop(_timestamp: number) {
     if (!streamingRef.current) return;
     const now = Date.now();
-    // Throttle frames to backend to ~10 FPS to prevent server overload
-    if (now - lastFrameTimeRef.current >= 100) {
-      sendFrameToBackend();
-      lastFrameTimeRef.current = now;
-    }
+    if (now - lastFrameTimeRef.current >= 100) { sendFrameToBackend(); lastFrameTimeRef.current = now; }
     requestRef.current = requestAnimationFrame(animationLoop);
   }
-// animationLoop moved earlier; original location removed
 
   useEffect(() => {
-    if (streaming) {
-      lastFrameTimeRef.current = Date.now();
-      requestRef.current = requestAnimationFrame(animationLoop);
-    }
-    return () => {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
-    };
+    if (streaming) { lastFrameTimeRef.current = Date.now(); requestRef.current = requestAnimationFrame(animationLoop); }
+    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
   }, [streaming, animationLoop]);
 
-  // Handle session timer
   useEffect(() => {
     if (!streaming) return;
-    sessionTimeRef.current = setInterval(() => {
-      setSessionTime(t => t + 1);
-    }, 1000);
-    return () => {
-      if (sessionTimeRef.current) clearInterval(sessionTimeRef.current);
-    };
+    sessionTimeRef.current = setInterval(() => setSessionTime(t => t + 1), 1000);
+    return () => { if (sessionTimeRef.current) clearInterval(sessionTimeRef.current); };
   }, [streaming]);
 
-  // Challenge step countdown timer
   useEffect(() => {
     if (!streaming || overallResult || !hasFaceEnrolled || currentChallenge >= challenges.length) return;
-    
     timerRef.current = setInterval(() => {
-      setChallengeTimer(t => {
-        if (t <= 1) {
-          // Instead of failing the session immediately on timeout, reset to 30 seconds to allow retry
-          console.log("Challenge timed out. Retrying current challenge...");
-          return 30;
-        }
-        return t - 1;
-      });
+      setChallengeTimer(t => { if (t <= 1) return 30; return t - 1; });
     }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [streaming, currentChallenge, challenges, hasFaceEnrolled, overallResult]);
 
-  // Enforce fail state on multiple faces or deepfake detections during active session
+  // Enforce fail state
   useEffect(() => {
     if (streaming && hasFaceEnrolled && !overallResult) {
-      if (detectedFaces > 1) {
-        const t = setTimeout(() => triggerSessionTermination('Multiple Faces Detected', false), 0);
-        return () => clearTimeout(t);
-      } else if (spoofScore > 0.45 && faceVisibleDuration >= 2.0) {
-        const t = setTimeout(() => triggerSessionTermination('Spoof Detected', false), 0);
-        return () => clearTimeout(t);
-      }
+      if (detectedFaces > 1) { const t = setTimeout(() => triggerSessionTermination('Multiple Faces Detected', false), 0); return () => clearTimeout(t); }
+      else if (spoofScore > 0.45 && faceVisibleDuration >= 2.0) { const t = setTimeout(() => triggerSessionTermination('Spoof Detected', false), 0); return () => clearTimeout(t); }
     }
   }, [detectedFaces, spoofScore, faceVisibleDuration, streaming, hasFaceEnrolled, overallResult, triggerSessionTermination]);
 
-  // Single Source of Truth Analytics Logging
+  // Analytics logging
   useEffect(() => {
     if (overallResult) {
       import('@/lib/api').then(({ analyticsAPI }) => {
         let status = overallResult === 'pass' ? 'VERIFIED' : 'FAILED';
-        if (terminationReason?.includes('Timeout') || terminationReason?.includes('Lost') || terminationReason === 'No face detected') {
-          status = 'NO FACE DETECTED';
-        } else if (spoofScore > 0.45) {
-          status = 'SPOOF ATTEMPT';
-        } else if (terminationReason?.includes('Mismatch')) {
-          status = 'FAILED';
-        }
+        if (terminationReason?.includes('Timeout') || terminationReason?.includes('Lost') || terminationReason === 'No face detected') status = 'NO FACE DETECTED';
+        else if (spoofScore > 0.45) status = 'SPOOF ATTEMPT';
+        else if (terminationReason?.includes('Mismatch')) status = 'FAILED';
 
         analyticsAPI.logVerificationEvent({
-          apiType: 'Enterprise',
-          status,
-          confidence: confidence || 0.95,
-          processingTimeMs: sessionTime ? sessionTime * 1000 : 2500,
-          spoofFlag: spoofScore > 0.45,
-          faceDetectedFlag: faceTrackingState !== 'FACE_LOST',
+          apiType: 'Enterprise', status,
+          confidence: confidence || 0.95, processingTimeMs: sessionTime ? sessionTime * 1000 : 2500,
+          spoofFlag: spoofScore > 0.45, faceDetectedFlag: faceTrackingState !== 'FACE_LOST',
           identityMatchedFlag: overallResult === 'pass',
           attentionScore: gazeAvailable ? 0.95 : (overallResult === 'pass' ? 0.9 : 0.4),
           user: user?.name || 'Unknown User',
           device: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : /Tablet|iPad/i.test(navigator.userAgent) ? 'Tablet' : 'Desktop'
         }).catch(console.error);
-        if (overallResult === 'pass') {
-           console.log("Verification Complete");
-        }
       });
     }
   }, [overallResult]);
 
   async function startCamera() {
-    setError(null);
-    faceVisibleStartRef.current = null;
-    setFaceVisibleDuration(0);
-    setSessionTime(0);
-    setOverallResult(null);
-    setSessionTerminated(false);
-    setTerminationReason('');
-    setModelStatus('Loading');
-    faceDetectionHistoryRef.current = [];
-    similarityHistoryRef.current = [];
-    
-    // Reset mismatch count
-    setMismatchCount(0);
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('mv_mismatch_count');
-    }
-
-    // Reset ref-based frame counters
-    consecutiveValidFramesRef.current = 0;
-    currentChallengeRef.current = 0;
-    setConsecutiveValidFrames(0);
-
-    // Reset state machine & tracking metrics
-    setFaceTrackingState('FACE_PRESENT');
-    prevTrackingStateRef.current = 'FACE_PRESENT';
-    setLostFrames(0);
-    setRecoveredFrames(0);
-    setTimeSinceFaceSeen(0);
-    setLiveEmbedding([]);
-    setLastMatchTime(null);
-    lastFaceSeenTimeRef.current = null;
-    lostFramesRef.current = 0;
-    recoveredFramesRef.current = 0;
-    setFaceConfidenceMetric(0);
-    setTrackingConfidence(1.0);
+    setError(null); faceVisibleStartRef.current = null; setFaceVisibleDuration(0);
+    setSessionTime(0); setOverallResult(null); setSessionTerminated(false); setTerminationReason('');
+    setModelStatus('Loading'); faceDetectionHistoryRef.current = []; similarityHistoryRef.current = [];
+    setMismatchCount(0); setShowReport(false);
+    if (typeof window !== 'undefined') sessionStorage.removeItem('mv_mismatch_count');
+    consecutiveValidFramesRef.current = 0; currentChallengeRef.current = 0; setConsecutiveValidFrames(0);
+    setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
+    setLostFrames(0); setRecoveredFrames(0); setTimeSinceFaceSeen(0);
+    setLiveEmbedding([]); setLastMatchTime(null);
+    lastFaceSeenTimeRef.current = null; lostFramesRef.current = 0; recoveredFramesRef.current = 0;
+    setFaceConfidenceMetric(0); setTrackingConfidence(1.0);
+    setEnterpriseReport(null); setFaceQuality(0); setPoseQuality(0); setLightingQuality(0);
+    setLandmarkGeometry(null); setPassiveLiveness(null); setFraudDetection(null); setPoseValidation(null);
 
     if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     loadingTimeoutRef.current = setTimeout(() => {
       if (modelStatus === 'Loading' || !streaming) {
-        console.warn("[Biometric Pipeline] Initialization timed out after 5 seconds.");
-        setModelStatus('Failed');
-        setError('Biometric services failed to respond within 5 seconds. Please check connection and try again.');
-        stopCamera();
+        setModelStatus('Failed'); setError('Biometric services failed to respond within 5 seconds.'); stopCamera();
       }
     }, 5000);
 
@@ -1195,215 +911,115 @@ export default function EnterpriseDemoPage() {
       setSessionId(sessionRes.data.session_id);
       setChallenges(sessionRes.data.challenges);
       setChallengePassed(new Array(sessionRes.data.challenges.length).fill(false));
-      setCurrentChallenge(0);
-      setChallengeTimer(30);
+      setCurrentChallenge(0); setChallengeTimer(30);
     } catch (e: any) {
-      console.warn("Failed to start session on backend", e);
-      const errorMsg = e.response ? `Backend returned status ${e.response.status}: ${JSON.stringify(e.response.data)}` : (e.message || 'Unknown network error');
-      setError(`Failed to initialize secure verification session with backend. Reason: ${errorMsg}`);
+      setError(`Failed to initialize secure verification session with backend.`);
       setModelStatus('Failed');
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
+      if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' }
-      });
-      if (stream && stream.active) {
-        console.log("Camera Started");
-        console.log("CAMERA_STARTED: Web camera stream obtained successfully.");
-        setCameraStatus('Active');
-      } else {
-        throw new Error("No active stream returned");
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+      if (stream && stream.active) { setCameraStatus('Active'); } else throw new Error("No active stream");
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          console.log("VIDEO_READY: Video element metadata loaded successfully.");
-        };
         await videoRef.current.play();
         setStreaming(true);
       }
     } catch (err) {
-      setCameraStatus('Inactive');
-      setError('Camera access denied. Please allow camera permissions and try again.');
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
+      setCameraStatus('Inactive'); setError('Camera access denied.');
+      if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
       setModelStatus('Failed');
     }
   }
 
   function stopCamera() {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setStreaming(false);
-    setCameraStatus('Inactive');
-    setOverallResult(null);
-    setConfidence(0);
-    setSimilarity(0);
-    faceDetectionHistoryRef.current = [];
-    similarityHistoryRef.current = [];
-    setGazeDirection(null);
-    setGazeAvailable(false);
-    setFaceInsideGuide(false);
-    faceVisibleStartRef.current = null;
-    setFaceVisibleDuration(0);
-    setChallenges([]);
-    setChallengePassed([]);
-    setSessionTerminated(false);
-    setTerminationReason('');
-
-    // Reset state machine & tracking metrics
-    setFaceTrackingState('FACE_PRESENT');
-    prevTrackingStateRef.current = 'FACE_PRESENT';
-    setLostFrames(0);
-    setRecoveredFrames(0);
-    setTimeSinceFaceSeen(0);
-    setLiveEmbedding([]);
-    setLastMatchTime(null);
-    setRawYaw(0);
-    setYawDirection('CENTER');
-    setYaw(0);
-    setPitch(0);
-    setRoll(0);
-    lastFaceSeenTimeRef.current = null;
-    lostFramesRef.current = 0;
-    recoveredFramesRef.current = 0;
-    setFaceConfidenceMetric(0);
-    setTrackingConfidence(1.0);
+    if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
+    if (videoRef.current?.srcObject) { (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop()); videoRef.current.srcObject = null; }
+    setStreaming(false); setCameraStatus('Inactive'); setOverallResult(null); setConfidence(0); setSimilarity(0);
+    faceDetectionHistoryRef.current = []; similarityHistoryRef.current = [];
+    setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
+    faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setChallenges([]); setChallengePassed([]);
+    setSessionTerminated(false); setTerminationReason(''); setShowReport(false);
+    setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
+    setLostFrames(0); setRecoveredFrames(0); setTimeSinceFaceSeen(0);
+    setLiveEmbedding([]); setLastMatchTime(null); setRawYaw(0); setYawDirection('CENTER');
+    setYaw(0); setPitch(0); setRoll(0);
+    lastFaceSeenTimeRef.current = null; lostFramesRef.current = 0; recoveredFramesRef.current = 0;
+    setFaceConfidenceMetric(0); setTrackingConfidence(1.0);
+    setEnterpriseReport(null); setFaceQuality(0); setPoseQuality(0); setLightingQuality(0);
+    setLandmarkGeometry(null); setPassiveLiveness(null); setFraudDetection(null); setPoseValidation(null);
   }
 
-  // Enrollment helper
   const enrollFace = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const video = videoRef.current; const canvas = canvasRef.current;
     if (!video || !canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     setEnrolling(true);
-    console.log("Enrollment Started");
     try {
-      // Draw frame to canvas
-      canvas.width = 320;
-      canvas.height = 240;
+      canvas.width = 320; canvas.height = 240;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const base64Image = canvas.toDataURL('image/jpeg', 0.80);
       setEnrollmentSnapshot(base64Image);
-
-      // Call API
       const res = await livenessAPI.enrollFace(base64Image);
       if (res.data && res.data.embedding_vector) {
-        console.log("Enrollment Complete");
-        console.log("Waiting for Stabilization");
         setIsStabilizing(true);
-
         setEnrolledEmbedding(res.data.embedding_vector);
         localStorage.setItem('enrolledEmbedding', JSON.stringify(res.data.embedding_vector));
         localStorage.setItem('mv_enrolled_signature', JSON.stringify(res.data.embedding_vector));
-        console.log('[Face Enrollment] Face enrolled successfully. Refreshing user context...');
-        console.log("ENROLLMENT_SUCCESS");
-        console.log("Enrollment embedding generated");
-        console.log(res.data.embedding_vector.length);
         await refreshUser();
-
-        setTimeout(() => {
-           console.log("Identity Matching Started");
-           setIsStabilizing(false);
-        }, 1000);
-
+        setTimeout(() => { setIsStabilizing(false); }, 1000);
       } else {
         alert("Failed to enroll face: Invalid response from backend");
       }
     } catch (err: unknown) {
-      console.warn(err);
       const apiErr = err as { response?: { data?: { detail?: string } } };
-      alert(apiErr.response?.data?.detail || "Failed to enroll face due to network/server error");
-    } finally {
-      setEnrolling(false);
-    }
+      alert(apiErr.response?.data?.detail || "Failed to enroll face");
+    } finally { setEnrolling(false); }
   };
 
   const clearEnrollment = async () => {
     setEnrolledEmbedding(null);
-    localStorage.removeItem('enrolledEmbedding');
-    localStorage.removeItem('mv_enrolled_signature');
-    setSimilarity(0);
-    similarityHistoryRef.current = [];
-    setConsecutiveValidFrames(0);
-    console.log('[Face Enrollment] Face enrollment cleared. Refreshing user context...');
+    localStorage.removeItem('enrolledEmbedding'); localStorage.removeItem('mv_enrolled_signature');
+    setSimilarity(0); similarityHistoryRef.current = []; setConsecutiveValidFrames(0);
     await refreshUser();
   };
 
-
-
   type EnterpriseState = 'FACE_DETECTED' | 'FACE_ENROLLED' | 'IDENTITY_MATCHED' | 'CHALLENGES_COMPLETED' | 'AUTHENTICATED';
-
   const enterpriseState = useMemo<EnterpriseState | null>(() => {
     if (!streaming || sessionTerminated) return null;
-    
-    // State 1: FACE_DETECTED
     const isFaceDetected = confidence > 0.50 && detectedFaces === 1 && faceInsideGuide;
     if (!isFaceDetected) return null;
-    
-    // State 2: FACE_ENROLLED
-    const isFaceEnrolled = hasFaceEnrolled;
-    if (!isFaceEnrolled) return 'FACE_DETECTED';
-    
-    // State 3: IDENTITY_MATCHED
-    const isIdentityMatched = similarity >= 0.75;
-    if (!isIdentityMatched) return 'FACE_ENROLLED';
-    
-    // State 4: CHALLENGES_COMPLETED
+    if (!hasFaceEnrolled) return 'FACE_DETECTED';
+    if (similarity < 0.75) return 'FACE_ENROLLED';
     const isChallengesCompleted = challengePassed.length > 0 && challengePassed.every(Boolean);
     if (!isChallengesCompleted) return 'IDENTITY_MATCHED';
-    
-    // State 5: AUTHENTICATED
     const isAuthenticated = isChallengesCompleted && confidence > 0.50 && detectedFaces === 1 && faceInsideGuide && spoofScore < 0.45 && deepfakeRisk < 0.30 && similarity >= 0.75;
-    if (isAuthenticated) {
-      return 'AUTHENTICATED';
-    }
-    
+    if (isAuthenticated) return 'AUTHENTICATED';
     return 'CHALLENGES_COMPLETED';
-  }, [streaming, sessionTerminated, confidence, detectedFaces, faceInsideGuide, hasFaceEnrolled, similarity, consecutiveValidFrames, challengePassed, spoofScore, deepfakeRisk]);
+  }, [streaming, sessionTerminated, confidence, detectedFaces, faceInsideGuide, hasFaceEnrolled, similarity, challengePassed, spoofScore, deepfakeRisk]);
 
-  const checks = {
-    face_present: confidence > 0.50 && detectedFaces === 1,
-    eye_tracking: gazeAvailable && gazeDirection !== null,
-    head_pose_ok: Math.abs(yaw) < 30 && Math.abs(pitch) < 20 && Math.abs(roll) < 15,
-    multiple_faces: detectedFaces > 1,
-    deepfake: spoofScore > 0.45,
-    session_active: streaming,
-    identity_matched: hasFaceEnrolled && similarity >= 0.75
-  };
-
-  // Enterprise API rules: Verification succeeds only when all conditions pass (State 5)
   const isVerified = enterpriseState === 'AUTHENTICATED';
 
+  // Auto-set overall result when verified
+  useEffect(() => {
+    if (isVerified && !overallResult) {
+      setOverallResult('pass');
+    }
+  }, [isVerified, overallResult]);
+
   const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+  const accentColor = sessionTerminated ? '#ff3366' : isVerified ? '#00ff88' : '#00d4ff';
 
   if (authLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <Navbar />
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(0, 212, 255, 0.1)', borderTopColor: '#00d4ff' }}
-        />
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(0, 212, 255, 0.1)', borderTopColor: '#00d4ff' }} />
         <p style={{ color: '#475569', fontSize: 14, fontFamily: 'monospace' }}>Verifying session...</p>
       </div>
     );
@@ -1414,163 +1030,148 @@ export default function EnterpriseDemoPage() {
     <PageTransition>
       <div style={{ minHeight: '100vh', background: 'transparent' }}>
       <Navbar />
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '128px 24px 60px' }}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '128px 20px 60px' }}>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)' }}>
                 <span style={{ fontSize: 11, color: '#00ff88', fontWeight: 600, letterSpacing: '0.08em' }}>ENTERPRISE IDENTITY API</span>
               </div>
               <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#475569' }}>POST /api/v1/identity/verify</div>
             </div>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8 }}>
-              Enterprise Identity <span className="gradient-text-green">Demo</span>
+            <h1 style={{ fontSize: 'clamp(26px, 4vw, 34px)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 6 }}>
+              Enterprise Identity <span className="gradient-text-green">Engine</span>
             </h1>
-            <p style={{ fontSize: 15, color: '#94a3b8', maxWidth: 500 }}>
-              High-security dynamic challenge verification sequence combining embedding matches, gaze analysis, and continuous monitoring.
+            <p style={{ fontSize: 14, color: '#94a3b8', maxWidth: 500 }}>
+              Multi-layer biometric verification with advanced embeddings, fraud detection, passive liveness, and continuous identity monitoring.
             </p>
           </div>
           <div className="text-left sm:text-right">
-            <div style={{ fontSize: 32, fontWeight: 700, color: '#00ff88' }}>99.2%</div>
-            <div style={{ fontSize: 12, color: '#475569' }}>Accuracy</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#00ff88' }}>99.9%</div>
+            <div style={{ fontSize: 11, color: '#475569' }}>Enterprise Accuracy</div>
           </div>
         </div>
 
-        {/* Enrollment Required Alert */}
+        {/* Enrollment Alert */}
         {!hasFaceEnrolled && (
-          <div className="glass" style={{ padding: '16px 20px', borderRadius: 16, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.04)', marginBottom: 24, display: 'flex', gap: 16, alignItems: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <AlertTriangle size={20} color="#ffb800" />
+          <div className="glass" style={{ padding: '14px 18px', borderRadius: 14, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.04)', marginBottom: 20, display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertTriangle size={18} color="#ffb800" />
             </div>
             <div>
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ffb800', marginBottom: 4 }}>Biometric Enrollment Required</h3>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
-                Continuous identity verification cannot run because you have not enrolled a face. Please align your face inside the camera oval and click <strong>Enroll Current Face</strong> in the right-hand panel.
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#ffb800', marginBottom: 3 }}>Biometric Enrollment Required</h3>
+              <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
+                Start the camera, align your face inside the oval, and click <strong>Enroll Current Face</strong>.
               </p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Camera Frame */}
-          <div className="lg:col-span-8">
-            <div style={{
-              position: 'relative', borderRadius: 20, overflow: 'hidden',
-              background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)',
-              aspectRatio: '4/3',
-            }}>
+        {/* Main Grid: 3-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          {/* LEFT SIDEBAR — Security Metrics */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
+            {/* Identity Score */}
+            <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 8 }}>IDENTITY MATCH</div>
+              <IdentityScoreRing score={similarity * 100} label="Match" size={110} />
+            </div>
+
+            {/* Security Metrics */}
+            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
+              <MetricBar label="Confidence" value={confidence * 100} />
+              <MetricBar label="Face Quality" value={faceQuality} />
+              <MetricBar label="Pose Quality" value={poseQuality} />
+              <MetricBar label="Lighting" value={lightingQuality * 100} />
+              <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
+              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
+                <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
+                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
+                  {(spoofScore * 100).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            {/* Threat Radar */}
+            <div className="glass" style={{ padding: 14, borderRadius: 14 }}>
+              <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
+            </div>
+
+            {/* Session Shield */}
+            <div className="glass" style={{ padding: 14, borderRadius: 14, textAlign: 'center' }}>
+              <SessionShield authenticated={isVerified} invalidated={sessionTerminated} color={accentColor} />
+              <div style={{ fontSize: 10, color: accentColor, fontWeight: 600, marginTop: 4 }}>
+                {sessionTerminated ? 'SESSION INVALIDATED' : isVerified ? 'AUTHENTICATED' : streaming ? 'VERIFYING' : 'STANDBY'}
+              </div>
+              <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', marginTop: 4 }}>
+                {formatTime(sessionTime)}
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER — Camera Feed */}
+          <div className="lg:col-span-6">
+            <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: '#0a0a0a', border: `1px solid ${accentColor}22`, aspectRatio: '4/3' }}>
               <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: streaming ? 'block' : 'none', transform: 'scaleX(-1)' }} muted playsInline />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-              {/* Premium Debug Overlay HUD */}
+              {/* HUD overlay */}
               {streaming && (
-                <div style={{
-                  position: 'absolute', top: 16, left: 16,
-                  padding: '12px 16px', borderRadius: 12,
-                  background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#fff', fontSize: 11, fontFamily: 'monospace',
-                  zIndex: 20, display: 'flex', flexDirection: 'column', gap: 6,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)', pointerEvents: 'none',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ fontWeight: 'bold', color: 'var(--brand-green)', marginBottom: 2, letterSpacing: '0.05em' }}>BIOMETRIC PIPELINE HUD</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Face Detected:</span>
-                    <span style={{ color: detectedFaces > 0 ? 'var(--brand-green)' : 'var(--brand-red)', fontWeight: 'bold' }}>
-                      {detectedFaces > 0 ? 'YES' : 'NO'}
-                    </span>
+                <div style={{ position: 'absolute', top: 12, left: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 10, fontFamily: 'monospace', zIndex: 20, display: 'flex', flexDirection: 'column', gap: 4, pointerEvents: 'none' }}>
+                  <div style={{ fontWeight: 'bold', color: '#00ff88', marginBottom: 2, letterSpacing: '0.05em', fontSize: 9 }}>ENTERPRISE BIOMETRIC HUD</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ color: '#94a3b8' }}>Face:</span>
+                    <span style={{ color: detectedFaces > 0 ? '#00ff88' : '#ff3366', fontWeight: 'bold' }}>{detectedFaces > 0 ? 'DETECTED' : 'SEARCHING'}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Landmarks Count:</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ color: '#94a3b8' }}>Landmarks:</span>
                     <span style={{ color: '#f8fafc' }}>{landmarkCount}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
                     <span style={{ color: '#94a3b8' }}>Confidence:</span>
-                    <span style={{ color: confidence > 0.50 ? 'var(--brand-green)' : 'var(--brand-amber)' }}>
-                      {(confidence * 100).toFixed(0)}%
-                    </span>
+                    <span style={{ color: confidence > 0.50 ? '#00ff88' : '#ffb800' }}>{(confidence * 100).toFixed(0)}%</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Camera Status:</span>
-                    <span style={{ color: cameraStatus === 'Active' ? 'var(--brand-green)' : 'var(--brand-red)' }}>
-                      {cameraStatus}
-                    </span>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '2px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ color: '#94a3b8' }}>Yaw:</span>
+                    <span style={{ color: '#ffb800' }}>{yaw.toFixed(1)}° {yawDirection}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Model Status:</span>
-                    <span style={{ color: modelStatus === 'Loaded' ? 'var(--brand-green)' : modelStatus === 'Failed' ? 'var(--brand-red)' : 'var(--brand-amber)' }}>
-                      {modelStatus}
-                    </span>
-                  </div>
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Face X / Y:</span>
-                    <span style={{ color: '#00d4ff' }}>{bbox ? bbox.x.toFixed(2) : '0.00'} / {bbox ? bbox.y.toFixed(2) : '0.00'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Center Offset:</span>
-                    <span style={{ color: '#00d4ff' }}>{((bbox ? Math.sqrt(Math.pow((bbox.x + bbox.w / 2) - 0.5, 2) + Math.pow((bbox.y + bbox.h / 2) - 0.5, 2)) : 0.0) * 100).toFixed(1)}%</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Blink Ratio:</span>
-                    <span style={{ color: '#00ff88' }}>{ear.toFixed(4)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Mouth Ratio:</span>
-                    <span style={{ color: '#00ff88' }}>{mar.toFixed(4)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Raw Yaw:</span>
-                    <span style={{ color: '#ffb800' }}>{rawYaw.toFixed(1)}°</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Corrected Yaw:</span>
-                    <span style={{ color: '#ffb800' }}>{yaw.toFixed(1)}°</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Direction:</span>
-                    <span style={{ color: '#ffb800' }}>{yawDirection}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                    <span style={{ color: '#94a3b8' }}>Pitch / Roll:</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ color: '#94a3b8' }}>Pitch/Roll:</span>
                     <span style={{ color: '#ffb800' }}>{pitch.toFixed(1)}° / {roll.toFixed(1)}°</span>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ color: '#94a3b8' }}>EAR/MAR:</span>
+                    <span style={{ color: '#00d4ff' }}>{ear.toFixed(3)} / {mar.toFixed(3)}</span>
+                  </div>
+                  {hasFaceEnrolled && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                      <span style={{ color: '#94a3b8' }}>Identity:</span>
+                      <span style={{ color: similarity >= 0.75 ? '#00ff88' : '#ff3366' }}>{(similarity * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Streaming Error Overlay */}
+              {/* Error overlay */}
               {streaming && error && (
-                <div style={{
-                  position: 'absolute', top: 16, left: 16, right: 16,
-                  padding: '12px 16px', borderRadius: 10,
-                  background: 'rgba(255, 51, 102, 0.9)', color: '#fff',
-                  fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
-                  zIndex: 30, boxShadow: '0 4px 15px rgba(255, 51, 102, 0.3)'
-                }}>
-                  <AlertCircle size={14} />
-                  <span>{error}</span>
+                <div style={{ position: 'absolute', top: 12, left: 12, right: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(255,51,102,0.9)', color: '#fff', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, zIndex: 30 }}>
+                  <AlertCircle size={14} /><span>{error}</span>
                 </div>
               )}
 
-              {/* Three.js R3F 478 Landmark wireframe overlay */}
+              {/* 3D landmark overlay */}
               {streaming && isMounted && apiResponse?.landmarks && (
-                <Biometric3DOverlay
-                  landmarks={apiResponse.landmarks}
-                  isVerified={isVerified}
-                  sessionTerminated={sessionTerminated}
-                />
+                <Biometric3DOverlay landmarks={apiResponse.landmarks} isVerified={isVerified} sessionTerminated={sessionTerminated} />
               )}
 
-              {/* Biometric Scanner Overlay */}
+              {/* Scanner overlay */}
               {streaming && !overallResult && (
                 <BiometricScannerOverlay
-                  faceInside={faceInsideGuide}
-                  confidence={confidence}
-                  detectedFaces={detectedFaces}
-                  bbox={bbox}
-                  ear={ear}
-                  mar={mar}
+                  faceInside={faceInsideGuide} confidence={confidence} detectedFaces={detectedFaces} bbox={bbox} ear={ear} mar={mar}
                   challengeLabel={
                     detectedFaces > 1 ? 'MULTIPLE FACES' :
                     faceTrackingState === 'FACE_WARNING' ? 'TEMPORARILY LOST' :
@@ -1580,603 +1181,233 @@ export default function EnterpriseDemoPage() {
                     !faceInsideGuide ? 'ALIGN FACE INSIDE OVAL' :
                     faceVisibleDuration < 2.0 ? `ACQUIRING SIGNAL (${Math.min(100, Math.round(faceVisibleDuration * 50))}%)` :
                     !hasFaceEnrolled ? 'READY TO ENROLL' :
-                    `ENTERPRISE SCAN: CHALLENGE TIMER ${challengeTimer}s`
+                    `ENTERPRISE SCAN: CHALLENGE ${challengeTimer}s`
                   }
                   themeColor="#00ff88"
                 />
               )}
 
-              {/* Gaze crosshair dot overlay */}
+              {/* Gaze crosshair */}
               {streaming && !overallResult && gazeAvailable && gazeDirection && (
                 <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
-                  <motion.div
-                    animate={{
-                      left: `${(1.0 - gazeDirection.x) * 100}%`,
-                      top: `${gazeDirection.y * 100}%`
-                    }}
-                    style={{
-                      position: 'absolute',
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      background: 'rgba(0, 255, 136, 0.85)',
-                      border: '2px solid #ffffff',
-                      boxShadow: '0 0 12px rgba(0, 255, 136, 1)',
-                      transform: 'translate(-50%, -50%)',
-                      transition: 'all 0.1s ease',
-                    }}
-                  />
+                  <motion.div animate={{ left: `${(1.0 - gazeDirection.x) * 100}%`, top: `${gazeDirection.y * 100}%` }}
+                    style={{ position: 'absolute', width: 12, height: 12, borderRadius: '50%', background: '#00ff8844', border: '1px solid #00ff88', transform: 'translate(-50%, -50%)' }} />
                 </div>
               )}
 
-              {/* Start state placeholder */}
-              {!streaming && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 24, background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Fingerprint size={32} color="#00ff88" />
-                  </div>
-                  <p style={{ color: '#475569', fontSize: 14, textAlign: 'center', maxWidth: 260 }}>
-                    Click below to initialize your high-security biometric session.
-                  </p>
-                  {error && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#ff3366', fontSize: 13, background: 'rgba(255,51,102,0.08)', padding: '10px 16px', borderRadius: 8 }}>
-                      <AlertTriangle size={14} /> {error}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Multiple face detection warning overlay */}
-              <AnimatePresence>
-                {detectedFaces > 1 && streaming && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', inset: 0, background: 'rgba(255,51,102,0.25)',
-                      backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', padding: 24 }} className="glass">
-                      <Users size={40} color="var(--brand-red)" style={{ margin: '0 auto 12px' }} />
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--brand-red)', marginBottom: 8 }}>MULTIPLE FACES DETECTED</h3>
-                      <p style={{ fontSize: 13, color: '#cbd5e1', maxWidth: 260, margin: '0 auto' }}>
-                        Multiple identities found. Please ensure only a single user is in front of the camera.
-                      </p>
-                    </div>
+              {/* Idle state */}
+              {!streaming && !overallResult && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>
+                    <Fingerprint size={64} color="#00ff88" strokeWidth={1} />
                   </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Session Terminated Overlay */}
-              <AnimatePresence>
-                {sessionTerminated && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', inset: 0, background: 'rgba(255,51,102,0.92)',
-                      backdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', zIndex: 100
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', padding: 24 }}>
-                      <XCircle size={64} color="#fff" style={{ margin: '0 auto 16px', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
-                      <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginBottom: 12 }}>SESSION TERMINATED</h2>
-                      <p style={{ fontSize: 18, color: '#fff', marginBottom: 8, fontWeight: 600 }}>
-                        {terminationReason === 'Multiple Faces Detected' ? 'MULTIPLE FACES DETECTED' : 'Face Lost'}
-                      </p>
-                      <p style={{ fontSize: 14, color: '#fda4af' }}>Redirecting to login / re-authentication...</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Face Lost Warning Overlay */}
-              <AnimatePresence>
-                {streaming && hasFaceEnrolled && (faceTrackingState === 'FACE_WARNING' || faceTrackingState === 'FACE_RECOVERY') && !sessionTerminated && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.4)',
-                      backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', padding: 24 }} className="glass">
-                      <AlertTriangle size={40} color="var(--brand-red)" style={{ margin: '0 auto 12px' }} />
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--brand-red)', marginBottom: 8, letterSpacing: '0.05em' }}>
-                        {faceTrackingState === 'FACE_WARNING' ? 'FACE TEMPORARILY LOST' : 'SEARCHING FOR FACE'}
-                      </h3>
-                      <p style={{ fontSize: 13, color: '#cbd5e1', maxWidth: 260, margin: '0 auto' }}>
-                        Session will terminate in {Math.max(0, Math.ceil(5.0 - timeSinceFaceSeen))}s...
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Face Mismatch Warning Overlay */}
-              <AnimatePresence>
-                {streaming && hasFaceEnrolled && mismatchCount > 0 && mismatchCount < 4 && !sessionTerminated && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', inset: 0, background: 'rgba(239,68,68,0.25)',
-                      backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', padding: 24 }} className="glass">
-                      <AlertTriangle size={40} color="var(--brand-red)" style={{ margin: '0 auto 12px' }} />
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--brand-red)', marginBottom: 8 }}>
-                        SECURITY WARNING: IDENTITY MISMATCH
-                      </h3>
-                      <p style={{ fontSize: 13, color: '#cbd5e1', maxWidth: 260, margin: '0 auto' }}>
-                        The face detected does not match the enrolled profile.
-                      </p>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--brand-red)', marginTop: 12 }}>
-                        Warning {mismatchCount}/3
-                      </div>
-                      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                        Session will terminate on the next mismatch.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Verification Result Overlay */}
-              <AnimatePresence>
-                {enterpriseState === 'AUTHENTICATED' && streaming && detectedFaces <= 1 && !sessionTerminated && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(0,255,136,0.12)',
-                      backdropFilter: 'blur(8px)', zIndex: 10
-                    }}>
-                    <div style={{ textAlign: 'center' }} className="glass">
-                      <div style={{ fontSize: 48, marginBottom: 8, color: '#00ff88' }}>✓</div>
-                      <h3 style={{ fontSize: 24, fontWeight: 900, color: '#00ff88', marginBottom: 12, letterSpacing: '0.05em' }}>
-                        AUTHENTICATED
-                      </h3>
-                      <p style={{ color: '#94a3b8', fontSize: 14, fontWeight: 700, margin: '0 auto 8px', textTransform: 'uppercase' }}>
-                        VERIFIED · SESSION ACTIVE
-                      </p>
-                      <p style={{ color: '#cbd5e1', fontSize: 12, maxWidth: 280, margin: '0 auto 24px', lineHeight: 1.5 }}>
-                        Continuous biometric and anti-spoof checks fully validated.
-                      </p>
-                      <button onClick={stopCamera} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto' }}>
-                        <RotateCcw size={14} /> End Session
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-                {streaming && !hasFaceEnrolled && detectedFaces <= 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute', top: 16, right: 16,
-                      padding: '8px 16px', borderRadius: 10,
-                      background: 'rgba(255,184,0,0.15)',
-                      border: '1px solid rgba(255,184,0,0.4)',
-                      color: '#ffb800',
-                      fontSize: 13, fontWeight: 700, letterSpacing: '0.05em',
-                      zIndex: 8
-                    }}>
-                    NO ENROLLED IDENTITY
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Live telemetry counters */}
-              {streaming && (
-                <div style={{ position: 'absolute', top: 16, left: 16 }}>
-                  <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,255,136,0.3)', fontSize: 11, color: '#00ff88', fontFamily: 'monospace', fontWeight: 600 }}>
-                    ● SESSION {formatTime(sessionTime)}
-                  </motion.div>
-                </div>
-              )}
-            </div>
-
-            {backendHealthy === false && (
-              <div className="glass" style={{ padding: 20, borderRadius: 16, border: '1px solid rgba(255, 51, 102, 0.3)', background: 'rgba(255, 51, 102, 0.03)', marginTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <AlertCircle size={16} color="#ff3366" />
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ff3366', margin: 0 }}>Connection Diagnostics</h3>
-                </div>
-                <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4, margin: '0 0 12px 0' }}>
-                  The biometric verification system is offline. Diagnostics:
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, fontFamily: 'monospace', color: '#cbd5e1', background: '#090f1d', padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto', textAlign: 'left' }}>
-                  <div><strong>URL:</strong> {diagnosticInfo?.url}</div>
-                  <div><strong>HTTP Status:</strong> {diagnosticInfo?.status}</div>
-                  <div><strong>Response:</strong> {diagnosticInfo?.body}</div>
-                  {diagnosticInfo?.reason && (
-                    <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6, color: '#fca5a5', whiteSpace: 'pre-wrap' }}>
-                      <strong>Parsed Reason:</strong><br/>{diagnosticInfo.reason}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Camera actions */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-              {!streaming ? (
-                <button
-                  className="btn-primary"
-                  onClick={startCamera}
-                  disabled={backendHealthy !== true}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    opacity: backendHealthy === true ? 1 : 0.6,
-                    cursor: backendHealthy === true ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  <Camera size={16} /> {backendHealthy === null ? 'Checking Backend...' : 'Start Session'}
-                </button>
-              ) : (
-                <>
-                  <button className="btn-ghost" onClick={stopCamera} style={{ flex: 1 }}>End Session</button>
-                  <button className="btn-ghost" onClick={() => setShowDebug(!showDebug)} style={{ color: showDebug ? 'var(--brand-green)' : 'var(--text-secondary)' }}>
-                    <Terminal size={16} /> Debug Panel
+                  <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', maxWidth: 260 }}>Enterprise Advanced Identity Verification Engine</p>
+                  <button onClick={startCamera} style={{ padding: '12px 28px', borderRadius: 10, background: 'linear-gradient(135deg, #00ff88, #00cc66)', color: '#000', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Camera size={16} /> Initialize Biometric Scan
                   </button>
-                </>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Controls Column */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            {/* Identity Similarity Card */}
-            <div className="glass" style={{ padding: 20, borderRadius: 16, position: 'relative' }}>
-              <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 12 }}>BIOMETRIC IDENTITY MATCH</div>
-              {hasFaceEnrolled ? (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: 'rgba(0, 255, 136, 0.1)', border: '1px solid rgba(0, 255, 136, 0.2)', color: '#00ff88' }}>
-                      IDENTITY ENROLLED
-                    </span>
-                    <button className="btn-ghost" onClick={clearEnrollment} style={{ fontSize: 10, padding: '4px 8px', height: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <RotateCcw size={10} /> Reset
+              {/* Verification Complete overlay */}
+              {overallResult && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 30 }}>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
+                    {overallResult === 'pass' ? (
+                      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(0,255,136,0.15)', border: '3px solid #00ff88', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldCheck size={40} color="#00ff88" />
+                      </div>
+                    ) : (
+                      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,51,102,0.15)', border: '3px solid #ff3366', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ShieldAlert size={40} color="#ff3366" />
+                      </div>
+                    )}
+                  </motion.div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: overallResult === 'pass' ? '#00ff88' : '#ff3366', marginTop: 16 }}>
+                    {overallResult === 'pass' ? 'IDENTITY VERIFIED' : sessionTerminated ? terminationReason.toUpperCase() : 'VERIFICATION FAILED'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>Session: {formatTime(sessionTime)}</div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                    {overallResult === 'pass' && (
+                      <button onClick={() => setShowReport(true)} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <FileText size={14} /> View Report
+                      </button>
+                    )}
+                    <button onClick={() => { stopCamera(); startCamera(); }} style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', color: '#00d4ff', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <RefreshCw size={14} /> New Session
                     </button>
                   </div>
-
-                  {enrollmentSnapshot && (
-                    <div style={{ marginBottom: 14, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', height: 80, display: 'flex', justifyContent: 'center', background: '#000' }}>
-                      <img src={enrollmentSnapshot} style={{ height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} alt="Enrolled Face" />
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: '#94a3b8' }}>Identity Match</span>
-                      <span style={{
-                        fontSize: 16, fontWeight: 700, fontFamily: 'monospace',
-                        color: similarity >= 0.90 ? '#00ff88' : similarity >= 0.75 ? '#00d4ff' : '#ff3366'
-                      }}>
-                        {Math.round(similarity * 100)}%
-                      </span>
-                    </div>
-
-                    <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                      <motion.div animate={{
-                        width: `${similarity * 100}%`,
-                        background: similarity >= 0.90 ? '#00ff88' : similarity >= 0.75 ? '#00d4ff' : '#ff3366'
-                      }}
-                        style={{ height: '100%', borderRadius: 3 }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 12, borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span style={{ color: '#475569' }}>Match Level:</span>
-                        <span style={{
-                          fontWeight: 700,
-                          color: similarity >= 0.90 ? '#00ff88' : similarity >= 0.75 ? '#00d4ff' : '#ff3366'
-                        }}>
-                          {similarity >= 0.90 ? '✓ Strong Match' : similarity >= 0.75 ? '~ Possible Match' : '✗ No Match'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span style={{ color: '#475569' }}>Similarity Score:</span>
-                        <span style={{ color: '#f8fafc', fontFamily: 'monospace' }}>
-                          {(similarity * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span style={{ color: '#475569' }}>Authentication Status:</span>
-                        <span style={{ color: checks.identity_matched ? (challengePassed.length > 0 && challengePassed.every(Boolean) ? '#00ff88' : '#00d4ff') : '#ffb800', fontWeight: 600 }}>
-                          {checks.identity_matched ? (challengePassed.length > 0 && challengePassed.every(Boolean) ? 'Authenticated' : 'Challenge In Progress') : 'Authentication Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                  <Fingerprint size={32} color="#475569" style={{ margin: '0 auto 8px' }} />
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8', letterSpacing: '-0.01em' }}>NO ENROLLED IDENTITY</div>
-                  <p style={{ fontSize: 11, color: '#475569', margin: '4px 0 16px', lineHeight: 1.4 }}>
-                    Enroll your face to calculate live similarity metrics.
-                  </p>
-                  <button
-                    className="btn-primary"
-                    onClick={enrollFace}
-                    disabled={!isFacePrepared || enrolling}
-                    style={{ fontSize: 12, padding: '8px 16px', display: 'flex', gap: 6, alignItems: 'center', margin: '0 auto' }}
-                  >
-                    {enrolling ? (
-                      <>Processing...</>
-                    ) : (
-                      <>
-                        <Lock size={12} /> Enroll Current Face
-                      </>
-                    )}
+              )}
+            </div>
+
+            {/* Enrollment Controls */}
+            {streaming && !overallResult && (
+              <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+                {!hasFaceEnrolled ? (
+                  <button onClick={enrollFace} disabled={enrolling || confidence < 0.5 || !faceInsideGuide}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: enrolling ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: enrolling || confidence < 0.5 ? 'not-allowed' : 'pointer', opacity: confidence < 0.5 ? 0.5 : 1 }}>
+                    {enrolling ? 'Enrolling...' : 'Enroll Current Face'}
                   </button>
-                </div>
-              )}
-            </div>
-
-            {/* Biometric Confidence Metrics Panel */}
-            {streaming && (
-              <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-                <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 12 }}>
-                  CONFIDENCE METRICS
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {[
-                    { label: 'Face Confidence', value: (confidence * 100).toFixed(1), icon: Brain, color: 'var(--brand-cyan)' },
-                    { label: 'Identity Similarity', value: hasFaceEnrolled ? (similarity * 100).toFixed(1) : '0.0', icon: Fingerprint, color: 'var(--brand-green)' },
-                    { label: 'Liveness Confidence', value: ((1.0 - spoofScore) * 100).toFixed(1), icon: Shield, color: '#00ff88' },
-                    { label: 'Detection Stability', value: detectionStability.toFixed(1), icon: Activity, color: '#00d4ff' }
-                  ].map(({ label, value, icon: Icon, color }) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Icon size={14} color={color} />
-                        <span style={{ fontSize: 12, color: '#94a3b8' }}>{label}</span>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color, fontFamily: 'monospace' }}>
-                        {value}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                ) : (
+                  <>
+                    <button onClick={clearEnrollment} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                      Clear Enrollment
+                    </button>
+                    <button onClick={stopCamera} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'rgba(100,100,100,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                      Stop Camera
+                    </button>
+                  </>
+                )}
               </div>
             )}
+          </div>
 
-            {/* Dynamic Challenge sequence */}
-            {streaming && hasFaceEnrolled && challenges.length > 0 && !overallResult && (
-              <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-                <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 12 }}>BIOMETRIC CHALLENGES</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {challenges.map((ch, i) => {
-                    const isCurrent = i === currentChallenge;
-                    const isDone = challengePassed[i];
-                    return (
-                      <div key={`${ch.id}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)', background: isCurrent ? 'rgba(0,255,136,0.05)' : 'transparent' }}>
-                        <span style={{ fontSize: 16 }}>{ch.icon}</span>
-                        <span style={{ fontSize: 12, flex: 1, color: isDone ? '#00ff88' : isCurrent ? '#f8fafc' : '#475569', fontWeight: isCurrent ? 600 : 400 }}>{ch.label}</span>
-                        {isDone && <CheckCircle size={14} color="#00ff88" />}
-                        {!isDone && !isCurrent && <div style={{ width: 14, height: 14, borderRadius: '50%', border: '1px solid #475569' }} />}
-                        {isCurrent && (
-                          <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-                            <motion.div animate={{ width: `${challengeProgress}%` }} style={{ height: '100%', background: 'var(--brand-green)' }} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+          {/* RIGHT SIDEBAR — Challenges, Fraud, Timeline */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
+            
+            {/* Challenge Progress */}
+            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>CHALLENGE SEQUENCE</div>
+                <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 700, fontFamily: 'monospace' }}>{challengeProgress}%</div>
               </div>
-            )}
-
-            {/* Anti-spoofing probabilities */}
-            <div className="glass" style={{ padding: 20, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>Spoof Risk</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: spoofScore > 0.45 ? 'var(--brand-red)' : 'var(--brand-green)', fontFamily: 'monospace' }}>
-                    {(spoofScore * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
-                  <motion.div animate={{ width: `${spoofScore * 100}%`, background: spoofScore > 0.45 ? 'var(--brand-red)' : 'var(--brand-green)' }}
-                    style={{ height: '100%', borderRadius: 3 }} />
-                </div>
+              {/* Progress bar */}
+              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
+                <motion.div animate={{ width: `${challengeProgress}%` }} transition={{ duration: 0.5 }} style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #00d4ff, #00ff88)' }} />
               </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8' }}>Deepfake Risk</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: deepfakeRisk > 0.30 ? 'var(--brand-red)' : 'var(--brand-green)', fontFamily: 'monospace' }}>
-                    {(deepfakeRisk * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
-                  <motion.div animate={{ width: `${deepfakeRisk * 100}%`, background: deepfakeRisk > 0.30 ? 'var(--brand-red)' : 'var(--brand-green)' }}
-                    style={{ height: '100%', borderRadius: 3 }} />
-                </div>
-              </div>
-
-              <div style={{ fontSize: 11, color: '#475569', marginBottom: 12 }}>
-                Liveness Status: {spoofScore > 0.45 || deepfakeRisk > 0.30 ? 'HIGH RISK DETECTED' : 'LOW RISK (LIVENESS VERIFIED)'}
-              </div>
-              <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.45 ? 'var(--brand-red)' : 'var(--brand-green)'} />
-            </div>
-
-            {/* Head Pose Card */}
-            <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-              <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 12 }}>REAL LANDMARK HEAD POSE</div>
-              {streaming && isMounted && (
-                <div style={{ marginBottom: 16 }}>
-                  <HeadPose3DWidget
-                    yaw={yaw}
-                    pitch={pitch}
-                    roll={roll}
-                    color={sessionTerminated ? 'var(--brand-red)' : isVerified ? 'var(--brand-green)' : 'var(--brand-cyan)'}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Yaw', value: yaw, max: 30 },
-                  { label: 'Pitch', value: pitch, max: 20 },
-                  { label: 'Roll', value: roll, max: 15 },
-                ].map(({ label, value, max }) => (
-                  <div key={label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(value) > max ? 'var(--brand-amber)' : 'var(--brand-cyan)', fontFamily: 'monospace' }}>
-                      {value.toFixed(1)}°
-                    </div>
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
+                {challenges.map((ch, i) => (
+                  <CheckBadge key={ch.id} label={`${ch.icon} ${ch.label}`} passed={challengePassed[i]} checking={i === currentChallenge && streaming && !overallResult} />
                 ))}
               </div>
             </div>
 
-            {/* Eye Tracking Card */}
-            <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>EYE TRACKING / GAZE</div>
-                {gazeAvailable && gazeDirection && (
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#00d4ff', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00d4ff', display: 'inline-block' }} />
-                    Eye Tracking Active
-                  </span>
-                )}
+            {/* Fraud Detection Panel */}
+            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>FRAUD DETECTION</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <FraudCheckItem label="Printed Photo" detected={fraudDetection?.printed_photo?.detected ?? false} icon="🖼️" />
+                <FraudCheckItem label="Replay Attack" detected={fraudDetection?.replay_attack?.detected ?? false} icon="📱" />
+                <FraudCheckItem label="Deepfake" detected={fraudDetection?.deepfake?.detected ?? false} icon="🤖" />
+                <FraudCheckItem label="AI Generated" detected={fraudDetection?.ai_generated?.detected ?? false} icon="🧠" />
+                <FraudCheckItem label="Screen Reflect" detected={fraudDetection?.screen_reflection?.detected ?? false} icon="💡" />
+                <FraudCheckItem label="Mask Attack" detected={fraudDetection?.mask_attack?.detected ?? false} icon="🎭" />
+                <FraudCheckItem label="Cropped Face" detected={fraudDetection?.cropped_face?.detected ?? false} icon="✂️" />
+                <FraudCheckItem label="Multi-Face" detected={(detectedFaces > 1)} icon="👥" />
               </div>
-              {gazeAvailable && gazeDirection ? (
-                <>
-                  <div style={{ position: 'relative', height: 80, background: 'rgba(0,0,0,0.4)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                    <motion.div animate={{ left: `${gazeDirection.x * 100}%`, top: `${gazeDirection.y * 100}%` }}
-                      style={{ position: 'absolute', transform: 'translate(-50%, -50%)', width: 12, height: 12, borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 12px rgba(0,212,255,0.8)' }} />
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 1, height: '80%', background: 'rgba(255,255,255,0.05)' }} />
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>
-                    <span>Gaze X: {(gazeDirection.x * 100).toFixed(1)}%</span>
-                    <span>Gaze Y: {(gazeDirection.y * 100).toFixed(1)}%</span>
-                  </div>
-                </>
-              ) : (
-                <div style={{ height: 80, background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13, fontWeight: 600 }}>
-                  Waiting for Eye landmarks...
+              {fraudDetection && (
+                <div style={{ marginTop: 8, padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>THREAT LEVEL</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: fraudDetection.threat_level === 'CRITICAL' ? '#ff3366' : fraudDetection.threat_level === 'HIGH' ? '#ff6633' : fraudDetection.threat_level === 'MEDIUM' ? '#ffb800' : '#00ff88' }}>
+                    {fraudDetection.threat_level}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Authentication Sequence Tracker */}
-            {streaming && (
-              <AuthSequenceTracker
-                faceDetected={checks.face_present}
-                landmarkGenerated={landmarkCount > 0}
-                livenessPassed={overallResult === 'pass' || (currentChallenge > 0 && !sessionTerminated)}
-                identityMatch={checks.identity_matched}
-                sessionActive={isVerified && !sessionTerminated}
-                color={sessionTerminated ? 'var(--brand-red)' : isVerified ? 'var(--brand-green)' : 'var(--brand-cyan)'}
-              />
-            )}
+            {/* Verification Timeline */}
+            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>VERIFICATION TIMELINE</div>
+              <VerificationTimeline stages={[
+                { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
+                { label: 'Biometric Enrollment', complete: hasFaceEnrolled, active: streaming && !hasFaceEnrolled && detectedFaces > 0 },
+                { label: 'Identity Matching', complete: similarity >= 0.75, active: hasFaceEnrolled && similarity < 0.75 },
+                { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
+                { label: 'Authenticated', complete: isVerified, active: challengePassed.every(Boolean) && !isVerified },
+              ]} />
+            </div>
 
-            {/* Security Checks List */}
-            <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
-              <h3 style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 14 }}>
-                ENTERPRISE API STATUS
-              </h3>
-              <SessionShield
-                authenticated={isVerified}
-                invalidated={sessionTerminated}
-                color={sessionTerminated ? 'var(--brand-red)' : isVerified ? 'var(--brand-green)' : 'var(--brand-cyan)'}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-                <CheckBadge label="Face Recognition" passed={checks.identity_matched} checking={streaming && hasFaceEnrolled && !checks.identity_matched} />
-                <CheckBadge label="Identity Matching" passed={checks.identity_matched} checking={false} />
-                <CheckBadge label="Continuous Monitoring" passed={checks.session_active} checking={false} />
-                <CheckBadge label="Single Face Validation" passed={!checks.multiple_faces && checks.face_present} checking={streaming && (checks.multiple_faces || !checks.face_present)} />
-                <CheckBadge label="Anti Spoof Validation" passed={!checks.deepfake && checks.face_present} checking={streaming && checks.deepfake} />
+            {/* Landmark Geometry */}
+            {landmarkGeometry && landmarkGeometry.regions && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>LANDMARK GEOMETRY</div>
+                <MetricBar label="Eye Geometry" value={landmarkGeometry.regions.eye_geometry * 100} />
+                <MetricBar label="Nose Geometry" value={landmarkGeometry.regions.nose_geometry * 100} />
+                <MetricBar label="Jaw Shape" value={landmarkGeometry.regions.jaw_shape * 100} />
+                <MetricBar label="Mouth Geometry" value={landmarkGeometry.regions.mouth_geometry * 100} />
+                <MetricBar label="Proportions" value={landmarkGeometry.regions.face_proportions * 100} />
               </div>
-            </div>
-
-            {/* Debug Panel */}
-            <AnimatePresence>
-              {showDebug && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  className="terminal" style={{ fontSize: 11, overflow: 'hidden' }}>
-                  <div style={{ color: 'var(--brand-green)', marginBottom: 8, fontSize: 10, letterSpacing: '0.08em', fontWeight: 700 }}>DEVELOPER DEBUG PANEL</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'monospace' }}>
-                    <div>Embedding Generated: <span style={{ color: hasFaceEnrolled ? 'var(--brand-green)' : 'var(--brand-red)' }}>{hasFaceEnrolled ? 'YES' : 'NO'}</span></div>
-                    <div>Embedding Length: <span style={{ color: '#f8fafc' }}>{enrolledEmbedding ? enrolledEmbedding.length : 0}</span></div>
-                    <div>Current Similarity: <span style={{ color: '#f8fafc' }}>{(apiResponse?.similarity_score !== undefined ? apiResponse.similarity_score * 100 : 0.0).toFixed(1)}%</span></div>
-                    <div>Frames Verified: <span style={{ color: '#f8fafc' }}>{consecutiveValidFrames}/20</span></div>
-                    <div>Current Face Confidence: <span style={{ color: '#f8fafc' }}>{(confidence * 100).toFixed(1)}%</span></div>
-                    <div>Enrollment Embedding Status: <span style={{ color: enrolledEmbedding ? 'var(--brand-green)' : 'var(--brand-red)' }}>{enrolledEmbedding ? 'Active (Ready)' : 'Missing'}</span></div>
-                    <div>Live Embedding Status: <span style={{ color: liveEmbedding && liveEmbedding.length > 0 ? 'var(--brand-green)' : 'var(--brand-red)' }}>{liveEmbedding && liveEmbedding.length > 0 ? 'Active' : 'Offline'}</span></div>
-                    <div>Similarity Score: <span style={{ color: similarity >= 0.75 ? 'var(--brand-green)' : 'var(--brand-amber)' }}>{(similarity * 100).toFixed(1)}%</span></div>
-                    <div>Authentication State: <span style={{ color: checks.identity_matched ? 'var(--brand-green)' : 'var(--brand-amber)' }}>{checks.identity_matched ? 'Authenticated' : 'Pending'}</span></div>
-                    <div>Last Match Time: <span style={{ color: '#f8fafc' }}>{lastMatchTime ? new Date(lastMatchTime).toLocaleTimeString() : 'N/A'}</span></div>
-                    <div>faceTrackingState: <span style={{ color: 'var(--brand-cyan)' }}>{faceTrackingState}</span></div>
-                    <div>Mismatch Count: <span style={{ color: mismatchCount > 0 ? 'var(--brand-red)' : '#f8fafc' }}>{mismatchCount}/3</span></div>
-                    <div>Current Identity State: <span style={{ color: 'var(--brand-cyan)' }}>{enterpriseState || 'SEARCHING_FOR_FACE'}</span></div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Instruction banner for Enterprise Challenges */}
-            {streaming && enrolledEmbedding && challenges.length > 0 && !overallResult && (
-              currentChallenge < challenges.length ? (
-                <motion.div
-                  key={currentChallenge}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{ padding: 20, borderRadius: 12, background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}
-                >
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>{challenges[currentChallenge].icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f8fafc', marginBottom: 4 }}>
-                    {challenges[currentChallenge].label}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{challenges[currentChallenge].instruction}</div>
-                  {confidence < 0.50 || !faceInsideGuide ? (
-                    <div style={{ fontSize: 12, color: 'var(--brand-amber)', marginTop: 8 }}>
-                      Position face inside guides to start challenge
-                    </div>
-                  ) : faceVisibleDuration < 2.0 ? (
-                    <div style={{ fontSize: 12, color: 'var(--brand-cyan)', marginTop: 8 }}>
-                      Stabilizing face... ({Math.min(100, Math.round(faceVisibleDuration * 50))}%)
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 12, color: 'var(--brand-cyan)', marginTop: 8, fontFamily: 'monospace' }}>
-                      Perform action now
-                    </div>
-                  )}
-                </motion.div>
-              ) : null
             )}
-
-            {/* Live API Response */}
-            <div className="terminal" style={{ fontSize: 11 }}>
-              <div style={{ color: '#475569', marginBottom: 8, fontSize: 10, letterSpacing: '0.08em' }}>LIVE API RESPONSE PREVIEW</div>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto' }}>
-                {apiResponse ? JSON.stringify(apiResponse, null, 2) : '// Waiting for camera stream...'}
-              </pre>
-            </div>
-
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Verification Report Modal */}
+      <AnimatePresence>
+        {showReport && enterpriseReport && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onClick={() => setShowReport(false)}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: 600, width: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'rgba(15,15,25,0.95)', borderRadius: 20, border: '1px solid rgba(0,255,136,0.2)', padding: 28 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#00ff88', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>SECURE VERIFICATION REPORT</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#f8fafc', marginTop: 4 }}>{enterpriseReport.identity_status}</div>
+                </div>
+                <button onClick={() => setShowReport(false)} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                {[
+                  { label: 'Identity Match', value: `${enterpriseReport.identity_match_pct.toFixed(2)}%`, color: '#00ff88' },
+                  { label: 'Confidence', value: `${enterpriseReport.confidence_pct.toFixed(2)}%`, color: '#00d4ff' },
+                  { label: 'Liveness', value: `${enterpriseReport.liveness_pct.toFixed(2)}%`, color: '#00ff88' },
+                  { label: 'Spoof Probability', value: `${enterpriseReport.spoof_probability_pct.toFixed(2)}%`, color: enterpriseReport.spoof_probability_pct > 20 ? '#ff3366' : '#00ff88' },
+                  { label: 'Fraud Score', value: `${enterpriseReport.fraud_score.toFixed(2)}%`, color: enterpriseReport.fraud_score > 20 ? '#ff3366' : '#00ff88' },
+                  { label: 'Risk Score', value: `${enterpriseReport.risk_score.toFixed(2)}%`, color: enterpriseReport.risk_score > 30 ? '#ffb800' : '#00ff88' },
+                  { label: 'Quality Score', value: `${enterpriseReport.quality_score.toFixed(2)}%`, color: '#00d4ff' },
+                  { label: 'Verification Time', value: `${(sessionTime)}s`, color: '#94a3b8' },
+                ].map(item => (
+                  <div key={item.label} style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: item.color, fontFamily: 'monospace' }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Fraud Detection Summary */}
+              <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 8 }}>FRAUD DETECTION SUMMARY</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                  {Object.entries(enterpriseReport.fraud_detection).map(([key, detected]) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: detected ? '#ff3366' : '#475569' }}>
+                      {detected ? <XCircle size={10} color="#ff3366" /> : <CheckCircle size={10} color="#00ff88" />}
+                      {key.replace(/_/g, ' ')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Passive Liveness */}
+              <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 8 }}>PASSIVE LIVENESS</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Blink', ok: enterpriseReport.passive_liveness.blink_detected },
+                    { label: 'Head Motion', ok: enterpriseReport.passive_liveness.head_motion },
+                    { label: 'Depth Valid', ok: enterpriseReport.passive_liveness.depth_valid },
+                  ].map(item => (
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: item.ok ? '#00ff88' : '#475569' }}>
+                      {item.ok ? <CheckCircle size={10} color="#00ff88" /> : <XCircle size={10} color="#475569" />}
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#00d4ff', fontFamily: 'monospace' }}>
+                  Score: {enterpriseReport.passive_liveness.score.toFixed(1)}%
+                </div>
+              </div>
+
+              <div style={{ fontSize: 9, color: '#475569', fontFamily: 'monospace', textAlign: 'center', marginTop: 8 }}>
+                Session: {sessionId.slice(0, 8)}... | Threat Level: {enterpriseReport.threat_level} | {new Date().toISOString()}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
     </PageTransition>
     </ProtectedRoute>
   );

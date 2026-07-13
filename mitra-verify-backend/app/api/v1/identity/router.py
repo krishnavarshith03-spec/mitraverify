@@ -91,7 +91,10 @@ async def identity_enroll(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.services.cv.mediapipe_engine import b64_to_numpy, _calculate_face_embedding, MP_AVAILABLE, CV2_AVAILABLE
+    from app.services.cv.mediapipe_engine import (
+        b64_to_numpy, _calculate_face_embedding, _calculate_advanced_embedding,
+        _validate_enrollment_quality, MP_AVAILABLE, CV2_AVAILABLE
+    )
     # pyrefly: ignore [missing-import]
     import cv2
     # pyrefly: ignore [missing-import]
@@ -113,7 +116,7 @@ async def identity_enroll(
 
     with mp_face_mesh.FaceMesh(
         static_image_mode=True,
-        max_num_faces=1,
+        max_num_faces=2,
         refine_landmarks=True,
         min_detection_confidence=0.5
     ) as face_mesh:
@@ -122,9 +125,24 @@ async def identity_enroll(
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
     if not multi_face_landmarks:
         raise HTTPException(status_code=400, detail="No face detected in enrollment frame")
+
+    # Enterprise: Reject if multiple faces detected
+    if len(multi_face_landmarks) > 1:
+        raise HTTPException(status_code=400, detail="Multiple faces detected. Please ensure only one face is visible during enrollment.")
         
     landmarks = multi_face_landmarks[0].landmark  # type: ignore
+
+    # Enterprise: Validate enrollment quality
+    quality = _validate_enrollment_quality(landmarks, frame, w, h)
+    if not quality["quality_pass"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Enrollment quality insufficient: {quality['recommendation']}. Score: {quality['quality_score']:.0%}"
+        )
+
+    # Generate both standard and advanced embeddings
     embedding_vector = _calculate_face_embedding(landmarks)
+    advanced_embedding = _calculate_advanced_embedding(landmarks)
     
     user_id = str(data.subject_id or current_user.id)
     
@@ -141,12 +159,13 @@ async def identity_enroll(
     db.add(new_embedding)
     await db.commit()
     print("ENROLLMENT_SUCCESS")
+    print(f"ENROLLMENT_QUALITY: score={quality['quality_score']:.4f}")
     
     # Convert NumPy array to a plain Python list for serialization
     embedding_list = embedding_vector.tolist() if hasattr(embedding_vector, "tolist") else embedding_vector
     return IdentityEnrollResponse(
         status="success",
-        message="Face embedding enrolled successfully",
+        message=f"Face embedding enrolled successfully. Quality: {quality['quality_score']:.0%}",
         user_id=user_id,
         embedding_vector=embedding_list,
         created_at=datetime.now(timezone.utc)
