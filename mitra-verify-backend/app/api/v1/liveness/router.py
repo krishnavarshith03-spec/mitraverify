@@ -332,6 +332,7 @@ async def demo_process(
                 "MULTIPLE_FACES_DETECTED",
                 "REPLAY_ATTACK_DETECTED",
                 "DEEPFAKE_SUSPECTED",
+                "SPOOF_DETECTED",
                 "CAMERA_FEED_FROZEN",
                 "UNAUTHORIZED_PERSON",
                 "IDENTITY_CHANGED",
@@ -346,8 +347,10 @@ async def demo_process(
             
             if status in terminal_statuses:
                 is_terminal = True
+                cv_result["result"] = "fail"
             elif status == "failed" and reason == "no_face_detected":
                 is_terminal = True
+                cv_result["result"] = "fail"
             
             challenges = session.get("challenges", [])
             if challenges and data.challenge_type == challenges[-1]["id"] and cv_result.get("challenge_passed"):

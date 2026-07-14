@@ -151,11 +151,9 @@ export default function AdvancedDemoPage() {
   useEffect(() => {
     if (spoofScore > 0.5) {
       setOverallResult('spoof');
-      setStreaming(false);
-      
-      setTimeout(() => logout('/signin?error=security_breach'), 3000);
+      console.log("Spoof score exceeded threshold in API 2. Auto-logout disabled per requirements.");
     }
-  }, [spoofScore, logout]);
+  }, [spoofScore]);
 
   // Reset/Initialize timers when step changes
   useEffect(() => {
@@ -281,7 +279,7 @@ export default function AdvancedDemoPage() {
         setStreaming(false);
         
         if (data.status === 'SPOOF_DETECTED' || data.status === 'MULTIPLE_FACES_DETECTED') {
-          setTimeout(() => logout('/signin?error=security_breach'), 3000);
+          console.log("Backend terminal state handled");
         }
       }
 
@@ -744,6 +742,22 @@ export default function AdvancedDemoPage() {
                 </div>
               )}
 
+              {/* Head Pose Live Indicator */}
+              {streaming && faceDetected && (
+                <div style={{
+                  position: 'absolute', top: 20, left: 20,
+                  background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)',
+                  padding: '10px 16px', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#fff', fontSize: 13, fontFamily: 'monospace', zIndex: 40,
+                  display: 'flex', flexDirection: 'column', gap: 4
+                }}>
+                  <div style={{ fontWeight: 'bold', color: 'var(--brand-cyan)', marginBottom: 4, textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.05em' }}>Head Pose</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Yaw:</span> <span style={{ color: Math.abs(yaw) > 15 ? '#00ff88' : '#fff' }}>{yaw.toFixed(1)}°</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Pitch:</span> <span>{pitch.toFixed(1)}°</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Roll:</span> <span>{roll.toFixed(1)}°</span></div>
+                </div>
+              )}
+
               {/* Face missing countdown overlay */}
               {streaming && !faceDetected && lastFaceSeenTimestamp !== null && !overallResult && !noFaceTimeoutError && (
                 <div style={{
@@ -853,19 +867,12 @@ export default function AdvancedDemoPage() {
                           }}>
                             {overallResult === 'spoof' ? 'SPOOF DETECTED' : 'CHALLENGE TIMEOUT'}
                           </div>
-                          {(overallResult === 'spoof' || spoofScore > 0.5) && (
-                            <p style={{ fontSize: 14, color: '#fff', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px' }}>
-                              Security failure detected. Signing you out automatically...
-                            </p>
-                          )}
                         </>
                       )}
                       
-                      {!(overallResult === 'spoof' || spoofScore > 0.5) && (
-                        <button onClick={reset} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: overallResult === 'pass' ? '#00b35f' : '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-                          <RotateCcw size={14} /> Restart Verification
-                        </button>
-                      )}
+                      <button onClick={reset} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: overallResult === 'pass' ? '#00b35f' : '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+                        <RotateCcw size={14} /> Restart Verification
+                      </button>
                     </div>
                   </motion.div>
                 )}

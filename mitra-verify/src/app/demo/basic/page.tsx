@@ -353,10 +353,9 @@ export default function BasicDemoPage() {
       setResult('fail');
       setStreaming(false);
       setCameraStatus('Inactive');
-      console.warn("SPOOF_DETECTED_IMMEDIATELY");
-      setTimeout(() => logout('/signin?error=security_breach'), 3000);
+      console.log("Spoof score exceeded threshold in API 1. Auto-logout disabled per requirements.");
     }
-  }, [spoofScore, logout]);
+  }, [spoofScore]);
 
   // E2E frame capturer and processor
   const sendFrameToBackend = useCallback(async () => {
@@ -484,7 +483,7 @@ Result: ${data.result || 'pending'}
         setCameraStatus('Inactive');
         
         if (data.status === 'SPOOF_DETECTED' || data.status === 'MULTIPLE_FACES_DETECTED') {
-          setTimeout(() => logout('/signin?error=security_breach'), 3000);
+          console.log("Backend terminal state handled");
         }
       }
 
@@ -1276,28 +1275,21 @@ Result: ${data.result || 'pending'}
                             color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 24,
                             letterSpacing: '0.05em', textTransform: 'uppercase'
                           }}>
-                            {apiResponse?.reason?.replace(/_/g, ' ') || apiResponse?.status?.replace(/_/g, ' ') || 'SPOOF'}
+                            {apiResponse?.reason?.replace(/_/g, ' ') || apiResponse?.status?.replace(/_/g, ' ') || 'SPOOF DETECTED'}
                           </div>
-                          {(apiResponse?.status === 'SPOOF_DETECTED' || apiResponse?.status === 'MULTIPLE_FACES_DETECTED' || spoofScore > 0.5) && (
-                            <p style={{ fontSize: 14, color: '#fff', marginBottom: 20, maxWidth: 320, margin: '0 auto 20px' }}>
-                              Security failure detected. Signing you out automatically...
-                            </p>
-                          )}
                         </>
                       )}
                       
-                      {!(apiResponse?.status === 'SPOOF_DETECTED' || apiResponse?.status === 'MULTIPLE_FACES_DETECTED' || spoofScore > 0.5) && (
-                        <div>
-                          <button onClick={() => {
-                            setResult(null);
-                            setCurrentStep(0);
-                            setSpoofScore(0);
-                            startCamera();
-                          }} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: result === 'pass' ? '#00b35f' : '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-                            <Camera size={14} /> Restart Verification
-                          </button>
-                        </div>
-                      )}
+                      <div>
+                        <button onClick={() => {
+                          setResult(null);
+                          setCurrentStep(0);
+                          setSpoofScore(0);
+                          startCamera();
+                        }} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', background: '#fff', color: result === 'pass' ? '#00b35f' : '#ff3366', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+                          <Camera size={14} /> Restart Verification
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 )}

@@ -543,18 +543,32 @@ export default function EnterpriseDemoPage() {
   }, [streaming, overallResult, challenges.length, currentChallenge]);
   useEffect(() => { const t = setTimeout(() => setIsMounted(true), 0); return () => clearTimeout(t); }, []);
 
-  const triggerSessionTermination = useCallback((reason: string, shouldRedirect: boolean = false) => {
+  const triggerSessionTermination = useCallback((reason: string) => {
     setSessionTerminated(true);
     setTerminationReason(reason);
     setOverallResult('fail');
     
     let eventType = 'SESSION_TERMINATED';
+    let isSecurityEvent = false;
     const normReason = reason.toLowerCase();
-    if (normReason.includes('face lost') || normReason.includes('no face') || normReason.includes('searching_for_face')) eventType = 'NO_FACE_DETECTED';
-    else if (normReason.includes('multiple faces')) eventType = 'MULTIPLE_FACE';
-    else if (normReason.includes('spoof') || normReason.includes('replay') || normReason.includes('deepfake')) eventType = 'SPOOF_DETECTED';
-    else if (normReason.includes('unauthorized') || normReason.includes('identity changed') || normReason.includes('mismatch')) eventType = 'IDENTITY_MISMATCH';
-    else if (normReason.includes('frozen') || normReason.includes('camera lost') || normReason.includes('camera feed frozen')) eventType = 'CAMERA_LOST';
+    
+    if (normReason.includes('multiple faces')) {
+      eventType = 'MULTIPLE_FACE';
+      isSecurityEvent = true;
+    } else if (normReason.includes('spoof') || normReason.includes('replay') || normReason.includes('photo') || normReason.includes('deepfake')) {
+      eventType = 'SPOOF_DETECTED';
+      isSecurityEvent = true;
+    } else if (normReason.includes('unauthorized') || normReason.includes('identity changed') || normReason.includes('mismatch')) {
+      eventType = 'IDENTITY_MISMATCH';
+      isSecurityEvent = true;
+    } else if (normReason.includes('corrupt') || normReason.includes('invalid enrollment')) {
+      eventType = 'CORRUPTED';
+      isSecurityEvent = true;
+    } else if (normReason.includes('face lost') || normReason.includes('no face') || normReason.includes('searching_for_face')) {
+      eventType = 'NO_FACE_DETECTED';
+    } else if (normReason.includes('frozen') || normReason.includes('camera lost') || normReason.includes('camera feed frozen')) {
+      eventType = 'CAMERA_LOST';
+    }
     
     livenessAPI.logEvent(sessionId, eventType, 'enterprise').catch(console.error);
 
@@ -564,8 +578,8 @@ export default function EnterpriseDemoPage() {
     }
     setStreaming(false);
 
-    if (shouldRedirect) {
-      setTimeout(() => { logout('/signin?reason=verification_lost'); }, 3000);
+    if (isSecurityEvent) {
+      setTimeout(() => { logout('/signin?reason=security_breach'); }, 3000);
     }
   }, [logout, sessionId]);
 
@@ -660,7 +674,7 @@ export default function EnterpriseDemoPage() {
       if (data.result === 'pass') {
         setOverallResult('pass');
       } else if (data.result === 'fail') {
-        triggerSessionTermination(data.status || 'VERIFICATION FAILED', false);
+        triggerSessionTermination(data.status || 'VERIFICATION FAILED');
         return;
       }
 
@@ -677,7 +691,7 @@ export default function EnterpriseDemoPage() {
       };
 
       if (data.status && data.status in terminalStatuses) {
-        triggerSessionTermination(terminalStatuses[data.status], false);
+        triggerSessionTermination(terminalStatuses[data.status]);
         return;
       }
 
@@ -1066,11 +1080,11 @@ export default function EnterpriseDemoPage() {
           </div>
         )}
 
-        {/* Main Grid: Full Width Camera, Metrics Below */}
+        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           
-          {/* CENTER — Camera Feed */}
-          <div className="lg:col-span-12">
+          {/* LEFT — Camera Feed */}
+          <div className="lg:col-span-8 flex flex-col gap-5">
             <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', background: '#0a0a0a', border: `1px solid ${accentColor}22`, aspectRatio: '4/3' }}>
               <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: streaming ? 'block' : 'none', transform: 'scaleX(-1)' }} muted playsInline />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -1122,15 +1136,13 @@ export default function EnterpriseDemoPage() {
                 <BiometricScannerOverlay
                   faceInside={faceInsideGuide} confidence={confidence} detectedFaces={detectedFaces} bbox={bbox} ear={ear} mar={mar}
                   challengeLabel={
-                    detectedFaces > 1 ? 'MULTIPLE FACES' :
-                    faceTrackingState === 'FACE_WARNING' ? 'TEMPORARILY LOST' :
-                    faceTrackingState === 'FACE_RECOVERY' ? 'SEARCHING FOR FACE' :
-                    landmarkCount === 0 ? 'SEARCHING FOR FACE' :
-                    confidence < 0.50 ? 'CONFIDENCE LOW' :
-                    !faceInsideGuide ? 'ALIGN FACE INSIDE OVAL' :
-                    faceVisibleDuration < 2.0 ? `ACQUIRING SIGNAL (${Math.min(100, Math.round(faceVisibleDuration * 50))}%)` :
+                    detectedFaces > 1 ? 'MULTIPLE FACES DETECTED' :
+                    faceTrackingState === 'FACE_WARNING' || faceTrackingState === 'FACE_RECOVERY' ? 'FACE TRACKING LOST' :
+                    confidence < 0.50 ? 'CONFIDENCE TOO LOW' :
+                    !faceInsideGuide ? 'POSITION FACE INSIDE OVAL' :
                     !hasFaceEnrolled ? 'READY TO ENROLL' :
-                    `ENTERPRISE SCAN: CHALLENGE ${challengeTimer}s`
+                    similarity < 0.75 ? 'IDENTITY MISMATCH' :
+                    `VERIFYING IDENTITY... ${challengeTimer}s`
                   }
                   themeColor="#00ff88"
                 />
@@ -1211,7 +1223,7 @@ export default function EnterpriseDemoPage() {
             )}
           </div>
 
-          {/* LEFT SIDEBAR — Security Metrics */}
+          {/* RIGHT SIDEBAR — Security Metrics */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {/* Identity Score */}
