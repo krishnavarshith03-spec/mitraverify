@@ -448,18 +448,28 @@ export default function BasicDemoPage() {
       const inferenceTimeMs = data.processing_time ? data.processing_time * 1000 : 0;
       setLatencyInfo({ latency: Math.round(frameLatency), inference: Math.round(inferenceTimeMs) });
 
-      // Structured Logging
-      console.info(JSON.stringify({
-        event: 'PROCESSED_FRAME',
-        frame_id: responseFrameId,
-        processing_time_ms: Math.round(inferenceTimeMs),
-        latency_ms: Math.round(frameLatency),
-        face_present: data.face_present || false,
-        detected_faces: data.detected_faces || 0,
-        spoof_score: data.spoof_score || 0,
-        identity_score: data.identity_score || 0,
-        decision: data.result || 'pending'
-      }));
+      // FULL RUNTIME DEBUGGING
+      console.log(`
+====================================================
+Frame ID: ${responseFrameId}
+Backend received frame: ${data.debug?.received || 'unknown'}
+Image decoded: ${data.debug?.decoded || 'unknown'}
+MediaPipe executed: ${data.debug?.mediapipe_executed || 'unknown'}
+Face count: ${data.detected_faces || 0}
+Landmark count: ${data.landmark_count || 0}
+Bounding box: ${JSON.stringify(data.bbox || null)}
+Face confidence: ${data.face_confidence || 0}
+Tracking state: ${data.face_present && data.landmark_count > 0 ? 'TRACKING' : 'NO_FACE'}
+Face present: ${data.face_present || false}
+Spoof score: ${data.spoof_score || 0}
+Identity score: ${data.identity_score || 0}
+Result: ${data.result || 'pending'}
+====================================================
+      `);
+
+      if (!data.face_present && data.landmark_count > 0) {
+        console.error(`[FRONTEND BUG CHECK] Backend returned face_present=false but landmark_count=${data.landmark_count}. Reason from backend: ${data.reason || 'None provided'}`);
+      }
 
       // Authoritative Backend Tracking
       lastBackendResponseTimeRef.current = Date.now();

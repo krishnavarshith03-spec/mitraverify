@@ -147,13 +147,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list + [
+    allow_origins=[
         "https://mitraverify.vercel.app",
-        "https://krishnavarshith21-co-mitra-vrify.vercel.app",
-        "https://krishnavarshith21-co-mitra-vrfiy.vercel.app",
-        "https://krishnavarshith21-co-mitra-vrify-git-main-krishnavarshith21-cos-projects.vercel.app",
         "http://localhost:3000",
-    ],
+    ] + settings.cors_origins_list,
     allow_origin_regex="https://.*\\.vercel\\.app",
     allow_credentials=True,
     allow_methods=["*"],

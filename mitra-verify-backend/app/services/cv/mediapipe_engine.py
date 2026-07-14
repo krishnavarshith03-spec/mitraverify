@@ -586,7 +586,14 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
             "blink_drop_frames": 0,
             "current_challenge": challenge_type,
             "created_at": time.time(),
-            "last_active": time.time()
+            "last_active": time.time(),
+            "ear_history": [],
+            "mar_history": [],
+            "yaw_history": [],
+            "pitch_history": [],
+            "roll_history": [],
+            "blink_history": [],
+            "mouth_history": []
         }
     
     cache = SESSION_CACHE[session_id]
@@ -604,14 +611,31 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
         cache["smile_ratios"] = []
         cache["blink_state"] = "WAITING"
         cache["blink_drop_frames"] = 0
+        
+    if "smile_ratios" not in cache:
+        cache["smile_ratios"] = []
+    if "ear_history" not in cache:
+        cache["ear_history"] = []
+    if "mar_history" not in cache:
+        cache["mar_history"] = []
+    if "yaw_history" not in cache:
+        cache["yaw_history"] = []
+    if "pitch_history" not in cache:
+        cache["pitch_history"] = []
+    if "roll_history" not in cache:
+        cache["roll_history"] = []
+    if "blink_history" not in cache:
+        cache["blink_history"] = []
+    if "mouth_history" not in cache:
+        cache["mouth_history"] = []
     
     # Store history for last 30 frames (approx 1 second at 30 FPS)
-    cache["landmarks"].append([(lm.x, lm.y, lm.z) for lm in landmarks])
-    cache["ear"].append(ear)
-    cache["mar"].append(mar)
-    cache["yaw"].append(yaw)
-    cache["pitch"].append(pitch)
-    cache["roll"].append(roll)
+    cache.setdefault("landmarks", []).append([(lm.x, lm.y, lm.z) for lm in landmarks])
+    cache.setdefault("ear", []).append(ear)
+    cache.setdefault("mar", []).append(mar)
+    cache.setdefault("yaw", []).append(yaw)
+    cache.setdefault("pitch", []).append(pitch)
+    cache.setdefault("roll", []).append(roll)
     
     # Eyebrow raise: Use arch landmarks vs upper eyelid for best accuracy
     left_brow_y = min(landmarks[63].y, landmarks[105].y, landmarks[66].y, landmarks[107].y)
@@ -623,24 +647,24 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     avg_brow_dist = (left_brow_dist + right_brow_dist) / 2.0
     face_height = abs(landmarks[152].y - landmarks[10].y)
     eyebrow_ratio = avg_brow_dist / face_height if face_height > 0.001 else 0.18
-    cache["eyebrow_ratios"].append(eyebrow_ratio)
+    cache.setdefault("eyebrow_ratios", []).append(eyebrow_ratio)
     
     # Smile ratio (Lip corner distance vs face width)
     if len(landmarks) > 291:
         w_mouth = np.linalg.norm(np.array([landmarks[291].x, landmarks[291].y]) - np.array([landmarks[61].x, landmarks[61].y]))
         w_face = np.linalg.norm(np.array([landmarks[454].x, landmarks[454].y]) - np.array([landmarks[234].x, landmarks[234].y]))
         smile_ratio = float(w_mouth / w_face if w_face > 0.001 else 0.32)
-        cache["smile_ratios"].append(smile_ratio)
+        cache.setdefault("smile_ratios", []).append(smile_ratio)
     
-    if len(cache["landmarks"]) > 30:
-        cache["landmarks"].pop(0)
-        cache["ear"].pop(0)
-        cache["mar"].pop(0)
-        cache["yaw"].pop(0)
-        cache["pitch"].pop(0)
-        cache["roll"].pop(0)
-        cache["eyebrow_ratios"].pop(0)
-        if cache["smile_ratios"]: cache["smile_ratios"].pop(0)
+    if len(cache.get("landmarks", [])) > 30:
+        if cache.get("landmarks"): cache["landmarks"].pop(0)
+        if cache.get("ear"): cache["ear"].pop(0)
+        if cache.get("mar"): cache["mar"].pop(0)
+        if cache.get("yaw"): cache["yaw"].pop(0)
+        if cache.get("pitch"): cache["pitch"].pop(0)
+        if cache.get("roll"): cache["roll"].pop(0)
+        if cache.get("eyebrow_ratios"): cache["eyebrow_ratios"].pop(0)
+        if cache.get("smile_ratios"): cache["smile_ratios"].pop(0)
         
     # Baseline distance calibration for the first 2 seconds (10 frames approx at slow fps, 60 at fast)
     # Baseline calibration: use median (more robust to outliers than mean)
@@ -1417,8 +1441,9 @@ def map_verification_result(cv_result: dict, api_type: str) -> str:
 
 
 
-def process_demo_frame(
+def _process_demo_frame_inner(
     image_b64: str,
+    frame_id: Optional[str] = None,
     session_id: Optional[str] = None,
     challenge_type: Optional[str] = None,
     enrolled_signature: Optional[list[float]] = None,
@@ -2002,3 +2027,74 @@ def run_identity_verify(image_b64: str, subject_id: Optional[str] = None, enroll
         "spoof_score": result.get("spoof_score", 0.0),
         "deepfake_risk": result.get("deepfake_risk", 0.0),
     }
+
+def process_demo_frame(
+    image_b64: str,
+    frame_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    challenge_type: Optional[str] = None,
+    enrolled_signature: Optional[list[float]] = None,
+    enrolled_embedding: Optional[list[float]] = None,
+    api_type: Optional[str] = None
+) -> dict:
+    t_start = time.perf_counter()
+    res = _process_demo_frame_inner(
+        image_b64=image_b64,
+        frame_id=frame_id,
+        session_id=session_id,
+        challenge_type=challenge_type,
+        enrolled_signature=enrolled_signature,
+        enrolled_embedding=enrolled_embedding,
+        api_type=api_type
+    )
+    
+    # Inject backend-authoritative tracking fields
+    res["frame_id"] = frame_id
+    res["processed_timestamp"] = int(time.time() * 1000)
+    
+    # Determine tracking state
+    face_present = res.get("face_present", False)
+    if face_present:
+        res["tracking_state"] = "TRACKING"
+    else:
+        res["tracking_state"] = "LOST"
+        
+    t_end = time.perf_counter()
+    
+    # Format debug timings
+    timings = res.get("timings", {})
+    if "request_received" in timings:
+        timings["received"] = "YES"
+        timings["decoded"] = f"{round(timings.get('image_decoding', 0.0), 2)}ms"
+        timings["mediapipe_executed"] = f"{round(timings.get('mediapipe_processing', 0.0), 2)}ms"
+    else:
+        timings["received"] = "YES"
+        timings["decoded"] = "FAILED/SKIPPED"
+        timings["mediapipe_executed"] = "FAILED/SKIPPED"
+
+    res["debug"] = timings
+    
+    # FULL RUNTIME DEBUGGING LOG
+    print("=" * 52)
+    print(f"Frame ID: {frame_id}")
+    print(f"Backend received frame: {timings.get('received')}")
+    print(f"Image decoded: {timings.get('decoded')}")
+    print(f"MediaPipe executed: {timings.get('mediapipe_executed')}")
+    print(f"Face count: {res.get('detected_faces', 0)}")
+    print(f"Landmark count: {res.get('landmark_count', 0)}")
+    print(f"Bounding box: {res.get('bbox', None)}")
+    print(f"Face confidence: {res.get('face_confidence', 0.0)}")
+    print(f"Tracking state: {res.get('tracking_state')}")
+    print(f"Face present: {res.get('face_present', False)}")
+    print(f"Spoof score: {res.get('spoof_score', 0.0)}")
+    print(f"Identity score: {res.get('similarity_score', 0.0)}")
+    print(f"Result: {res.get('result', 'pending')}")
+    print(f"Status: {res.get('status', 'unknown')}")
+    
+    if not res.get("face_present", False):
+        print(f"STOPPED PROCESSING. Reason: {res.get('reason', res.get('status', 'unknown reason'))}")
+    
+    print("=" * 52)
+
+    return res
+

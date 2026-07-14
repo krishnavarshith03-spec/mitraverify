@@ -223,6 +223,7 @@ class SessionStartRequest(BaseModel):
 
 class DemoProcessRequest(BaseModel):
     image: str
+    frame_id: Optional[str] = None
     session_id: Optional[str] = None
     challenge_type: Optional[str] = None
     enrolled_signature: Optional[list[float]] = None
@@ -273,12 +274,21 @@ async def start_session(data: SessionStartRequest):
         "roll": [],
         "eyebrow_ratios": [],
         "baseline_eyebrow_ratio": None,
+        "smile_ratios": [],
+        "baseline_smile_ratio": None,
         "current_challenge": "face_centered",
         "challenges": challenges,
         "logged": False,
         "created_at": time.time(),
         "last_active": time.time(),
-        "last_face_seen": time.time()
+        "last_face_seen": time.time(),
+        "ear_history": [],
+        "mar_history": [],
+        "yaw_history": [],
+        "pitch_history": [],
+        "roll_history": [],
+        "blink_history": [],
+        "mouth_history": []
     }
     
     return {
@@ -298,6 +308,7 @@ async def demo_process(
     cv_result = await run_in_threadpool(
         process_demo_frame,
         image_b64=data.image,
+        frame_id=data.frame_id,
         session_id=data.session_id,
         challenge_type=data.challenge_type,
         enrolled_signature=data.enrolled_signature,
