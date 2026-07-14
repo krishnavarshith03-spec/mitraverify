@@ -738,15 +738,10 @@ export default function BasicDemoPage() {
     activeStepTimeElapsedRef.current = 0;
     lastFrameTimestampRef.current = Date.now();
 
-    if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-    loadingTimeoutRef.current = setTimeout(() => {
-      if (modelStatus === 'Loading' || !streaming) {
-        console.warn("[Biometric Pipeline] Initialization timed out after 5 seconds.");
-        setModelStatus('Failed');
-        setError('Biometric services failed to respond within 5 seconds. Please check connection and try again.');
-        stopCamera();
-      }
-    }, 5000);
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
 
     try {
       const sessionRes = await livenessAPI.startSession('basic');
@@ -935,6 +930,7 @@ export default function BasicDemoPage() {
                   ear={ear}
                   mar={mar}
                   challengeLabel={
+                    modelStatus === 'Loading' ? 'CONNECTING TO BACKEND...' :
                     detectedFaces > 1 ? 'MULTIPLE FACES' :
                     landmarkCount === 0 ? 'SEARCHING FOR FACE' :
                     confidence < 0.90 ? 'CONFIDENCE LOW' :

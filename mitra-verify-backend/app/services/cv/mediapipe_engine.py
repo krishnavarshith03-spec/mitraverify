@@ -29,12 +29,23 @@ try:
         mp_face_mesh = mp.solutions.face_mesh
         mp_face_detection = mp.solutions.face_detection
         MP_AVAILABLE = True
+        
+        # Instantiate global models to avoid per-frame loading overhead
+        global_face_mesh = mp_face_mesh.FaceMesh(
+            static_image_mode=False,
+            max_num_faces=4,
+            refine_landmarks=True,
+            min_detection_confidence=0.3,
+            min_tracking_confidence=0.3
+        )
     else:
         mp_face_mesh = None
         mp_face_detection = None
         MP_AVAILABLE = False
+        global_face_mesh = None
 except ImportError:
     MP_AVAILABLE = False
+    global_face_mesh = None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -241,14 +252,8 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    assert mp_face_mesh is not None
-    with mp_face_mesh.FaceMesh(
-        static_image_mode=True,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5
-    ) as face_mesh:
-        results = face_mesh.process(rgb)
+    assert global_face_mesh is not None
+    results = global_face_mesh.process(rgb)
 
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
     if not multi_face_landmarks:
@@ -642,7 +647,6 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     if cache["baseline_eyebrow_ratio"] is None or cache["baseline_smile_ratio"] is None:
         elapsed = time.time() - cache["created_at"]
         if elapsed >= 2.0:
-            import numpy as np  # pyrefly: ignore [missing-import]
             if cache["baseline_eyebrow_ratio"] is None:
                 cache["baseline_eyebrow_ratio"] = float(np.median(cache["eyebrow_ratios"])) if cache["eyebrow_ratios"] else 0.18
             if cache["baseline_smile_ratio"] is None:
@@ -1421,6 +1425,9 @@ def process_demo_frame(
     enrolled_embedding: Optional[list[float]] = None,
     api_type: Optional[str] = None
 ) -> dict:
+    t_start = time.perf_counter()
+    timings = {"request_received": t_start}
+    
     print("FACE_DETECTION_STARTED")
     if not MP_AVAILABLE or not CV2_AVAILABLE:
         return {
@@ -1452,8 +1459,6 @@ def process_demo_frame(
         }
         
     frame = b64_to_numpy(image_b64)
-    if frame is not None:
-        print(f"[CV Engine] Received frame shape: {frame.shape}, mean intensity: {np.mean(frame)}")
     if frame is None:
         return {
             "face_present": False,
@@ -1483,17 +1488,15 @@ def process_demo_frame(
             "status": "invalid_image"
         }
         
+    timings["image_decoding"] = (time.perf_counter() - t_start) * 1000
+    
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     
-    assert mp_face_mesh is not None
-    with mp_face_mesh.FaceMesh(
-        static_image_mode=True,
-        max_num_faces=4,
-        refine_landmarks=True,
-        min_detection_confidence=0.3
-    ) as face_mesh:
-        results = face_mesh.process(rgb)
+    t_mediapipe_start = time.perf_counter()
+    assert global_face_mesh is not None
+    results = global_face_mesh.process(rgb)
+    timings["mediapipe_processing"] = (time.perf_counter() - t_mediapipe_start) * 1000
         
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
     if not multi_face_landmarks:
@@ -1779,8 +1782,10 @@ def process_demo_frame(
                 challenge_passed = (recent_pitches[0] - recent_pitches[-1]) > 8.0
 
     # Calculate spoof score dynamically passing the challenge details
+    t_spoof_start = time.perf_counter()
     spoof_score = _calculate_spoof_risk(frame, landmarks, history, texture_score, replay_score, challenge_type, challenge_passed)
-            
+    timings["spoof_detection"] = (time.perf_counter() - t_spoof_start) * 1000
+    
     if api_type == "enterprise":
         # Strict temporal spoof enforcement
         if history:
@@ -1796,6 +1801,7 @@ def process_demo_frame(
                 history["spoof_frames"] = 0
 
     # 12. Face signature & matching
+    t_identity_start = time.perf_counter()
     current_signature = _calculate_face_embedding(landmarks)
     print("EMBEDDING_GENERATED")
     
@@ -1906,6 +1912,9 @@ def process_demo_frame(
             enrolled_matched=enrolled_matched,
         )
 
+    timings["identity_matching"] = (time.perf_counter() - t_identity_start) * 1000
+    timings["total_processing"] = (time.perf_counter() - timings["request_received"]) * 1000
+
     ret = {
         "face_present": True,
         "detected_faces": int(detected_faces),  # type: ignore
@@ -1940,7 +1949,8 @@ def process_demo_frame(
         "challenge_passed": bool(challenge_passed),  # type: ignore
         "similarity_score": float(similarity_score),  # type: ignore
         "enrolled_matched": bool(enrolled_matched),  # type: ignore
-        "status": status
+        "status": status,
+        "timings": timings
     }
 
     # Append enterprise-exclusive analytics

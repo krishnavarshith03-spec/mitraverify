@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, Request
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime
@@ -294,7 +295,8 @@ async def demo_process(
 ):
     from app.services.cv.mediapipe_engine import process_demo_frame, SESSION_CACHE
     
-    cv_result = process_demo_frame(
+    cv_result = await run_in_threadpool(
+        process_demo_frame,
         image_b64=data.image,
         session_id=data.session_id,
         challenge_type=data.challenge_type,
