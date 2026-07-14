@@ -611,7 +611,8 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
             "face_lost_frames": 0,
             "spoof_frames": 0,
             "wrong_person_frames": 0,
-            "challenge_start_time": time.time()
+            "challenge_start_time": time.time(),
+            "face_stable_since": None
         }
     
     cache = SESSION_CACHE[session_id]
@@ -1615,6 +1616,9 @@ def _process_demo_frame_inner(
     print("LANDMARKS_FOUND")
     if session_id and session_id in SESSION_CACHE:
         SESSION_CACHE[session_id]["last_face_seen"] = time.time()
+        # If face wasn't already marked as stable, start the timer now
+        if SESSION_CACHE[session_id].get("face_stable_since") is None:
+            SESSION_CACHE[session_id]["face_stable_since"] = time.time()
         
     valid_faces = []
     if multi_face_landmarks:
@@ -1624,6 +1628,9 @@ def _process_demo_frame_inner(
                 valid_faces.append(face_landmarks)
                 
     if not valid_faces:
+        if session_id and session_id in SESSION_CACHE:
+            SESSION_CACHE[session_id]["face_stable_since"] = None
+            
         return {
             "face_present": False,
             "detected_faces": 0,
@@ -1655,6 +1662,10 @@ def _process_demo_frame_inner(
         
     multi_face_landmarks = valid_faces
     detected_faces = len(multi_face_landmarks)
+    
+    # If multiple faces detected, reset stability timer
+    if detected_faces > 1 and session_id and session_id in SESSION_CACHE:
+        SESSION_CACHE[session_id]["face_stable_since"] = None
     
     if api_type in ["advanced", "enterprise"]:
         if session_id and session_id in SESSION_CACHE:
@@ -1977,8 +1988,19 @@ def _process_demo_frame_inner(
     # Default status logic
     if status == "ready" and session_id and session_id in SESSION_CACHE:
         if time.time() - SESSION_CACHE[session_id].get("challenge_start_time", time.time()) > 30.0:
-            status = "SPOOF_DETECTED"
-            
+            return {
+                "face_present": True,
+                "detected_faces": int(detected_faces),
+                "face_confidence": float(face_confidence),
+                "landmark_count": int(landmark_count),
+                "bbox": bbox,
+                "status": "SPOOF_DETECTED",
+                "reason": "CHALLENGE_TIMEOUT",
+                "challenge_passed": False,
+                "enrolled_matched": False,
+                "similarity_score": 0.0,
+                "spoof_score": 1.0
+            }
     # ── Enterprise Advanced Analytics ──────────────────────────────
     enterprise_report = None
     landmark_geometry = {}

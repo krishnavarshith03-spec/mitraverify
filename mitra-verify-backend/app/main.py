@@ -13,7 +13,7 @@ from app.api.v1.admin.router import router as admin_router
 from app.models.models import User, SystemLog, AuditLog, UserRole
 from app.core.security import hash_password
 from sqlalchemy import select
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import traceback
 
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
                 role=UserRole.admin,
                 email_verified=True,
                 is_active=True,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             db.add(admin)
             await db.commit()
@@ -54,42 +54,42 @@ async def lifespan(app: FastAPI):
                     level="INFO",
                     message="Database engine initialized and migration check passed.",
                     meta_data={"driver": "aiosqlite"},
-                    created_at=datetime.utcnow() - timedelta(minutes=50)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=50)
                 ),
                 SystemLog(
                     id=str(uuid.uuid4()),
                     level="INFO",
                     message="Mediapipe computer vision models loaded successfully.",
                     meta_data={"tasks": ["face_detector", "face_landmarker"]},
-                    created_at=datetime.utcnow() - timedelta(minutes=45)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=45)
                 ),
                 SystemLog(
                     id=str(uuid.uuid4()),
                     level="INFO",
                     message="Face anti-spoof checks compiled.",
                     meta_data={"version": "1.4.2"},
-                    created_at=datetime.utcnow() - timedelta(minutes=40)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=40)
                 ),
                 SystemLog(
                     id=str(uuid.uuid4()),
                     level="WARNING",
                     message="Verification latency spike detected on Basic Liveness API.",
                     meta_data={"latency_ms": 1240, "threshold_ms": 1000},
-                    created_at=datetime.utcnow() - timedelta(minutes=30)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=30)
                 ),
                 SystemLog(
                     id=str(uuid.uuid4()),
                     level="ERROR",
                     message="Face matching failed due to insufficient illumination.",
                     meta_data={"brightness_score": 0.12, "min_required": 0.3},
-                    created_at=datetime.utcnow() - timedelta(minutes=15)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=15)
                 ),
                 SystemLog(
                     id=str(uuid.uuid4()),
                     level="INFO",
                     message="API keys refreshed and validation caches synchronized.",
                     meta_data={"keys_synced": 3},
-                    created_at=datetime.utcnow() - timedelta(minutes=5)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=5)
                 )
             ]
             for log in mock_logs:
@@ -108,7 +108,7 @@ async def lifespan(app: FastAPI):
                     resource_type="system",
                     meta_data={"details": "System database initialized with default configuration"},
                     ip_address="127.0.0.1",
-                    created_at=datetime.utcnow() - timedelta(minutes=50)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=50)
                 ),
                 AuditLog(
                     id=str(uuid.uuid4()),
@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
                     resource_type="api_key",
                     meta_data={"prefix": "mv_live_ba12", "type": "enterprise"},
                     ip_address="127.0.0.1",
-                    created_at=datetime.utcnow() - timedelta(minutes=35)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=35)
                 ),
                 AuditLog(
                     id=str(uuid.uuid4()),
@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
                     resource_type="session",
                     meta_data={"user_agent": "Mozilla/5.0 Chrome/124.0.0"},
                     ip_address="127.0.0.1",
-                    created_at=datetime.utcnow() - timedelta(minutes=25)
+                    created_at=datetime.now(timezone.utc) - timedelta(minutes=25)
                 )
             ]
             for audit in mock_audits:
@@ -176,7 +176,7 @@ async def telemetry_check():
     return {
         "status": "synchronized",
         "service": "mitra-verify-telemetry",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "database": "sqlite"
     }
 

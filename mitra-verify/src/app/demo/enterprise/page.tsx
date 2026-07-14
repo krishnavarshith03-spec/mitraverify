@@ -813,17 +813,23 @@ export default function EnterpriseDemoPage() {
   const streamingRef = useRef(false);
   useEffect(() => { streamingRef.current = streaming; }, [streaming]);
 
-  function animationLoop(_timestamp: number) {
+  // Stable closure for sendFrameToBackend
+  const sendFrameToBackendRef = useRef(sendFrameToBackend);
+  useEffect(() => {
+    sendFrameToBackendRef.current = sendFrameToBackend;
+  }, [sendFrameToBackend]);
+
+  const animationLoop = useCallback((_timestamp: number) => {
     if (!streamingRef.current) return;
     const now = Date.now();
-    if (now - lastFrameTimeRef.current >= 100) { sendFrameToBackend(); lastFrameTimeRef.current = now; }
+    if (now - lastFrameTimeRef.current >= 100) { sendFrameToBackendRef.current(); lastFrameTimeRef.current = now; }
     requestRef.current = requestAnimationFrame(animationLoop);
-  }
+  }, []);
 
   useEffect(() => {
     if (streaming) { lastFrameTimeRef.current = Date.now(); requestRef.current = requestAnimationFrame(animationLoop); }
     return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
-  }, [streaming, animationLoop]);
+  }, [streaming]);
 
   useEffect(() => {
     if (!streaming) return;
@@ -942,7 +948,7 @@ export default function EnterpriseDemoPage() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const base64Image = canvas.toDataURL('image/jpeg', 0.80);
       setEnrollmentSnapshot(base64Image);
-      const res = await livenessAPI.enrollFace(base64Image);
+      const res = await livenessAPI.enrollFace(base64Image, undefined, sessionId);
       if (res.data && res.data.embedding_vector) {
         setIsStabilizing(true);
         setEnrolledEmbedding(res.data.embedding_vector);

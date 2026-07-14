@@ -341,18 +341,7 @@ export default function BasicDemoPage() {
 
       // Rule 2: Elapsed active time in current step (frozen when face is lost)
       const elapsedInStep = activeStepTimeElapsedRef.current / 1000;
-      
-      if (currentStep === 0) {
-        if (elapsedInStep > 10.0) {
-          console.warn("FACE_CENTERED_FAILED: Face centering took too long (>10s).");
-          setResult('fail');
-        }
-      } else {
-        if (elapsedInStep > 10.0) {
-          console.warn(`CHALLENGE_TIMEOUT: Stuck on Challenge ${currentStep + 1} for more than 10 seconds of active face presence.`);
-          setResult('fail');
-        }
-      }
+
     }, 100);
     
     return () => clearInterval(interval);
@@ -782,17 +771,23 @@ Result: ${data.result || 'pending'}
   useEffect(() => {
     streamingRef.current = streaming;
   }, [streaming]);
-  
+
+  // Stable closure for sendFrameToBackend
+  const sendFrameToBackendRef = useRef(sendFrameToBackend);
+  useEffect(() => {
+    sendFrameToBackendRef.current = sendFrameToBackend;
+  }, [sendFrameToBackend]);
+
   const animationLoop = useCallback((_timestamp: number) => {
     if (!streamingRef.current) return;
     const now = Date.now();
     // Throttle frames to backend to ~12 FPS to prevent server overload
     if (now - lastFrameTimeRef.current >= 83) {
-      sendFrameToBackend();
+      sendFrameToBackendRef.current();
       lastFrameTimeRef.current = now;
     }
     requestRef.current = requestAnimationFrame(animationLoop);
-  }, [sendFrameToBackend]);
+  }, []);
 
   useEffect(() => {
     if (streaming) {
@@ -804,7 +799,7 @@ Result: ${data.result || 'pending'}
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [streaming, animationLoop]);
+  }, [streaming]);
 
 
   // Overall fail verification criteria logic (multiple faces)

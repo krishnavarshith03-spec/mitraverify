@@ -182,12 +182,14 @@ async def identity_enroll(
         raise HTTPException(status_code=400, detail="Stage 7 Failed: Face stability for 2 continuous seconds (No active continuous session tracking)")
     
     session = SESSION_CACHE[data.session_id]
-    created_at = session.get("created_at", time.time())
-    elapsed = time.time() - created_at
+    face_stable_since = session.get("face_stable_since")
+    
+    if face_stable_since is None:
+        raise HTTPException(status_code=400, detail="Stage 7 Failed: Face stability for 2 continuous seconds (Tracking lost or multiple faces)")
+        
+    elapsed = time.time() - face_stable_since
     if elapsed < 2.0:
         raise HTTPException(status_code=400, detail="Stage 7 Failed: Face stability for 2 continuous seconds (Insufficient duration)")
-    if session.get("last_face_seen", time.time()) < (time.time() - 0.5):
-        raise HTTPException(status_code=400, detail="Stage 7 Failed: Face stability for 2 continuous seconds (Tracking lost during validation)")
 
     # --- Stage 8: Embedding generation ---
     print("[Enrollment] Stage 8: Embedding generation")

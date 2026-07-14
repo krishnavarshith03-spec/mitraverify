@@ -468,16 +468,22 @@ export default function AdvancedDemoPage() {
     streamingRef.current = streaming;
   }, [streaming]);
 
+  // Stable closure for sendFrameToBackend
+  const sendFrameToBackendRef = useRef(sendFrameToBackend);
+  useEffect(() => {
+    sendFrameToBackendRef.current = sendFrameToBackend;
+  }, [sendFrameToBackend]);
+
   const animationLoop = useCallback((timestamp: number) => {
     if (!streamingRef.current) return;
     const now = Date.now();
     // Throttle frames to backend to ~10 FPS to prevent server overload
     if (now - lastFrameTimeRef.current >= 100) {
-      sendFrameToBackend();
+      sendFrameToBackendRef.current();
       lastFrameTimeRef.current = now;
     }
     requestRef.current = requestAnimationFrame(animationLoop);
-  }, [sendFrameToBackend]);
+  }, []);
 
   useEffect(() => {
     if (streaming && !overallResult) {
@@ -489,7 +495,7 @@ export default function AdvancedDemoPage() {
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [streaming, animationLoop, overallResult]);
+  }, [streaming, overallResult]);
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
