@@ -1,7 +1,13 @@
 FROM python:3.11-slim
 
-# System deps for mediapipe/opencv
+# System deps for mediapipe/opencv and build tools for python packages
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    curl \
+    wget \
+    unzip \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -20,9 +26,8 @@ RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buff
 
 COPY . .
 
-# Railway sets PORT env var automatically
-ENV PORT=8000
+# Expose a default port (Railway will override this internally, but it's good practice)
+EXPOSE 8000
 
-EXPOSE $PORT
-
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+# Use Railway's injected PORT, fallback to 8000 for local dev
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
