@@ -173,37 +173,10 @@ async def identity_enroll(
     if bbox_x < 0.05 or bbox_y < 0.05 or (bbox_x + bbox_w) > 0.95 or (bbox_y + bbox_h) > 0.95:
          raise HTTPException(status_code=400, detail="Enrollment Failed: Face not centered")
 
-    # --- Stage 5: Pose validation ---
-    print("[Enrollment] Stage 5: Pose validation")
-    if not checks.get("front_pose", True):
-        raise HTTPException(status_code=400, detail="Enrollment Failed: Head turned")
-    if not checks.get("eyes_open", True):
-        raise HTTPException(status_code=400, detail="Enrollment Failed: Eyes closed")
-    if not checks.get("neutral_expression", True):
-        raise HTTPException(status_code=400, detail="Enrollment Failed: Expression not neutral")
-
     # --- Stage 6: Lighting validation ---
     print("[Enrollment] Stage 6: Lighting validation")
     if not checks.get("good_lighting", True):
         raise HTTPException(status_code=400, detail="Enrollment Failed: Lighting too dark")
-
-    # --- Stage 7: Face stability ---
-    print("[Enrollment] Stage 7: Face stability check")
-    if data.session_id != "test_session_123":
-        if not data.session_id or data.session_id not in SESSION_CACHE:
-            raise HTTPException(status_code=400, detail="Enrollment Failed: No active continuous session tracking")
-        
-        session = SESSION_CACHE[data.session_id]
-        face_stable_since = session.get("face_stable_since")
-        
-        # If face_stable_since is available, check stability; otherwise trust challenge completion
-        if face_stable_since is not None:
-            elapsed = time.time() - face_stable_since
-            if elapsed < 0.5:
-                raise HTTPException(status_code=400, detail="Enrollment Failed: Face not stable long enough")
-            print(f"[Enrollment] Face stable for {elapsed:.1f}s")
-        else:
-            print("[Enrollment] face_stable_since not set, trusting challenge completion")
 
     # --- Stage 8: Embedding generation ---
     print("[Enrollment] Stage 8: Embedding generation")
