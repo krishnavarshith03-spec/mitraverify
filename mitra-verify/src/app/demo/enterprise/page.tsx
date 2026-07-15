@@ -989,13 +989,10 @@ export default function EnterpriseDemoPage() {
 
   const enrollFace = async () => {
     console.log("=== ENROLL BUTTON CLICKED ===");
-    console.log("Button enabled state:", !(enrolling || confidence < 0.5 || !faceInsideGuide || (challenges.length > 0 && !challengePassed.every(Boolean))));
-    console.log("challengePassed array:", challengePassed);
-    console.log("sessionId:", sessionId);
-    console.log("isEnrolling:", enrolling);
     
-    if (challenges.length > 0 && !challengePassed.every(Boolean)) {
-        console.warn("Enrollment aborted: challenges not completed.");
+    if (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) {
+        alert("Cannot enroll: Please complete all challenges and ensure your face is centered and clearly visible.");
+        console.warn("Enrollment aborted: Conditions not met.");
         return;
     }
     const video = videoRef.current; const canvas = canvasRef.current;
@@ -1260,8 +1257,21 @@ export default function EnterpriseDemoPage() {
             {streaming && !overallResult && (
               <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
                 {!hasFaceEnrolled ? (
-                  <button onClick={enrollFace} disabled={enrolling || confidence < 0.5 || !faceInsideGuide || (challenges.length > 0 && !challengePassed.every(Boolean))}
-                    style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: enrolling ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: (enrolling || confidence < 0.5 || (challenges.length > 0 && !challengePassed.every(Boolean))) ? 'not-allowed' : 'pointer', opacity: (confidence < 0.5 || (challenges.length > 0 && !challengePassed.every(Boolean))) ? 0.5 : 1 }}>
+                  <button 
+                    onClick={enrollFace} 
+                    disabled={enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)}
+                    style={{ 
+                      flex: 1, 
+                      padding: '10px 0', 
+                      borderRadius: 10, 
+                      background: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', 
+                      color: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? '#94a3b8' : '#000', 
+                      fontWeight: 700, 
+                      fontSize: 13, 
+                      border: 'none', 
+                      cursor: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? 'not-allowed' : 'pointer', 
+                      transition: 'all 0.3s ease'
+                    }}>
                     {enrolling ? 'Enrolling...' : 'Enroll Current Face'}
                   </button>
                 ) : (

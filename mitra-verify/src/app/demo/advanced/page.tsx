@@ -437,7 +437,16 @@ export default function AdvancedDemoPage() {
               stepStartTimeRef.current = Date.now();
               
               if (nextStep >= challenges.length) {
-                console.log("Awaiting final validation from backend...");
+                console.log("ALL_CHALLENGES_COMPLETE");
+                
+                // All challenges passed — show PASS screen and stop processing
+                setOverallResult('pass');
+                if (videoRef.current?.srcObject) {
+                  (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+                  videoRef.current.srcObject = null;
+                }
+                setStreaming(false);
+                setCameraStatus('Inactive');
               }
             }
           }

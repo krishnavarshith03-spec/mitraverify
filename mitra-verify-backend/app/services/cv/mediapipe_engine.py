@@ -504,6 +504,23 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
         yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
         passed = yaw > 15.0
         detected = f"Yaw={yaw:.1f}"
+    elif challenge_type == "hold_still":
+        if history:
+            yaws = history.get("yaw", [])
+            pitches = history.get("pitch", [])
+            rolls = history.get("roll", [])
+            if len(yaws) >= 15:
+                y_var = np.var(yaws[-15:])
+                p_var = np.var(pitches[-15:])
+                r_var = np.var(rolls[-15:])
+                passed = (y_var < 5.0 and p_var < 5.0 and r_var < 5.0)
+                detected = "Holding still" if passed else "Moving"
+            else:
+                passed = False
+                detected = "Waiting for frames..."
+        else:
+            passed = False
+            detected = "Waiting for frames..."
         
     return {"passed": bool(passed), "detected": detected}
 
@@ -1953,6 +1970,16 @@ def _process_demo_frame_inner(
             if len(pitches) >= 10 and pitch < -10.0:
                 recent_pitches = pitches[-10:]
                 challenge_passed = (recent_pitches[0] - recent_pitches[-1]) > 8.0
+        elif challenge_type == "hold_still":
+            yaws = history.get("yaw", [])
+            pitches = history.get("pitch", [])
+            rolls = history.get("roll", [])
+            if len(yaws) >= 15:
+                y_var = np.var(yaws[-15:])
+                p_var = np.var(pitches[-15:])
+                r_var = np.var(rolls[-15:])
+                if y_var < 5.0 and p_var < 5.0 and r_var < 5.0:
+                    challenge_passed = True
 
     # Calculate spoof score dynamically passing the challenge details
     t_spoof_start = time.perf_counter()

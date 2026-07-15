@@ -215,7 +215,7 @@ CHALLENGES_METADATA = {
     "shake_head": { "label": "Shake Head", "instruction": "Shake your head left and right", "icon": "👎" },
     "look_left": { "label": "Look Left", "instruction": "Look left with your eyes", "icon": "👀" },
     "look_right": { "label": "Look Right", "instruction": "Look right with your eyes", "icon": "👀" },
-    "hold_still": { "label": "Hold Still", "instruction": "Hold still for 3 seconds", "icon": "⏱️" }
+    "hold_still": { "label": "Hold Still", "instruction": "Hold still for 2 seconds", "icon": "⏱️" }
 }
 
 class SessionStartRequest(BaseModel):
@@ -235,11 +235,10 @@ async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
     
     advanced_pool = ['blink_once', 'blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up', 'look_down', 'look_left', 'look_right']
-    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up', 'look_down', 'look_left', 'look_right']
+    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'hold_still']
     
     if data.api_type == "enterprise":
-        num_challenges = secrets.choice([7, 8])
-        selected = secrets.SystemRandom().sample(enterprise_pool, num_challenges)
+        selected = secrets.SystemRandom().sample(enterprise_pool, len(enterprise_pool))
     elif data.api_type == "advanced":
         num_challenges = secrets.choice([5, 6])
         selected = secrets.SystemRandom().sample(advanced_pool, num_challenges)

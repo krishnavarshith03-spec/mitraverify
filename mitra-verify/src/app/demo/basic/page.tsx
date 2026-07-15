@@ -690,8 +690,16 @@ Result: ${data.result || 'pending'}
             console.log("CHALLENGE_4_COMPLETE");
             setHasRotatedHead(true);
             setCurrentStep(4);
-            setEnrollmentSuccess(true);
             console.log("LIVENESS_COMPLETE");
+
+            // All 4 challenges passed — show PASS screen and stop processing
+            setResult('pass');
+            if (videoRef.current?.srcObject) {
+              (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+              videoRef.current.srcObject = null;
+            }
+            setStreaming(false);
+            setCameraStatus('Inactive');
           }
         }
 

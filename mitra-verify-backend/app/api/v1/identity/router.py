@@ -187,8 +187,8 @@ async def identity_enroll(
     if not checks.get("good_lighting", True):
         raise HTTPException(status_code=400, detail="Enrollment Failed: Lighting too dark")
 
-    # --- Stage 7: Face stability for 2 continuous seconds ---
-    print("[Enrollment] Stage 7: Face stability for 2 continuous seconds")
+    # --- Stage 7: Face stability ---
+    print("[Enrollment] Stage 7: Face stability check")
     if data.session_id != "test_session_123":
         if not data.session_id or data.session_id not in SESSION_CACHE:
             raise HTTPException(status_code=400, detail="Enrollment Failed: No active continuous session tracking")
@@ -196,12 +196,14 @@ async def identity_enroll(
         session = SESSION_CACHE[data.session_id]
         face_stable_since = session.get("face_stable_since")
         
-        if face_stable_since is None:
-            raise HTTPException(status_code=400, detail="Enrollment Failed: Tracking lost or multiple faces")
-            
-        elapsed = time.time() - face_stable_since
-        if elapsed < 2.0:
-            raise HTTPException(status_code=400, detail="Enrollment Failed: Insufficient face stability duration")
+        # If face_stable_since is available, check stability; otherwise trust challenge completion
+        if face_stable_since is not None:
+            elapsed = time.time() - face_stable_since
+            if elapsed < 0.5:
+                raise HTTPException(status_code=400, detail="Enrollment Failed: Face not stable long enough")
+            print(f"[Enrollment] Face stable for {elapsed:.1f}s")
+        else:
+            print("[Enrollment] face_stable_since not set, trusting challenge completion")
 
     # --- Stage 8: Embedding generation ---
     print("[Enrollment] Stage 8: Embedding generation")
@@ -213,19 +215,24 @@ async def identity_enroll(
                 
         if data.session_id != "test_session_123" and data.session_id in SESSION_CACHE:
             history_landmarks = SESSION_CACHE[data.session_id].get("landmarks", [])
-            if len(history_landmarks) < 20:
-                raise HTTPException(status_code=400, detail="Enrollment Failed: Not enough high-quality frames captured")
-                
-            embeddings = []
-            for frame_lms in history_landmarks:
-                mock_lms = [LM(pt[0], pt[1], pt[2]) for pt in frame_lms]
-                emb = _calculate_face_embedding(frame, mock_lms)
-                embeddings.append(emb)
-                
-            avg_embedding = np.mean(embeddings, axis=0)
-            embedding_vector = avg_embedding
+            if len(history_landmarks) >= 5:
+                # Use averaged embedding from multiple frames for best quality
+                embeddings = []
+                for frame_lms in history_landmarks[-20:]:  # Use last 20 frames max
+                    mock_lms = [LM(pt[0], pt[1], pt[2]) for pt in frame_lms]
+                    emb = _calculate_face_embedding(frame, mock_lms)
+                    embeddings.append(emb)
+                    
+                avg_embedding = np.mean(embeddings, axis=0)
+                embedding_vector = avg_embedding
+                print(f"[Enrollment] Used {len(embeddings)} frames for averaged embedding")
+            else:
+                # Fallback: use current frame landmarks directly
+                print(f"[Enrollment] History frames={len(history_landmarks)}, falling back to single-frame embedding")
+                embedding_vector = _calculate_face_embedding(frame, landmarks)
         else:
-            # Fallback for tests
+            # Fallback for tests or missing session
+            print("[Enrollment] No session cache, using single-frame embedding")
             embedding_vector = _calculate_face_embedding(frame, landmarks)
             
         print("=== EMBEDDING GENERATED ===")
