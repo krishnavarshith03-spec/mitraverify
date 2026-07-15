@@ -2,12 +2,17 @@ import axios from 'axios';
 import { supabase } from './supabase';
 
 // Read API URL from environment variable
-let API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://mitraverify-production.up.railway.app';
+
+if (API_BASE && !API_BASE.startsWith('http://') && !API_BASE.startsWith('https://')) {
+  API_BASE = 'https://' + API_BASE;
+}
+
 if (API_BASE && !API_BASE.endsWith('/api/v1')) {
   API_BASE = API_BASE.replace(/\/+$/, '') + '/api/v1';
 }
 
-console.log(`[MITRA VERIFY] API Base URL: ${API_BASE || 'MISSING — set NEXT_PUBLIC_API_URL'}`);
+console.log(`[MITRA VERIFY] API Base URL: ${API_BASE}`);
 
 // ── Shared axios instance for all authenticated API calls ─────────────────────
 const api = axios.create({
@@ -139,8 +144,8 @@ export const livenessAPI = {
 
 // ── Analytics (Single Source of Truth) ────────────────────────────────────────
 export const analyticsAPI = {
-  overview: () => axios.get('/api/analytics/overview'),
-  usage: (days?: number) => axios.get('/api/analytics/usage'),
+  overview: () => api.get('/analytics/overview'),
+  usage: (days?: number) => api.get('/analytics/usage'),
   logVerificationEvent: (data: {
     apiType: string;
     status: string;
@@ -152,7 +157,7 @@ export const analyticsAPI = {
     attentionScore?: number;
     user?: string;
     device?: string;
-  }) => axios.post('/api/events', data),
+  }) => api.post('/analytics/events', data),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
