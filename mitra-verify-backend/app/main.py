@@ -150,8 +150,8 @@ app.add_middleware(
     allow_origins=[
         "https://mitraverify.vercel.app",
         "http://localhost:3000",
-    ] + settings.cors_origins_list,
-    allow_origin_regex="https://.*\\.vercel\\.app",
+        "http://localhost:3005"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

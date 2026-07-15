@@ -1,0 +1,38 @@
+=========================================
+MITRA VERIFY - Idempotent Local Deploy
+=========================================
+-> Checking port 8000...
+-> Booting FastAPI Backend...
+-> Waiting for backend to be healthy...
+-> Backend is healthy!
+-> Cleaning up old cloudflared processes...
+-> Starting Cloudflare Tunnel...
+-> Waiting for Cloudflare Tunnel URL...
+=========================================
+Tunnel is active!
+Public URL: https://enters-look-queens-finished.trycloudflare.com
+=========================================
+-> Updating frontend config...
+-> Starting Next.js Frontend...
+=========================================
+Deployment Successful!
+Frontend: http://localhost:3005
+API URL:  https://enters-look-queens-finished.trycloudflare.com
+API Docs: https://enters-look-queens-finished.trycloudflare.com/docs
+=========================================
+
+> mitra-verify@0.1.0 dev
+> PORT=3005 next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3005
+- Network:       http://192.168.0.12:3005
+- Environments: .env.local
+✓ Ready in 227ms
+⚠ turbopack.root should be absolute, using: /Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+
+Shutting down...
+
+Shutting down...
