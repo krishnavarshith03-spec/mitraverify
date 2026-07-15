@@ -9,9 +9,12 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+import base64
+
 def _prehash(password: str) -> str:
-    """SHA-256 pre-hash so bcrypt never sees more than 64 bytes."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    """SHA-256 pre-hash so bcrypt never sees more than 64 bytes. Encoded in Base64 for compactness."""
+    digest = hashlib.sha256(password.encode("utf-8")).digest()
+    return base64.b64encode(digest).decode("ascii")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(_prehash(plain_password), hashed_password)
