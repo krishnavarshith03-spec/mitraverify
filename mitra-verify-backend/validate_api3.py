@@ -35,7 +35,7 @@ async def test_scenarios():
     
     # 1. Happy Path
     with patch("app.services.cv.mediapipe_engine.global_face_mesh") as mock_mesh, \
-         patch("app.services.cv.mediapipe_engine.global_face_analyzer") as mock_insight, \
+         patch("app.services.cv.mediapipe_engine.FaceEngine") as mock_insight, \
          patch("app.services.cv.mediapipe_engine.b64_to_numpy", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine.cv2.Laplacian", return_value=np.random.randint(0, 255, (100, 100), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine._head_pose_3d", return_value=(0.0, 0.0, 0.0)), \
@@ -60,7 +60,7 @@ async def test_scenarios():
 
     # 2. Different Person
     with patch("app.services.cv.mediapipe_engine.global_face_mesh") as mock_mesh, \
-         patch("app.services.cv.mediapipe_engine.global_face_analyzer") as mock_insight, \
+         patch("app.services.cv.mediapipe_engine.FaceEngine") as mock_insight, \
          patch("app.services.cv.mediapipe_engine.b64_to_numpy", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine.cv2.Laplacian", return_value=np.random.randint(0, 255, (100, 100), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine._head_pose_3d", return_value=(0.0, 0.0, 0.0)), \
@@ -102,7 +102,7 @@ async def test_scenarios():
 
     # 5. Spoof Test
     with patch("app.services.cv.mediapipe_engine.global_face_mesh") as mock_mesh, \
-         patch("app.services.cv.mediapipe_engine.global_face_analyzer") as mock_insight, \
+         patch("app.services.cv.mediapipe_engine.FaceEngine") as mock_insight, \
          patch("app.services.cv.mediapipe_engine.b64_to_numpy", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine.cv2.Laplacian", return_value=np.random.randint(0, 255, (100, 100), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine._head_pose_3d", return_value=(0.0, 0.0, 0.0)), \
@@ -126,7 +126,7 @@ async def test_scenarios():
 
     # 6. Multiple Faces
     with patch("app.services.cv.mediapipe_engine.global_face_mesh") as mock_mesh, \
-         patch("app.services.cv.mediapipe_engine.global_face_analyzer") as mock_insight, \
+         patch("app.services.cv.mediapipe_engine.FaceEngine") as mock_insight, \
          patch("app.services.cv.mediapipe_engine.b64_to_numpy", return_value=np.zeros((100, 100, 3), dtype=np.uint8)), \
          patch("app.services.cv.mediapipe_engine._head_pose_3d", return_value=(0.0, 0.0, 0.0)), \
          patch("app.services.cv.mediapipe_engine.cv2.Laplacian", return_value=np.random.randint(0, 255, (100, 100), dtype=np.uint8)):

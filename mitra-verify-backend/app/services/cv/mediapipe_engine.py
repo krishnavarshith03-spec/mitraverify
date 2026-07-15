@@ -55,14 +55,34 @@ except ImportError:
 # Try importing InsightFace for production embeddings
 try:
     import insightface  # pyrefly: ignore [missing-import]
-    global_face_analyzer = insightface.app.FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
-    global_face_analyzer.prepare(ctx_id=0, det_size=(640, 640))
     INSIGHTFACE_AVAILABLE = True
-    print("InsightFace loaded successfully.")
-except Exception as e:
-    print(f"Failed to load InsightFace: {e}")
-    global_face_analyzer = None
+except ImportError:
+    insightface = None
     INSIGHTFACE_AVAILABLE = False
+
+class FaceEngine:
+    _analyzer = None
+    
+    @classmethod
+    def get(cls):
+        if not INSIGHTFACE_AVAILABLE:
+            return None
+        if cls._analyzer is None:
+            print("Lazy-loading InsightFace (buffalo_sc)...")
+            try:
+                # Use buffalo_sc (16MB) instead of buffalo_l (300MB) to fit in 512MB RAM limit
+                # Only load detection and recognition to save memory
+                cls._analyzer = insightface.app.FaceAnalysis(
+                    name='buffalo_sc', 
+                    allowed_modules=['detection', 'recognition'],
+                    providers=['CPUExecutionProvider']
+                )
+                cls._analyzer.prepare(ctx_id=0, det_size=(640, 640))
+                print("InsightFace (buffalo_sc) loaded successfully.")
+            except Exception as e:
+                print(f"Failed to load InsightFace (buffalo_sc): {e}")
+                cls._analyzer = None
+        return cls._analyzer
 
 # ─────────────────────────────────────────────────────────────
 # Landmark indices (MediaPipe 478-point face mesh)
