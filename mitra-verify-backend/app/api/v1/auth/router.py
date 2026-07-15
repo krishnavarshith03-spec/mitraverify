@@ -142,6 +142,8 @@ async def login(data: UserLogin, request: Request, db: AsyncSession = Depends(ge
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
+    print(f"[AUTH LOG] /me endpoint accessed by user ID: {current_user.id}")
+    print(f"[AUTH LOG] /me endpoint user data: {current_user.email}, role: {current_user.role}")
     return current_user
 
 @router.post("/logout")
