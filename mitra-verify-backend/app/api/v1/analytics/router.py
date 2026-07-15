@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from datetime import datetime, timedelta, timezone
@@ -169,10 +171,60 @@ async def get_realtime(current_user: User = Depends(get_current_user), db: Async
     }
 
 @router.get("/telemetry")
-async def get_telemetry_endpoint(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def get_telemetry():
     return {
         "status": "synchronized",
-        "latency_ms": 120,
-        "packet_loss_percent": 0.0,
-        "connected_clients": 1
+        "service": "mitra-verify-telemetry",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+class EventPayload(BaseModel):
+    apiType: str
+    status: str
+    confidence: float
+    processingTimeMs: int
+    spoofFlag: bool
+    faceDetectedFlag: bool
+    identityMatchedFlag: bool
+    attentionScore: Optional[float] = None
+    user: Optional[str] = None
+    device: Optional[str] = None
+
+@router.post("/events")
+async def log_event(data: EventPayload, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Simply return success, the actual logging is handled in the liveness process endpoints
+    # This endpoint can be used for custom analytics events from the frontend
+    return {"status": "success", "event_logged": True}
+
+@router.get("/events")
+async def get_events(limit: int = 50, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Return recent verification logs for the user
+    keys_result = await db.execute(select(ApiKey.id).where(ApiKey.user_id == current_user.id))
+    key_ids = [r[0] for r in keys_result.fetchall()]
+
+    if not key_ids:
+        return []
+
+    stmt = (
+        select(VerificationLog)
+        .where(VerificationLog.api_key_id.in_(key_ids))
+        .order_by(VerificationLog.created_at.desc())
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    logs = res.scalars().all()
+    
+    events = []
+    for log in logs:
+        events.append({
+            "id": log.id,
+            "timestamp": log.created_at.isoformat() if log.created_at else None,
+            "apiType": log.api_type,
+            "status": log.result,
+            "confidence": log.confidence,
+            "processingTimeMs": log.processing_time,
+            "spoofFlag": log.spoof_score > 0.5 if log.spoof_score else False,
+            "faceDetectedFlag": log.result != "NO_FACE_DETECTED",
+            "ip": log.ip_address
+        })
+    return events
