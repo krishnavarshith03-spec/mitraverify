@@ -1200,28 +1200,10 @@ def _passive_liveness_analysis(history: dict, landmarks, w: int, h: int) -> dict
 def _validate_enrollment_quality(landmarks, frame, w: int, h: int) -> dict:
     """Enforce strict quality gates at enrollment time.
     
-    Requires:
-    - Front-facing pose (|yaw| < 8°, |pitch| < 8°)
-    - Eyes open (EAR > 0.22)
+    Requires ONLY:
     - Good lighting (texture_score > 0.5)
-    - Neutral expression (smile_score < 0.35)
     - Adequate face size (bbox width > 25% of frame)
-    - Single face
     """
-    yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
-    left_ear_val = _ear(landmarks, LEFT_EYE_INDICES, w, h)
-    right_ear_val = _ear(landmarks, RIGHT_EYE_INDICES, w, h)
-    avg_ear = (left_ear_val + right_ear_val) / 2.0
-
-    # Smile check
-    p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
-    p_right_mouth = np.array([landmarks[61].x, landmarks[61].y])
-    mouth_width = float(np.linalg.norm(p_left_mouth - p_right_mouth))
-    p_left_jaw = np.array([landmarks[234].x, landmarks[234].y])
-    p_right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    face_width = float(np.linalg.norm(p_left_jaw - p_right_jaw))
-    smile_ratio = mouth_width / face_width if face_width > 0.001 else 0.32
-    smile_score = float(np.clip((smile_ratio - 0.32) / 0.08, 0.0, 1.0))
 
     # Lighting check
     if CV2_AVAILABLE:
@@ -1244,33 +1226,29 @@ def _validate_enrollment_quality(landmarks, frame, w: int, h: int) -> dict:
 
     # Quality checks
     checks = {
-        "front_pose": abs(yaw) < 10.0 and abs(pitch) < 10.0,
-        "eyes_open": avg_ear > 0.20,
         "good_lighting": lighting_ok,
-        "neutral_expression": smile_score < 0.40,
         "adequate_size": size_ok,
-        "pose_yaw": round(float(yaw), 2),
-        "pose_pitch": round(float(pitch), 2),
-        "ear_value": round(avg_ear, 4),
-        "smile_value": round(smile_score, 4),
         "lighting_score": round(texture_score, 4),
         "face_width_pct": round(bbox["w"] * 100, 1),
     }
 
     all_pass = all([
-        checks["front_pose"],
-        checks["eyes_open"],
         checks["good_lighting"],
         checks["adequate_size"]
     ])
 
     quality_score = (
-        (0.95 if checks["front_pose"] else 0.3) * 0.3 +
-        (0.95 if checks["eyes_open"] else 0.4) * 0.2 +
-        (texture_score) * 0.2 +
-        (0.95 if checks["neutral_expression"] else 0.5) * 0.15 +
-        (0.95 if checks["adequate_size"] else 0.3) * 0.15
+        (texture_score) * 0.5 +
+        (0.95 if checks["adequate_size"] else 0.3) * 0.5
     )
+
+    recommendation = "Good"
+    if not checks["good_lighting"]:
+        recommendation = "Move to a better lit area"
+    elif not checks["adequate_size"]:
+        recommendation = "Move closer to the camera"
+
+
 
     return {
         "quality_pass": all_pass,
