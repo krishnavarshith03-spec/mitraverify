@@ -422,6 +422,7 @@ export default function EnterpriseDemoPage() {
 
   // Enrollment states
   const [enrolledEmbedding, setEnrolledEmbedding] = useState<number[] | null>(null);
+  const [phase, setPhase] = useState<'IDLE' | 'ENROLLMENT' | 'CHALLENGES' | 'MONITORING'>('IDLE');
   const [enrolling, setEnrolling] = useState(false);
   const [isStabilizing, setIsStabilizing] = useState(false);
   const [enrollmentSnapshot, setEnrollmentSnapshot] = useState<string | null>(null);
@@ -669,7 +670,7 @@ export default function EnterpriseDemoPage() {
 
     try {
       const base64Image = canvas.toDataURL('image/jpeg', 0.65);
-      const activeChallengeId = isMonitoring ? 'monitoring' : (currentChallenge < challenges.length ? challenges[currentChallenge].id : undefined);
+      const activeChallengeId = phase === 'MONITORING' ? 'monitoring' : (phase === 'CHALLENGES' && currentChallenge < challenges.length ? challenges[currentChallenge].id : undefined);
       const res = await livenessAPI.processDemoFrame(base64Image, sessionId, activeChallengeId, hasFaceEnrolled ? (enrolledEmbedding || undefined) : undefined, 'enterprise');
       const data = res?.data;
       setApiResponse(data);
@@ -829,7 +830,11 @@ export default function EnterpriseDemoPage() {
             const nextStep = currentChallenge + 1;
             currentChallengeRef.current = nextStep; setCurrentChallenge(nextStep);
             stepStartTimeRef.current = Date.now();
-            if (nextStep >= challenges.length) console.log("LIVENESS_COMPLETE");
+            if (nextStep >= challenges.length) {
+              console.log("LIVENESS_COMPLETE");
+              setPhase('MONITORING');
+              setIsMonitoring(true);
+            }
           }
         }
       } else {
@@ -922,7 +927,7 @@ export default function EnterpriseDemoPage() {
     setError(null); faceVisibleStartRef.current = null; setFaceVisibleDuration(0);
     setSessionTime(0); setOverallResult(null); setSessionTerminated(false); setTerminationReason('');
     setModelStatus('Loading'); faceDetectionHistoryRef.current = []; similarityHistoryRef.current = [];
-    setMismatchCount(0); setShowReport(false); setIsMonitoring(false); setMonitoringAudit([]);
+    setMismatchCount(0); setPhase('ENROLLMENT'); setShowReport(false); setIsMonitoring(false); setMonitoringAudit([]);
     if (typeof window !== 'undefined') sessionStorage.removeItem('mv_mismatch_count');
     consecutiveValidFramesRef.current = 0; currentChallengeRef.current = 0; setConsecutiveValidFrames(0);
     setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
@@ -975,7 +980,7 @@ export default function EnterpriseDemoPage() {
     faceDetectionHistoryRef.current = []; similarityHistoryRef.current = [];
     setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
     faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setChallenges([]); setChallengePassed([]);
-    setSessionTerminated(false); setTerminationReason(''); setShowReport(false);
+    setSessionTerminated(false); setPhase('IDLE'); setTerminationReason(''); setShowReport(false);
     setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
     setIsMonitoring(false); setMonitoringAudit([]);
     setLostFrames(0); setRecoveredFrames(0); setTimeSinceFaceSeen(0);
@@ -990,7 +995,7 @@ export default function EnterpriseDemoPage() {
   const enrollFace = async () => {
     console.log("=== ENROLL BUTTON CLICKED ===");
     
-    if (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) {
+    if (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1) {
         alert("Cannot enroll: Please complete all challenges and ensure your face is centered and clearly visible.");
         console.warn("Enrollment aborted: Conditions not met.");
         return;
@@ -1016,7 +1021,7 @@ export default function EnterpriseDemoPage() {
         localStorage.setItem('mv_enrolled_signature', JSON.stringify(res.data.embedding_vector));
         await refreshUser();
         setEnrollmentSuccess(true);
-        setTimeout(() => { setIsStabilizing(false); setEnrollmentSuccess(false); }, 2000);
+        setTimeout(() => { setIsStabilizing(false); setEnrollmentSuccess(false); setPhase('CHALLENGES'); }, 2000);
       } else {
         alert("Failed to enroll face: Invalid response from backend");
       }
@@ -1259,7 +1264,7 @@ export default function EnterpriseDemoPage() {
                 {!hasFaceEnrolled ? (
                   <button 
                     onClick={enrollFace} 
-                    disabled={enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)}
+                    disabled={enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT'}
                     style={{ 
                       flex: 1, 
                       padding: '10px 0', 
@@ -1290,6 +1295,40 @@ export default function EnterpriseDemoPage() {
 
           {/* RIGHT SIDEBAR — Security Metrics */}
           <div className="lg:col-span-4 flex flex-col gap-4">
+            {/* 3-Stage Workflow Indicator */}
+            {streaming && !overallResult && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>Enterprise Verification Stages</div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: phase === 'ENROLLMENT' ? 1 : (phase === 'IDLE' ? 0.3 : 0.6) }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: phase === 'ENROLLMENT' ? '#00d4ff22' : (phase === 'CHALLENGES' || phase === 'MONITORING' ? '#00ff8822' : '#334155'), border: `1px solid ${phase === 'ENROLLMENT' ? '#00d4ff' : (phase === 'CHALLENGES' || phase === 'MONITORING' ? '#00ff88' : '#475569')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {phase === 'CHALLENGES' || phase === 'MONITORING' ? <CheckCircle size={14} color="#00ff88" /> : <span style={{ fontSize: 10, color: phase === 'ENROLLMENT' ? '#00d4ff' : '#475569' }}>1</span>}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: phase === 'ENROLLMENT' ? 700 : 500, color: phase === 'ENROLLMENT' ? '#00d4ff' : (phase === 'CHALLENGES' || phase === 'MONITORING' ? '#00ff88' : '#94a3b8') }}>Enrollment</div>
+                  </div>
+                  
+                  <div style={{ width: 2, height: 16, background: 'rgba(255,255,255,0.1)', marginLeft: 11, marginTop: -8, marginBottom: -8 }} />
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: phase === 'CHALLENGES' ? 1 : 0.5 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: phase === 'CHALLENGES' ? '#00d4ff22' : (phase === 'MONITORING' ? '#00ff8822' : '#334155'), border: `1px solid ${phase === 'CHALLENGES' ? '#00d4ff' : (phase === 'MONITORING' ? '#00ff88' : '#475569')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {phase === 'MONITORING' ? <CheckCircle size={14} color="#00ff88" /> : <span style={{ fontSize: 10, color: phase === 'CHALLENGES' ? '#00d4ff' : '#475569' }}>2</span>}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: phase === 'CHALLENGES' ? 700 : 500, color: phase === 'CHALLENGES' ? '#00d4ff' : (phase === 'MONITORING' ? '#00ff88' : '#94a3b8') }}>Liveness Challenges</div>
+                  </div>
+                  
+                  <div style={{ width: 2, height: 16, background: 'rgba(255,255,255,0.1)', marginLeft: 11, marginTop: -8, marginBottom: -8 }} />
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: phase === 'MONITORING' ? 1 : 0.5 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: phase === 'MONITORING' ? '#00ff8822' : '#334155', border: `1px solid ${phase === 'MONITORING' ? '#00ff88' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 10, color: phase === 'MONITORING' ? '#00ff88' : '#475569' }}>3</span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: phase === 'MONITORING' ? 700 : 500, color: phase === 'MONITORING' ? '#00ff88' : '#94a3b8' }}>Continuous Monitoring</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {/* Identity Score */}
               <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1366,7 +1405,8 @@ export default function EnterpriseDemoPage() {
           
             
             {/* Challenge Progress */}
-            <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+            {phase === 'CHALLENGES' && (
+              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>CHALLENGE SEQUENCE</div>
                 <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 700, fontFamily: 'monospace' }}>{challengeProgress}%</div>
@@ -1385,7 +1425,17 @@ export default function EnterpriseDemoPage() {
                   {challengeError}
                 </div>
               )}
+              {/* Show instructions explicitly */}
+              {challenges[currentChallenge] && (
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(0,212,255,0.1)', border: '1px solid #00d4ff', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>{challenges[currentChallenge].icon}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#00d4ff' }}>{challenges[currentChallenge].label}</div>
+                  <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 4 }}>{challenges[currentChallenge].instruction}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8 }}>Time remaining: {challengeTimer}s</div>
+                </div>
+              )}
             </div>
+            )}
 
             {/* Fraud Detection Panel */}
             { (
