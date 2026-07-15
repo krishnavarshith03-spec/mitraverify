@@ -624,8 +624,9 @@ export default function EnterpriseDemoPage() {
     if (!ctx) return;
     setIsProcessing(true);
 
+    const videoRatio = video.videoWidth / video.videoHeight;
     canvas.width = 320;
-    canvas.height = 240;
+    canvas.height = 320 / videoRatio;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const now = Date.now();
@@ -739,7 +740,7 @@ export default function EnterpriseDemoPage() {
       if (data.mar !== undefined) setMar(data.mar);
       const face_center_x = data.landmarks && data.landmarks[1] ? data.landmarks[1][0] : (box ? box.x + box.w / 2 : 0.5);
       const face_center_y = data.landmarks && data.landmarks[1] ? data.landmarks[1][1] : (box ? box.y + box.h / 2 : 0.5);
-      const inside = box && Math.abs(face_center_x - 0.5) <= 0.15 && Math.abs(face_center_y - 0.5) <= 0.15;
+      const inside = box && Math.abs(face_center_x - 0.5) <= 0.25 && Math.abs(face_center_y - 0.5) <= 0.25;
 
       const isFrameValid = isFacePresentAndValid && data.detected_faces === 1 && inside &&
         (!hasFaceEnrolled || isStabilizing || (data.spoof_score < 0.45 && data.deepfake_risk < 0.30 && (data.similarity_score ?? 0) >= 0.75));
@@ -1011,7 +1012,9 @@ export default function EnterpriseDemoPage() {
     if (!ctx) return;
     setEnrolling(true);
     try {
-      canvas.width = 320; canvas.height = 240;
+      const videoRatio = video.videoWidth / video.videoHeight;
+      canvas.width = 320; 
+      canvas.height = 320 / videoRatio;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const base64Image = canvas.toDataURL('image/jpeg', 0.80);
       setEnrollmentSnapshot(base64Image);

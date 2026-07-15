@@ -444,9 +444,10 @@ export default function BasicDemoPage() {
 
     const startTime = performance.now();
 
-    // Draw video frame to small canvas for efficient transfer (320x240)
+    // Draw video frame to small canvas for efficient transfer, preserving aspect ratio
+    const videoRatio = video.videoWidth / video.videoHeight;
     canvas.width = 320;
-    canvas.height = 240;
+    canvas.height = 320 / videoRatio;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Calculate FPS
@@ -656,9 +657,7 @@ Result: ${data.result || 'pending'}
         const box = data.bbox;
         const face_center_x = data.landmarks && data.landmarks[1] ? data.landmarks[1][0] : (box ? box.x + box.w / 2 : 0.5);
         const face_center_y = data.landmarks && data.landmarks[1] ? data.landmarks[1][1] : (box ? box.y + box.h / 2 : 0.5);
-        const inside = box &&
-                       Math.abs(face_center_x - 0.5) <= 0.15 &&
-                       Math.abs(face_center_y - 0.5) <= 0.15;
+        const inside = box && Math.abs(face_center_x - 0.5) <= 0.25 && Math.abs(face_center_y - 0.5) <= 0.25;
         
         setFaceInsideGuide(!!inside);
 
