@@ -85,12 +85,14 @@ async def identity_verify(
         timestamp=datetime.now(timezone.utc)
     )
 
-@router.post("/enroll", response_model=IdentityEnrollResponse)
+@router.post("/enroll", tags=["Identity"])
 async def identity_enroll(
     data: IdentityEnrollRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    print("ENTER: identity_enroll")
+    """Enroll a face for enterprise identity verification. Generates a master embedding."""
     print(f"=== ENROLL REQUEST RECEIVED ===")
     print(f"Request payload: session_id={data.session_id}, subject_id={data.subject_id}, image length={len(data.image)}")
 
@@ -104,6 +106,7 @@ async def identity_enroll(
     import mediapipe as mp
     
     if not MP_AVAILABLE or not CV2_AVAILABLE:
+        print("RAISE: HTTPException(500, Computer vision engine is unavailable)")
         raise HTTPException(status_code=500, detail="Computer vision engine is unavailable")
         
     # --- Stage 1: Camera initialized ---
@@ -118,16 +121,19 @@ async def identity_enroll(
 
     frame = b64_to_numpy(data.image)
     if frame is None:
+        print("RAISE: HTTPException(400, Stage 1 Failed: Invalid image format)")
         raise HTTPException(status_code=400, detail="Stage 1 Failed: Invalid image format")
         
     try:
         h, w = frame.shape[:2]
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     except Exception as e:
+        print(f"RAISE: HTTPException(400, Stage 1 Failed: Frame Decode Error - {str(e)})")
         raise HTTPException(status_code=400, detail=f"Stage 1 Failed: Frame Decode Error - {str(e)}")
     
     from app.services.cv.mediapipe_engine import mp_face_mesh, SESSION_CACHE
     if mp_face_mesh is None:
+        print("RAISE: HTTPException(500, CV Engine unavailable)")
         raise HTTPException(status_code=500, detail="CV Engine unavailable")
 
     try:
@@ -141,11 +147,14 @@ async def identity_enroll(
             
         multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
         
+        print(f"ENTER validate_face")
         # --- Stage 2: Single face detected ---
         print("[Enrollment] Stage 2: Single face detected")
         if not multi_face_landmarks:
+            print("RAISE: HTTPException(400, Stage 2 Failed: No face detected in frame)")
             raise HTTPException(status_code=400, detail="Stage 2 Failed: No face detected in frame")
         if len(multi_face_landmarks) > 1:
+            print("RAISE: HTTPException(400, Stage 2 Failed: Multiple faces detected)")
             raise HTTPException(status_code=400, detail="Stage 2 Failed: Multiple faces detected")
             
         landmarks = multi_face_landmarks[0].landmark  # type: ignore
@@ -153,12 +162,15 @@ async def identity_enroll(
         # --- Stage 3: 468/478 landmarks detected ---
         print("[Enrollment] Stage 3: 468/478 landmarks detected")
         if len(landmarks) < 468:
+            print(f"RAISE: HTTPException(400, Stage 3 Failed: Incomplete landmarks ({len(landmarks)}/468))")
             raise HTTPException(status_code=400, detail=f"Stage 3 Failed: Incomplete landmarks ({len(landmarks)}/468)")
     except HTTPException:
         raise
     except Exception as e:
+        print(f"RAISE: HTTPException(400, Stage 3 Failed: Landmark Detection Error - {str(e)})")
         raise HTTPException(status_code=400, detail=f"Stage 3 Failed: Landmark Detection Error - {str(e)}")
 
+    print(f"ENTER quality_check")
     quality = _validate_enrollment_quality(landmarks, frame, w, h)
     checks = quality.get("checks", {})
     
@@ -169,18 +181,23 @@ async def identity_enroll(
     bbox_w = max([lm.x for lm in landmarks]) - bbox_x
     bbox_h = max([lm.y for lm in landmarks]) - bbox_y
     if bbox_w < 0.25:
+        print("RAISE: HTTPException(400, Enrollment Failed: Face too small)")
         raise HTTPException(status_code=400, detail="Enrollment Failed: Face too small")
     if bbox_x < 0.05 or bbox_y < 0.05 or (bbox_x + bbox_w) > 0.95 or (bbox_y + bbox_h) > 0.95:
+         print("RAISE: HTTPException(400, Enrollment Failed: Face not centered)")
          raise HTTPException(status_code=400, detail="Enrollment Failed: Face not centered")
 
     # --- Stage 6: Lighting validation ---
+    print(f"ENTER lighting_check")
     print("[Enrollment] Stage 6: Lighting validation")
     if not checks.get("good_lighting", True):
+        print("RAISE: HTTPException(400, Enrollment Failed: Lighting too dark)")
         raise HTTPException(status_code=400, detail="Enrollment Failed: Lighting too dark")
 
     # --- Stage 8: Embedding generation ---
+    print(f"ENTER embedding_generation")
     print("[Enrollment] Stage 8: Embedding generation")
-    print("=== EMBEDDING GENERATION STARTED ===")
+    print("=== EMBEDDING GENERATED ===")
     try:
         class LM:
             def __init__(self, x, y, z):
@@ -211,6 +228,7 @@ async def identity_enroll(
         print("=== EMBEDDING GENERATED ===")
             
         if embedding_vector is None or len(embedding_vector) == 0:
+            print("RAISE: ValueError(Empty embedding returned)")
             raise ValueError("Empty embedding returned")
             
         # Logging baseline similarity to itself
@@ -220,6 +238,7 @@ async def identity_enroll(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"RAISE: HTTPException(500, Embedding Generation Error - {str(e)})")
         raise HTTPException(status_code=500, detail=f"Enrollment Failed: Embedding Generation Error - {str(e)}")
 
     # --- Stage 9: Embedding normalization ---
@@ -229,9 +248,11 @@ async def identity_enroll(
         if abs(norm - 1.0) > 0.05:
             embedding_vector = np.array(embedding_vector) / norm
     except Exception as e:
+        print(f"RAISE: HTTPException(500, Embedding Normalization Error - {str(e)})")
         raise HTTPException(status_code=500, detail=f"Stage 9 Failed: Embedding Normalization Error - {str(e)}")
 
     # --- Stage 10: Embedding storage ---
+    print(f"ENTER database_save")
     print("[Enrollment] Stage 10: Embedding storage")
     print("=== DATABASE SAVE STARTED ===")
     try:
@@ -251,18 +272,21 @@ async def identity_enroll(
         await db.commit()
     except Exception as e:
         await db.rollback()
+        print(f"RAISE: HTTPException(500, Embedding Storage Error - {str(e)})")
         raise HTTPException(status_code=500, detail=f"Stage 10 Failed: Embedding Storage Error - {str(e)}")
 
     # --- Stage 11: Enrollment successful ---
     print("[Enrollment] Stage 11: Enrollment successful")
-    print("=== RESPONSE SENT ===")
-    return IdentityEnrollResponse(
+    response = IdentityEnrollResponse(
         status="success",
-        message=f"Enrollment successful. Quality: {quality['quality_score']:.0%}",
+        message=f"Enrollment successful. Quality: {quality.get('quality_score', 0):.0%}",
         user_id=user_id,
         embedding_vector=embedding_list,
         created_at=datetime.now(timezone.utc)
     )
+    print("RETURN:", response)
+    print("EXIT: identity_enroll")
+    return response
 
 @router.get("/enrolled")
 async def get_enrolled_identity(

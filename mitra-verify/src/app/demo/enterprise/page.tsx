@@ -1016,10 +1016,12 @@ export default function EnterpriseDemoPage() {
       const base64Image = canvas.toDataURL('image/jpeg', 0.80);
       setEnrollmentSnapshot(base64Image);
       
-      console.log("API request payload:", { image: "base64...", subjectId: undefined, sessionId: sessionId });
-      
+      console.log("[FRONTEND LOG] Request URL: POST /api/v1/identity/enroll");
+      console.log("[FRONTEND LOG] Request payload:", { subjectId: undefined, sessionId: sessionId });
+
       const res = await livenessAPI.enrollFace(base64Image, undefined, sessionId);
-      console.log(`[STATE] API response received:`, res.data);
+      console.log(`[FRONTEND LOG] Response status:`, res.status);
+      console.log(`[FRONTEND LOG] Response JSON:`, res.data);
       if (res.data && res.data.embedding_vector) {
         console.log(`[STATE] Embedding saved!`);
         setIsStabilizing(true);
