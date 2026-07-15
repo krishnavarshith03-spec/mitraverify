@@ -18,13 +18,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY mitra-verify-backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download buffalo_sc model during build so it's baked into the image and prevents startup downloads
 RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buffalo_sc', allowed_modules=['detection', 'recognition'], providers=['CPUExecutionProvider']); app.prepare(ctx_id=0, det_size=(640,640))"
 
-COPY . .
+COPY mitra-verify-backend/ .
 
 # Expose a default port (Railway will override this internally, but it's good practice)
 EXPOSE 8000
