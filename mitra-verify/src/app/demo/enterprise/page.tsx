@@ -809,7 +809,9 @@ export default function EnterpriseDemoPage() {
         else { setFaceVisibleDuration((Date.now() - faceVisibleStartRef.current) / 1000); }
 
         // State machine progression
-        if (currentChallenge === 0) {
+        if (phase === 'CHALLENGES') {
+          console.log(`[STATE] Frame processed. Stage: ${phase}, isFaceEnrolled: ${hasFaceEnrolled}, currentChallenge: ${currentChallenge}`);
+          if (currentChallenge === 0) {
           if (data.face_confidence > 0.50 && inside && data.detected_faces === 1) {
             if (!centerTimerStartedRef.current) {
               centerTimerStartedRef.current = true; centerTimerStartTimeRef.current = Date.now();
@@ -832,11 +834,13 @@ export default function EnterpriseDemoPage() {
             stepStartTimeRef.current = Date.now();
             if (nextStep >= challenges.length) {
               console.log("LIVENESS_COMPLETE");
+              console.log(`[STATE] State transition: CHALLENGES -> MONITORING`);
               setPhase('MONITORING');
               setIsMonitoring(true);
             }
           }
         }
+        } // End if phase === CHALLENGES
       } else {
         if (searchingForFaceStartRef.current === null) searchingForFaceStartRef.current = Date.now();
         else if (Date.now() - searchingForFaceStartRef.current > 3000) searchingForFaceStartRef.current = Date.now();
@@ -993,7 +997,8 @@ export default function EnterpriseDemoPage() {
   }
 
   const enrollFace = async () => {
-    console.log("=== ENROLL BUTTON CLICKED ===");
+    console.log(`[STATE] === ENROLL BUTTON CLICKED ===`);
+    console.log(`[STATE] Current Stage: ${phase}, isFaceEnrolled: ${hasFaceEnrolled}, enrolling: ${enrolling}, sessionId: ${sessionId}, challengeIndex: ${currentChallenge}, buttonDisabled: false`);
     
     if (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1) {
         alert("Cannot enroll: Please complete all challenges and ensure your face is centered and clearly visible.");
@@ -1014,14 +1019,16 @@ export default function EnterpriseDemoPage() {
       console.log("API request payload:", { image: "base64...", subjectId: undefined, sessionId: sessionId });
       
       const res = await livenessAPI.enrollFace(base64Image, undefined, sessionId);
+      console.log(`[STATE] API response received:`, res.data);
       if (res.data && res.data.embedding_vector) {
+        console.log(`[STATE] Embedding saved!`);
         setIsStabilizing(true);
         setEnrolledEmbedding(res.data.embedding_vector);
         localStorage.setItem('enrolledEmbedding', JSON.stringify(res.data.embedding_vector));
         localStorage.setItem('mv_enrolled_signature', JSON.stringify(res.data.embedding_vector));
         await refreshUser();
         setEnrollmentSuccess(true);
-        setTimeout(() => { setIsStabilizing(false); setEnrollmentSuccess(false); setPhase('CHALLENGES'); }, 2000);
+        setTimeout(() => { setIsStabilizing(false); setEnrollmentSuccess(false); console.log(`[STATE] State transition: ENROLLMENT -> CHALLENGES`); setPhase('CHALLENGES'); }, 2000);
       } else {
         alert("Failed to enroll face: Invalid response from backend");
       }
@@ -1196,8 +1203,8 @@ export default function EnterpriseDemoPage() {
                     faceTrackingState === 'FACE_WARNING' || faceTrackingState === 'FACE_RECOVERY' ? 'FACE TRACKING LOST' :
                     confidence < 0.50 ? 'CONFIDENCE TOO LOW' :
                     !faceInsideGuide ? 'POSITION FACE INSIDE OVAL' :
-                    (!hasFaceEnrolled && challengePassed.length > 0 && challengePassed.every(Boolean)) ? 'READY TO ENROLL' :
-                    (!hasFaceEnrolled) ? `ENROLLMENT CHALLENGE ${currentChallenge + 1}/${challenges.length}` :
+                    phase === 'ENROLLMENT' ? 'READY TO ENROLL - CLICK BUTTON BELOW' :
+                    phase === 'CHALLENGES' ? `LIVENESS CHALLENGE ${currentChallenge + 1}/${challenges.length}` :
                     similarity < 0.75 ? 'IDENTITY MISMATCH' :
                     `VERIFYING IDENTITY... ${challengeTimer}s`
                   }
@@ -1269,12 +1276,12 @@ export default function EnterpriseDemoPage() {
                       flex: 1, 
                       padding: '10px 0', 
                       borderRadius: 10, 
-                      background: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', 
-                      color: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? '#94a3b8' : '#000', 
+                      background: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', 
+                      color: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? '#94a3b8' : '#000', 
                       fontWeight: 700, 
                       fontSize: 13, 
                       border: 'none', 
-                      cursor: (enrolling || confidence < 0.5 || !faceInsideGuide || challenges.length === 0 || !challengePassed.every(Boolean)) ? 'not-allowed' : 'pointer', 
+                      cursor: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'not-allowed' : 'pointer', 
                       transition: 'all 0.3s ease'
                     }}>
                     {enrolling ? 'Enrolling...' : 'Enroll Current Face'}
