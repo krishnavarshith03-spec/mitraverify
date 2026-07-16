@@ -12,6 +12,7 @@ config = context.config
 # for 'autogenerate' support
 sys.path.append('.')
 from app.core.database import Base
+import app.models.models
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -50,6 +51,7 @@ def run_migrations_online():
             connection=connection,
             target_metadata=Base.metadata,
             compare_type=True,
+            render_as_batch=True,
         )
         with context.begin_transaction():
             context.run_migrations()

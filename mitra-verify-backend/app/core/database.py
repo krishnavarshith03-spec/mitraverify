@@ -33,5 +33,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, Any]:  # type: ignore
             await session.close()
 
 async def init_db():
+    from sqlalchemy import text
+    import asyncio
+    
+    # First, detect if we need to stamp the DB
+    users_exists = False
+    alembic_exists = False
+    
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'"))
+        users_exists = result.scalar() is not None
+        
+        result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"))
+        alembic_exists = result.scalar() is not None
+        
+    def run_migrations():
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        
+        if users_exists and not alembic_exists:
+            # DB was created by create_all before Alembic was introduced
+            command.stamp(alembic_cfg, "0455c6e66a99")
+            
+        command.upgrade(alembic_cfg, "head")
+        
+    await asyncio.to_thread(run_migrations)

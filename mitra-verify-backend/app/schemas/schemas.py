@@ -22,7 +22,7 @@ class UserOut(BaseModel):
     email: str
     full_name: Optional[str]
     role: str
-    email_verified: bool
+    email_verified: Optional[bool] = False
     created_at: datetime
 
     class Config:
