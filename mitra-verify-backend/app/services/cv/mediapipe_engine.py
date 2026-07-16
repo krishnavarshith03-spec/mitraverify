@@ -1689,10 +1689,13 @@ def _process_demo_frame_inner(
     try:
         results = global_face_mesh.process(rgb)
     except Exception as e:
-        print(f"[FATAL] MediaPipe process() threw exception:\n{traceback.format_exc()}")
+        import traceback
+        print(f"[FATAL] process_demo_frame threw exception:\n{traceback.format_exc()}")
         return {
-            "face_present": False, "status": "cv_runtime_error", 
-            "error": traceback.format_exc()
+            "face_present": False,
+            "status": "error",
+            "error": traceback.format_exc(),
+            "reason": str(e)
         }
         
     timings["mediapipe_processing"] = (time.perf_counter() - t_mediapipe_start) * 1000
@@ -2287,12 +2290,17 @@ def _process_demo_frame_inner(
             ret_early["enterprise_report"] = _build_enterprise_report(
                 identity_match=similarity_score,
                 confidence=face_confidence,
-                pose_quality=pose_quality,
-                lighting_quality=lighting_quality,
-                blur_level=0.1,
-                texture_score=0.5,
-                landmark_precision=1.0,
-                presentation_attack_score=spoof_score
+                liveness_score=0.0,
+                spoof_score=spoof_score,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
             )
         return ret_early
 
@@ -2425,6 +2433,13 @@ def _process_demo_frame_inner(
         ret["face_quality"] = round(face_quality_score, 4)
         ret["pose_quality"] = round(pose_quality, 4)
         ret["lighting_quality"] = round(lighting_quality, 4)
+        
+        # Explicitly requested by user for root payload compatibility
+        ret["identity_match"] = round(similarity_score * 100, 2)
+        ret["liveness_score"] = round(liveness_score * 100, 2) if 'liveness_score' in locals() else 0.0
+        ret["risk_score"] = enterprise_report.get("risk_score", 0.0)
+        ret["challenge_progress"] = 0 # Frontend tracks real progress
+        ret["lighting"] = ret["lighting_quality"]
 
     return ret
 
@@ -2494,15 +2509,25 @@ def process_demo_frame(
     api_type: Optional[str] = None
 ) -> dict:
     t_start = time.perf_counter()
-    res = _process_demo_frame_inner(
-        image_b64=image_b64,
-        frame_id=frame_id,
-        session_id=session_id,
-        challenge_type=challenge_type,
-        enrolled_signature=enrolled_signature,
-        enrolled_embedding=enrolled_embedding,
-        api_type=api_type
-    )
+    try:
+        res = _process_demo_frame_inner(
+            image_b64=image_b64,
+            frame_id=frame_id,
+            session_id=session_id,
+            challenge_type=challenge_type,
+            enrolled_signature=enrolled_signature,
+            enrolled_embedding=enrolled_embedding,
+            api_type=api_type
+        )
+    except Exception as e:
+        import traceback
+        print(f"[FATAL] _process_demo_frame_inner threw exception:\n{traceback.format_exc()}")
+        return {
+            "face_present": False,
+            "status": "error",
+            "error": traceback.format_exc(),
+            "reason": str(e)
+        }
     
     # Inject backend-authoritative tracking fields
     res["frame_id"] = frame_id
