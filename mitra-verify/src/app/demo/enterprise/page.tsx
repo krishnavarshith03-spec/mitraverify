@@ -634,38 +634,23 @@ export default function EnterpriseDemoPage() {
     if (now - lastFpsTime.current >= 1000) { fpsCountRef.current = 0; lastFpsTime.current = now; }
 
     const handleFrameInvalid = (data: BiometricResponse | null) => {
-      const currentFaceDetected = !!(data && data.face_present && data.face_confidence > 0.50 && data.landmark_count > 0 && Math.abs(data.yaw || 0) <= 45 && Math.abs(data.pitch || 0) <= 30 && Math.abs(data.roll || 0) <= 30);
-      faceDetectionHistoryRef.current.push(currentFaceDetected);
-      if (faceDetectionHistoryRef.current.length > 15) faceDetectionHistoryRef.current.shift();
-      const smoothFaceDetected = faceDetectionHistoryRef.current.filter(Boolean).length >= 8;
-
-      if (smoothFaceDetected) { faceLostStartRef.current = null; setFaceMissingDuration(0); }
-      else { if (faceLostStartRef.current === null) faceLostStartRef.current = Date.now(); }
-
-      const faceLostDuration = faceLostStartRef.current ? (Date.now() - faceLostStartRef.current) / 1000 : 0;
-
-      if (!hasFaceEnrolled) {
+      if (!data || !data.face_present || data.detected_faces === 0 || data.landmark_count === 0) {
         setFaceTrackingState('FACE_LOST');
         prevTrackingStateRef.current = 'FACE_LOST';
         setDetectedFaces(0); setLandmarkCount(0); setConfidence(0);
         setGazeDirection(null); setGazeAvailable(false); setFaceInsideGuide(false);
         faceVisibleStartRef.current = null; setFaceVisibleDuration(0); setSimilarity(0);
         setConsecutiveValidFrames(0); noseHistoryRef.current = []; setDetectionStability(0.0);
-        return;
-      }
-
-      const timeSinceEnrollment = enrollmentTimeRef.current ? Date.now() - enrollmentTimeRef.current : 0;
-      if (hasFaceEnrolled && timeSinceEnrollment < 3000) return;
-
-      recoveredFramesRef.current = 0; setRecoveredFrames(0);
-      lostFramesRef.current += 1; setLostFrames(lostFramesRef.current);
-      setFaceConfidenceMetric(0); setTrackingConfidence(0.0); setTimeSinceFaceSeen(faceLostDuration);
-
-      const state: 'FACE_WARNING' | 'FACE_RECOVERY' | 'FACE_LOST' = faceLostDuration < 2.0 ? 'FACE_WARNING' : faceLostDuration < 5.0 ? 'FACE_RECOVERY' : 'FACE_LOST';
-      setFaceTrackingState(state); prevTrackingStateRef.current = state;
-      
-      if (isMonitoring && faceLostDuration > 10.0) {
-        triggerSessionTermination('Session Timeout (Face Lost)');
+        
+        const faceLostDuration = faceLostStartRef.current ? (Date.now() - faceLostStartRef.current) / 1000 : 0;
+        if (faceLostStartRef.current === null) faceLostStartRef.current = Date.now();
+        if (isMonitoring && faceLostDuration > 10.0) {
+          triggerSessionTermination('Session Timeout (Face Lost)');
+        }
+      } else {
+        setFaceTrackingState('FACE_PRESENT');
+        prevTrackingStateRef.current = 'FACE_PRESENT';
+        faceLostStartRef.current = null;
       }
     };
 
@@ -733,23 +718,22 @@ export default function EnterpriseDemoPage() {
       if (data.fraud_detection) setFraudDetection(data.fraud_detection);
       if (data.pose_validation) setPoseValidation(data.pose_validation);
 
-      const isFacePresentAndValid = data.face_present && data.face_confidence > 0.50;
+      const isFacePresentAndValid = data.face_present && data.face_confidence > 0.50 && data.detected_faces === 1;
       const box = data.bbox;
       setBbox(box || null);
       if (data.ear !== undefined) setEar(data.ear);
       if (data.mar !== undefined) setMar(data.mar);
       const face_center_x = data.landmarks && data.landmarks[1] ? data.landmarks[1][0] : (box ? box.x + box.w / 2 : 0.5);
       const face_center_y = data.landmarks && data.landmarks[1] ? data.landmarks[1][1] : (box ? box.y + box.h / 2 : 0.5);
-      const inside = box && Math.abs(face_center_x - 0.5) <= 0.25 && Math.abs(face_center_y - 0.5) <= 0.25;
+      const inside = box ? (Math.abs(face_center_x - 0.5) <= 0.25 && Math.abs(face_center_y - 0.5) <= 0.25) : false;
 
-      const isFrameValid = isFacePresentAndValid && data.detected_faces === 1 && inside &&
-        (!hasFaceEnrolled || isStabilizing || (data.spoof_score < 0.45 && data.deepfake_risk < 0.30 && (data.similarity_score ?? 0) >= 0.75));
+      // Ensure we immediately sync tracking state with backend face_present
+      handleFrameInvalid(data);
 
-      if (isFrameValid) {
+      if (isFacePresentAndValid) {
         setFaceConfidenceMetric(data.face_confidence);
         setTrackingConfidence(Math.min(1.0, data.face_confidence + 0.1));
-        lostFramesRef.current = 0; setLostFrames(0);
-        recoveredFramesRef.current += 1; setRecoveredFrames(recoveredFramesRef.current);
+        
         lastFaceSeenTimeRef.current = Date.now(); setTimeSinceFaceSeen(0);
 
         if (data.landmarks && data.landmarks.length > 0) {
@@ -767,18 +751,13 @@ export default function EnterpriseDemoPage() {
           }
         }
 
-        if (recoveredFramesRef.current >= 5) {
-          setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
-        }
-        searchingForFaceStartRef.current = null;
-        faceLostStartRef.current = null; setFaceMissingDuration(0); setMismatchCount(0);
         setDetectedFaces(data.detected_faces); setLandmarkCount(data.landmark_count); setConfidence(data.face_confidence);
         
         const pose = processHeadPose(data.yaw, data.raw_yaw);
         setYaw(pose.correctedYaw); setRawYaw(pose.rawYaw); setYawDirection(pose.direction);
         setPitch(data.pitch); setRoll(data.roll);
         setSpoofScore(data.spoof_score); setDeepfakeRisk(data.deepfake_risk);
-        setGazeDirection(data.gaze_direction); setGazeAvailable(data.gaze_available); setFaceInsideGuide(true);
+        setGazeDirection(data.gaze_direction); setGazeAvailable(data.gaze_available); setFaceInsideGuide(inside);
         
         setFraudDetection(data.fraud_detection);
         setRawLandmarks(data.landmarks || []);
@@ -787,65 +766,49 @@ export default function EnterpriseDemoPage() {
           logEvent('MULTIPLE_FACES_DETECTED', { faces: data.detected_faces }, 'WARNING');
         }
 
-        if (data.landmarks && data.landmarks[1]) {
-          const nose = data.landmarks[1];
-          const hist = noseHistoryRef.current;
-          hist.push([nose[0], nose[1]]);
-          if (hist.length > 10) hist.shift();
-          if (hist.length >= 2) {
-            let totalDist = 0;
-            for (let i = 1; i < hist.length; i++) {
-              const dx = hist[i][0] - hist[i-1][0]; const dy = hist[i][1] - hist[i-1][1];
-              totalDist += Math.sqrt(dx * dx + dy * dy);
-            }
-            const avgDist = totalDist / (hist.length - 1);
-            setDetectionStability(Math.max(0.0, Math.min(100.0, 100.0 - avgDist * 500.0)));
-          }
-        }
-
         wasBlinkingRef.current = data.blink_detected ?? false;
         if (hasFaceEnrolled) { consecutiveValidFramesRef.current += 1; setConsecutiveValidFrames(consecutiveValidFramesRef.current); }
 
         if (faceVisibleStartRef.current === null) { faceVisibleStartRef.current = Date.now(); setFaceVisibleDuration(0); }
         else { setFaceVisibleDuration((Date.now() - faceVisibleStartRef.current) / 1000); }
 
-        // State machine progression
+        // State machine progression MUST run if face is present, regardless of perfectly centered or not
         if (phase === 'CHALLENGES') {
           console.log(`[STATE] Frame processed. Stage: ${phase}, isFaceEnrolled: ${hasFaceEnrolled}, currentChallenge: ${currentChallenge}`);
+          
           if (currentChallenge === 0) {
-          if (data.face_confidence > 0.50 && inside && data.detected_faces === 1) {
-            if (!centerTimerStartedRef.current) {
-              centerTimerStartedRef.current = true; centerTimerStartTimeRef.current = Date.now();
-            } else {
-              const centeredDur = (Date.now() - centerTimerStartTimeRef.current) / 1000;
-              setFaceVisibleDuration(centeredDur);
-              if (centeredDur >= 2.0) {
-                setIsFacePrepared(true);
-                setChallengePassed(prev => { const next = [...prev]; next[0] = true; return next; });
-                currentChallengeRef.current = 1; setCurrentChallenge(1);
+            // First challenge is ALWAYS face centered
+            if (data.face_confidence > 0.50 && inside && data.detected_faces === 1) {
+              if (!centerTimerStartedRef.current) {
+                centerTimerStartedRef.current = true; centerTimerStartTimeRef.current = Date.now();
+              } else {
+                const centeredDur = (Date.now() - centerTimerStartTimeRef.current) / 1000;
+                setFaceVisibleDuration(centeredDur);
+                if (centeredDur >= 1.5) { // Reduced to 1.5s for better UX
+                  setIsFacePrepared(true);
+                  setChallengePassed(prev => { const next = [...prev]; next[0] = true; return next; });
+                  currentChallengeRef.current = 1; setCurrentChallenge(1);
+                  stepStartTimeRef.current = Date.now();
+                }
+              }
+            } else { centerTimerStartedRef.current = false; setFaceVisibleDuration(0); }
+          } else {
+            // Processing dynamic backend challenges
+            const activeChallenge = challenges[currentChallenge];
+            if (activeChallenge && data.challenge_passed) {
+              setChallengePassed(prev => { const next = [...prev]; next[currentChallenge] = true; return next; });
+              const nextStep = currentChallenge + 1;
+              currentChallengeRef.current = nextStep; setCurrentChallenge(nextStep);
+              stepStartTimeRef.current = Date.now();
+              if (nextStep >= challenges.length) {
+                console.log("LIVENESS_COMPLETE");
+                console.log(`[STATE] State transition: CHALLENGES -> MONITORING`);
+                setPhase('MONITORING');
+                setIsMonitoring(true);
               }
             }
-          } else { centerTimerStartedRef.current = false; setFaceVisibleDuration(0); }
-        } else {
-          const activeChallenge = challenges[currentChallenge];
-          if (activeChallenge && data.challenge_passed) {
-            setChallengePassed(prev => { const next = [...prev]; next[currentChallenge] = true; return next; });
-            const nextStep = currentChallenge + 1;
-            currentChallengeRef.current = nextStep; setCurrentChallenge(nextStep);
-            stepStartTimeRef.current = Date.now();
-            if (nextStep >= challenges.length) {
-              console.log("LIVENESS_COMPLETE");
-              console.log(`[STATE] State transition: CHALLENGES -> MONITORING`);
-              setPhase('MONITORING');
-              setIsMonitoring(true);
-            }
           }
-        }
         } // End if phase === CHALLENGES
-      } else {
-        if (searchingForFaceStartRef.current === null) searchingForFaceStartRef.current = Date.now();
-        else if (Date.now() - searchingForFaceStartRef.current > 3000) searchingForFaceStartRef.current = Date.now();
-        handleFrameInvalid(data);
       }
     } catch (err: any) {
       console.warn('Frame processing failed', err);
