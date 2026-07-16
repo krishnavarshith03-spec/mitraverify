@@ -2036,7 +2036,9 @@ def _process_demo_frame_inner(
     head_rotation = abs(yaw) > 12.0 or abs(pitch) > 8.0
     
     # Strict Yaw/Pitch validation for embedding comparison
-    if api_type == "enterprise" and head_rotation:
+    # Skip this guard when the active challenge requires head movement (look_up, look_down, turn_left, turn_right)
+    pose_challenge_active = challenge_type in ("look_up", "look_down", "turn_left", "turn_right")
+    if api_type == "enterprise" and head_rotation and not pose_challenge_active:
         return {
             "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
             "bbox": bbox, "status": "POSE_INVALID", "reason": "Face turned beyond allowed yaw/pitch", "challenge_passed": False, "enrolled_matched": False
