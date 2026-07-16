@@ -25,6 +25,10 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
         )
 
     # Fetch counts grouped by result and api_type to apply exact formulas
+    print(f"[ANALYTICS LOG] SQL query executed: SELECT result, api_type, count(id) FROM verification_logs WHERE api_key_id IN ({key_ids}) GROUP BY result, api_type")
+    print(f"[ANALYTICS LOG] database name: PostgreSQL (production) or SQLite (local)")
+    print(f"[ANALYTICS LOG] schema: public")
+    
     stmt = (
         select(VerificationLog.result, VerificationLog.api_type, func.count(VerificationLog.id))
         .where(VerificationLog.api_key_id.in_(key_ids))
@@ -32,6 +36,7 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
     )
     res = await db.execute(stmt)
     rows = res.fetchall()
+    print(f"[ANALYTICS LOG] rows returned: {len(rows)}")
     
     # Initialize counts for formula components
     counts = {
@@ -112,6 +117,11 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
     active_count = active_keys.scalar() or 0
 
     success_rate = (successful_verifications / total_requests * 100) if total_requests > 0 else 0.0
+
+    print(f"[ANALYTICS LOG] total_verifications: {total_requests}")
+    print(f"[ANALYTICS LOG] api1_count: {counts['SUCCESS']} (Basic/Total)")
+    print(f"[ANALYTICS LOG] api2_count: N/A")
+    print(f"[ANALYTICS LOG] api3_count: {identity_matches} (Enterprise)")
 
     return AnalyticsOverview(
         total_requests=total_requests,

@@ -501,9 +501,16 @@ async def demo_process(
                 db.add(log)
                 try:
                     await db.commit()
+                    await db.refresh(log)
+                    print(f"[VERIFICATION LOG] verification_id: {log.session_id}")
+                    print(f"[VERIFICATION LOG] api_type: {log.api_type}")
+                    print(f"[VERIFICATION LOG] database INSERT success: True")
+                    print(f"[VERIFICATION LOG] row ID: {log.id}")
+                    print(f"[VERIFICATION LOG] timestamp: {log.created_at}")
                     session["logged"] = True
-                except Exception:
+                except Exception as e:
                     await db.rollback()
+                    print(f"[VERIFICATION LOG ERROR] database INSERT success: False")
                     raise
                     
     return cv_result

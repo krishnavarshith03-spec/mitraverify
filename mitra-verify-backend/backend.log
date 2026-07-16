@@ -47,3 +47,10 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 INFO:     127.0.0.1:65131 - "GET /api/v1/health HTTP/1.1" 200 OK
 INFO:     2406:b400:d5:b344:f939:234d:3e2c:768b:0 - "GET /api/v1/health HTTP/1.1" 200 OK
 INFO:     2406:b400:d5:b344:f939:234d:3e2c:768b:0 - "OPTIONS /api/v1/liveness/start HTTP/1.1" 200 OK
+2026-07-16 15:55:11,429 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-07-16 15:55:11,452 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.password_hash, users.full_name, users.role, users.email_verified, users.is_active, users.created_at, users.updated_at, users.last_login 
+FROM users 
+WHERE users.email = ? AND users.is_active = 1
+2026-07-16 15:55:11,453 INFO sqlalchemy.engine.Engine [generated in 0.00218s] ('test@example.com',)
+2026-07-16 15:55:11,468 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62578 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
