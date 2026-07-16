@@ -49,16 +49,16 @@ export function useDiagnosticLogger() {
   }, [logs]);
 
   const interpretSpoof = useCallback((fraudDetection: any, spoofScore: number) => {
-    if (!fraudDetection) return `Spoof Score: ${(spoofScore * 100).toFixed(1)}%`;
+    if (!fraudDetection) return `Spoof Score: ${Number((spoofScore * 100) || 0).toFixed(1)}%`;
     const reasons: string[] = [];
-    if (fraudDetection.printed_photo?.detected) reasons.push(`Printed photo detected (${(fraudDetection.printed_photo.confidence * 100).toFixed(1)}%)`);
-    if (fraudDetection.replay_attack?.detected) reasons.push(`Replay attack suspected (${(fraudDetection.replay_attack.confidence * 100).toFixed(1)}%)`);
-    if (fraudDetection.deepfake?.detected) reasons.push(`Deepfake/Jitter detected (${(fraudDetection.deepfake.confidence * 100).toFixed(1)}%)`);
-    if (fraudDetection.ai_generated?.detected) reasons.push(`AI-generated symmetry (${(fraudDetection.ai_generated.confidence * 100).toFixed(1)}%)`);
-    if (fraudDetection.screen_reflection?.detected) reasons.push(`Screen reflection detected (${(fraudDetection.screen_reflection.confidence * 100).toFixed(1)}%)`);
-    if (fraudDetection.mask_attack?.detected) reasons.push(`Mask attack boundary detected (${(fraudDetection.mask_attack.confidence * 100).toFixed(1)}%)`);
+    if (fraudDetection.printed_photo?.detected) reasons.push(`Printed photo detected (${Number((fraudDetection.printed_photo.confidence * 100) || 0).toFixed(1)}%)`);
+    if (fraudDetection.replay_attack?.detected) reasons.push(`Replay attack suspected (${Number((fraudDetection.replay_attack.confidence * 100) || 0).toFixed(1)}%)`);
+    if (fraudDetection.deepfake?.detected) reasons.push(`Deepfake/Jitter detected (${Number((fraudDetection.deepfake.confidence * 100) || 0).toFixed(1)}%)`);
+    if (fraudDetection.ai_generated?.detected) reasons.push(`AI-generated symmetry (${Number((fraudDetection.ai_generated.confidence * 100) || 0).toFixed(1)}%)`);
+    if (fraudDetection.screen_reflection?.detected) reasons.push(`Screen reflection detected (${Number((fraudDetection.screen_reflection.confidence * 100) || 0).toFixed(1)}%)`);
+    if (fraudDetection.mask_attack?.detected) reasons.push(`Mask attack boundary detected (${Number((fraudDetection.mask_attack.confidence * 100) || 0).toFixed(1)}%)`);
     
-    return reasons.length > 0 ? reasons.join(', ') : `General Spoof Score: ${(spoofScore * 100).toFixed(1)}%`;
+    return reasons.length > 0 ? reasons.join(', ') : `General Spoof Score: ${Number((spoofScore * 100) || 0).toFixed(1)}%`;
   }, []);
 
   return { logs, logEvent, downloadLogs, interpretSpoof };

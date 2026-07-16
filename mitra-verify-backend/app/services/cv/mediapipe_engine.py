@@ -1861,7 +1861,25 @@ def _process_demo_frame_inner(
                     "enrolled_matched": False,
                     "enrollment_signature": None,
                     "bbox": None,
-                    "status": "MULTIPLE_FACES_DETECTED"
+                    "status": "MULTIPLE_FACES_DETECTED",
+                    "enterprise_report": {
+                        "identity_match_pct": 0.0,
+                        "confidence_pct": 0.0,
+                        "liveness_pct": 0.0,
+                        "spoof_probability_pct": 0.0,
+                        "fraud_score": 0.0,
+                        "risk_score": 0.0,
+                        "quality_score": 0.0,
+                        "threat_level": "UNKNOWN",
+                        "identity_status": "PENDING",
+                        "fraud_detection": {},
+                        "passive_liveness": {
+                            "blink_detected": False,
+                            "head_motion": False,
+                            "depth_valid": False,
+                            "score": 0.0
+                        }
+                    }
                 }
 
     landmarks = multi_face_landmarks[0].landmark  # type: ignore
@@ -1876,12 +1894,48 @@ def _process_demo_frame_inner(
         if bbox["x"] < 0.05 or bbox["y"] < 0.05 or (bbox["x"] + bbox["w"]) > 0.95 or (bbox["y"] + bbox["h"]) > 0.95:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
-                "bbox": bbox, "status": "FACE_NOT_CENTERED", "reason": "Face not centered or partially visible", "challenge_passed": False, "enrolled_matched": False
+                "bbox": bbox, "status": "FACE_NOT_CENTERED", "reason": "Face not centered or partially visible", "challenge_passed": False, "enrolled_matched": False,
+                "enterprise_report": {
+                    "identity_match_pct": 0.0,
+                    "confidence_pct": 0.0,
+                    "liveness_pct": 0.0,
+                    "spoof_probability_pct": 0.0,
+                    "fraud_score": 0.0,
+                    "risk_score": 0.0,
+                    "quality_score": 0.0,
+                    "threat_level": "UNKNOWN",
+                    "identity_status": "PENDING",
+                    "fraud_detection": {},
+                    "passive_liveness": {
+                        "blink_detected": False,
+                        "head_motion": False,
+                        "depth_valid": False,
+                        "score": 0.0
+                    }
+                }
             }
-        if bbox["w"] < 0.25:
+        if bbox["h"] < 0.18:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
-                "bbox": bbox, "status": "FACE_TOO_SMALL", "reason": "Face too small", "challenge_passed": False, "enrolled_matched": False
+                "bbox": bbox, "status": "FACE_TOO_SMALL", "reason": "Face too small", "challenge_passed": False, "enrolled_matched": False,
+                "enterprise_report": {
+                    "identity_match_pct": 0.0,
+                    "confidence_pct": 0.0,
+                    "liveness_pct": 0.0,
+                    "spoof_probability_pct": 0.0,
+                    "fraud_score": 0.0,
+                    "risk_score": 0.0,
+                    "quality_score": 0.0,
+                    "threat_level": "UNKNOWN",
+                    "identity_status": "PENDING",
+                    "fraud_detection": {},
+                    "passive_liveness": {
+                        "blink_detected": False,
+                        "head_motion": False,
+                        "depth_valid": False,
+                        "score": 0.0
+                    }
+                }
             }
         
         # Blur detection
@@ -1890,14 +1944,50 @@ def _process_demo_frame_inner(
         if laplacian_var < 50:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
-                "bbox": bbox, "status": "BLUR_DETECTED", "reason": "Blur detected", "challenge_passed": False, "enrolled_matched": False
+                "bbox": bbox, "status": "BLUR_DETECTED", "reason": "Blur detected", "challenge_passed": False, "enrolled_matched": False,
+                "enterprise_report": {
+                    "identity_match_pct": 0.0,
+                    "confidence_pct": 0.0,
+                    "liveness_pct": 0.0,
+                    "spoof_probability_pct": 0.0,
+                    "fraud_score": 0.0,
+                    "risk_score": 0.0,
+                    "quality_score": 0.0,
+                    "threat_level": "UNKNOWN",
+                    "identity_status": "PENDING",
+                    "fraud_detection": {},
+                    "passive_liveness": {
+                        "blink_detected": False,
+                        "head_motion": False,
+                        "depth_valid": False,
+                        "score": 0.0
+                    }
+                }
             }
         
         # Confidence check
         if face_confidence < 0.5:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
-                "bbox": bbox, "status": "LOW_CONFIDENCE", "reason": "Face confidence too low", "challenge_passed": False, "enrolled_matched": False
+                "bbox": bbox, "status": "LOW_CONFIDENCE", "reason": "Face confidence too low", "challenge_passed": False, "enrolled_matched": False,
+                "enterprise_report": {
+                    "identity_match_pct": 0.0,
+                    "confidence_pct": 0.0,
+                    "liveness_pct": 0.0,
+                    "spoof_probability_pct": 0.0,
+                    "fraud_score": 0.0,
+                    "risk_score": 0.0,
+                    "quality_score": 0.0,
+                    "threat_level": "UNKNOWN",
+                    "identity_status": "PENDING",
+                    "fraud_detection": {},
+                    "passive_liveness": {
+                        "blink_detected": False,
+                        "head_motion": False,
+                        "depth_valid": False,
+                        "score": 0.0
+                    }
+                }
             }
 
     # 2. EAR & MAR

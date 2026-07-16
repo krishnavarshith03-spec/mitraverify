@@ -187,7 +187,7 @@ export default function BiometricSecurityRadar() {
         <div className="bg-white/5 border border-white/10 rounded-lg p-2 text-center">
           <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Confidence</div>
           <div className="font-mono font-semibold text-sm text-[#00d4ff]">
-            {data ? data.confidence.toFixed(1) : '0.0'}%
+            {data ? Number(data.confidence || 0).toFixed(1) : '0.0'}%
           </div>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-lg p-2 text-center">

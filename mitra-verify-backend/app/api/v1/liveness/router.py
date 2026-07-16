@@ -310,7 +310,7 @@ async def debug_cv():
 async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
     
-    advanced_pool = ['blink_once', 'blink_twice', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up', 'look_down', 'look_left', 'look_right']
+    advanced_pool = ['blink_once', 'open_mouth']
     enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'hold_still']
     
     if data.api_type == "enterprise":

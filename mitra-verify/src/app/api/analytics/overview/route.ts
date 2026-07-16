@@ -177,7 +177,7 @@ export async function GET(req: Request) {
 
   // Build Recent Alerts dynamically based purely on real metrics
   const recentAlerts = [];
-  if (total > 10 && successRate < 80) recentAlerts.push({ type: 'High Failure Rate', message: `Success rate dropped to ${successRate.toFixed(1)}%`, time: new Date().toISOString(), severity: 'warning' });
+  if (total > 10 && successRate < 80) recentAlerts.push({ type: 'High Failure Rate', message: `Success rate dropped to ${Number(successRate || 0).toFixed(1)}%`, time: new Date().toISOString(), severity: 'warning' });
   if (total > 5 && avgLatency > 500) recentAlerts.push({ type: 'API Latency Warning', message: `Average processing time is ${avgLatency}ms`, time: new Date().toISOString(), severity: 'warning' });
   if (securityEvents.deepfake > 5) recentAlerts.push({ type: 'Repeated Spoof Attempts', message: `Multiple deepfakes detected`, time: new Date().toISOString(), severity: 'critical' });
 

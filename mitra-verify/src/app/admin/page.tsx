@@ -484,7 +484,7 @@ export default function AdminPage() {
                       <div>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>System CPU Load</div>
                         <div style={{ fontSize: 18, fontWeight: 700 }}>
-                          {stats?.system.cpu_load.toFixed(2)}
+                          {Number(stats?.system.cpu_load || 0).toFixed(2)}
                         </div>
                       </div>
                       <div>

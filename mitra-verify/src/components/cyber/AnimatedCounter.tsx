@@ -38,13 +38,13 @@ export default function AnimatedCounter({ value, duration = 1.2 }: AnimatedCount
       return Math.round(displayValue).toLocaleString();
     }
     if (hasPercent) {
-      return `${displayValue.toFixed(1)}%`;
+      return `${Number(displayValue || 0).toFixed(1)}%`;
     }
     if (hasMs) {
       return `${Math.round(displayValue)}ms`;
     }
     if (rawString.includes('.')) {
-      return displayValue.toFixed(1);
+      return Number(displayValue || 0).toFixed(1);
     }
     return Math.round(displayValue).toLocaleString();
   })();

@@ -215,7 +215,7 @@ function IdentityScoreRing({ score, label, size = 120, color = '#00ff88' }: { sc
           style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: `2px solid ${displayColor}`, pointerEvents: 'none' }} />
       )}
       <div style={{ textAlign: 'center', zIndex: 1 }}>
-        <div style={{ fontSize: Math.max(18, size / 5), fontWeight: 800, color: displayColor, fontFamily: 'monospace' }}>{score.toFixed(1)}%</div>
+        <div style={{ fontSize: Math.max(18, size / 5), fontWeight: 800, color: displayColor, fontFamily: 'monospace' }}>{Number(score || 0).toFixed(1)}%</div>
         <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{label}</div>
       </div>
     </div>
@@ -229,7 +229,7 @@ function MetricBar({ label, value, max = 100, color = '#00ff88', suffix = '%' }:
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 11, color: barColor, fontWeight: 700, fontFamily: 'monospace' }}>{value.toFixed(1)}{suffix}</span>
+        <span style={{ fontSize: 11, color: barColor, fontWeight: 700, fontFamily: 'monospace' }}>{Number(value || 0).toFixed(1)}{suffix}</span>
       </div>
       <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} style={{ height: '100%', borderRadius: 2, background: `linear-gradient(90deg, ${barColor}88, ${barColor})` }} />
@@ -302,7 +302,7 @@ function ThreatRadarWidget({ spoofScore, color }: { spoofScore: number; color: s
       <div style={{ zIndex: 1, textAlign: 'center' }}>
         <div style={{ fontSize: 8, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Threat Radar</div>
         <div style={{ fontSize: 16, fontWeight: 800, color, fontFamily: 'monospace' }}>
-          {(spoofScore * 100).toFixed(0)}%
+          {Number((spoofScore * 100) || 0).toFixed(0)}%
         </div>
       </div>
     </div>
@@ -1368,7 +1368,7 @@ export default function EnterpriseDemoPage() {
               <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
                 <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
                 <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
-                  {(spoofScore * 100).toFixed(1)}%
+                  {Number((spoofScore * 100) || 0).toFixed(1)}%
                 </span>
               </div>
               </div>
@@ -1522,13 +1522,13 @@ export default function EnterpriseDemoPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 {[
-                  { label: 'Identity Match', value: `${enterpriseReport.identity_match_pct.toFixed(2)}%`, color: '#00ff88' },
-                  { label: 'Confidence', value: `${enterpriseReport.confidence_pct.toFixed(2)}%`, color: '#00d4ff' },
-                  { label: 'Liveness', value: `${enterpriseReport.liveness_pct.toFixed(2)}%`, color: '#00ff88' },
-                  { label: 'Spoof Probability', value: `${enterpriseReport.spoof_probability_pct.toFixed(2)}%`, color: enterpriseReport.spoof_probability_pct > 20 ? '#ff3366' : '#00ff88' },
-                  { label: 'Fraud Score', value: `${enterpriseReport.fraud_score.toFixed(2)}%`, color: enterpriseReport.fraud_score > 20 ? '#ff3366' : '#00ff88' },
-                  { label: 'Risk Score', value: `${enterpriseReport.risk_score.toFixed(2)}%`, color: enterpriseReport.risk_score > 30 ? '#ffb800' : '#00ff88' },
-                  { label: 'Quality Score', value: `${enterpriseReport.quality_score.toFixed(2)}%`, color: '#00d4ff' },
+                  { label: 'Identity Match', value: `${Number(enterpriseReport.identity_match_pct || 0).toFixed(2)}%`, color: '#00ff88' },
+                  { label: 'Confidence', value: `${Number(enterpriseReport.confidence_pct || 0).toFixed(2)}%`, color: '#00d4ff' },
+                  { label: 'Liveness', value: `${Number(enterpriseReport.liveness_pct || 0).toFixed(2)}%`, color: '#00ff88' },
+                  { label: 'Spoof Probability', value: `${Number(enterpriseReport.spoof_probability_pct || 0).toFixed(2)}%`, color: enterpriseReport.spoof_probability_pct > 20 ? '#ff3366' : '#00ff88' },
+                  { label: 'Fraud Score', value: `${Number(enterpriseReport.fraud_score || 0).toFixed(2)}%`, color: enterpriseReport.fraud_score > 20 ? '#ff3366' : '#00ff88' },
+                  { label: 'Risk Score', value: `${Number(enterpriseReport.risk_score || 0).toFixed(2)}%`, color: enterpriseReport.risk_score > 30 ? '#ffb800' : '#00ff88' },
+                  { label: 'Quality Score', value: `${Number(enterpriseReport.quality_score || 0).toFixed(2)}%`, color: '#00d4ff' },
                   { label: 'Verification Time', value: `${(sessionTime)}s`, color: '#94a3b8' },
                 ].map(item => (
                   <div key={item.label} style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1567,7 +1567,7 @@ export default function EnterpriseDemoPage() {
                   ))}
                 </div>
                 <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#00d4ff', fontFamily: 'monospace' }}>
-                  Score: {enterpriseReport.passive_liveness.score.toFixed(1)}%
+                  Score: {Number(enterpriseReport.passive_liveness.score || 0).toFixed(1)}%
                 </div>
               </div>
 

@@ -82,7 +82,7 @@ export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean 
                     <span className="text-[10px] text-slate-500 font-mono tracking-widest">{format(new Date(item.timestamp), 'HH:mm:ss')}</span>
                   </div>
                   <div className="flex justify-between items-baseline mt-0.5">
-                    <span className="text-[10px] text-slate-400 font-mono">conf: {(item.confidence * 100).toFixed(1)}%</span>
+                    <span className="text-[10px] text-slate-400 font-mono">conf: {Number((item.confidence * 100) || 0).toFixed(1)}%</span>
                     <span className="text-[10px] text-slate-500 font-mono tracking-wider">{item.ip}</span>
                   </div>
                 </div>

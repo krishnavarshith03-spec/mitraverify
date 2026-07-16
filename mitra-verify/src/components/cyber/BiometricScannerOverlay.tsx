@@ -135,7 +135,7 @@ export default function BiometricScannerOverlay({
             letterSpacing: '0.05em',
             boxShadow: `0 0 10px ${activeColor}30`
           }}>
-            FACE MATCH: {(confidence * 100).toFixed(0)}%
+            FACE MATCH: {Number((confidence * 100) || 0).toFixed(0)}%
           </div>
         </div>
       )}
@@ -164,11 +164,11 @@ export default function BiometricScannerOverlay({
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
           <span style={{ opacity: 0.6 }}>EAR (EYES):</span>
-          <span>{ear.toFixed(3)}</span>
+          <span>{Number(ear || 0).toFixed(3)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
           <span style={{ opacity: 0.6 }}>MAR (MOUTH):</span>
-          <span>{mar.toFixed(3)}</span>
+          <span>{Number(mar || 0).toFixed(3)}</span>
         </div>
       </div>
 

@@ -120,15 +120,15 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
         <div>Tracking State: <span style={{ color: '#fff' }}>{telemetry.trackingState}</span></div>
         <div>Landmarks: <span style={{ color: '#fff' }}>{telemetry.landmarkCount}/478</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px' }}>
-          <div>Blink EAR: <span style={{ color: '#fff' }}>{telemetry.ear.toFixed(3)}</span></div>
+          <div>Blink EAR: <span style={{ color: '#fff' }}>{Number(telemetry.ear || 0).toFixed(3)}</span></div>
           <div>Blinking: <span style={{ color: telemetry.blinkDetected ? '#0f0' : '#fff' }}>{telemetry.blinkDetected ? 'YES' : 'NO'}</span></div>
-          <div>Mouth MAR: <span style={{ color: '#fff' }}>{telemetry.mar.toFixed(3)}</span></div>
+          <div>Mouth MAR: <span style={{ color: '#fff' }}>{Number(telemetry.mar || 0).toFixed(3)}</span></div>
           <div>Mouth Open: <span style={{ color: telemetry.mouthOpen ? '#0f0' : '#fff' }}>{telemetry.mouthOpen ? 'YES' : 'NO'}</span></div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', marginTop: '4px' }}>
-          <div>Y: <span style={{ color: '#fff' }}>{telemetry.yaw.toFixed(1)}°</span></div>
-          <div>P: <span style={{ color: '#fff' }}>{telemetry.pitch.toFixed(1)}°</span></div>
-          <div>R: <span style={{ color: '#fff' }}>{telemetry.roll.toFixed(1)}°</span></div>
+          <div>Y: <span style={{ color: '#fff' }}>{Number(telemetry.yaw || 0).toFixed(1)}°</span></div>
+          <div>P: <span style={{ color: '#fff' }}>{Number(telemetry.pitch || 0).toFixed(1)}°</span></div>
+          <div>R: <span style={{ color: '#fff' }}>{Number(telemetry.roll || 0).toFixed(1)}°</span></div>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
         <div>Verification State: <span style={{ color: '#0f0', fontWeight: 'bold' }}>{telemetry.verificationState}</span></div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
           <span>Liveness Score:</span>
-          <span style={{ color: telemetry.livenessScore > 0.5 ? '#0f0' : '#f00' }}>{(telemetry.livenessScore * 100).toFixed(1)}%</span>
+          <span style={{ color: telemetry.livenessScore > 0.5 ? '#0f0' : '#f00' }}>{Number((telemetry.livenessScore * 100) || 0).toFixed(1)}%</span>
         </div>
         <div style={{ width: '100%', height: '4px', backgroundColor: '#333', marginTop: '2px' }}>
           <div style={{ width: `${telemetry.livenessScore * 100}%`, height: '100%', backgroundColor: telemetry.livenessScore > 0.5 ? '#0f0' : '#f00' }} />
@@ -146,7 +146,7 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
         
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
           <span>Spoof Risk:</span>
-          <span style={{ color: telemetry.spoofScore > 0.5 ? '#f00' : '#0f0' }}>{(telemetry.spoofScore * 100).toFixed(1)}%</span>
+          <span style={{ color: telemetry.spoofScore > 0.5 ? '#f00' : '#0f0' }}>{Number((telemetry.spoofScore * 100) || 0).toFixed(1)}%</span>
         </div>
         <div style={{ width: '100%', height: '4px', backgroundColor: '#333', marginTop: '2px' }}>
           <div style={{ width: `${telemetry.spoofScore * 100}%`, height: '100%', backgroundColor: telemetry.spoofScore > 0.5 ? '#f00' : '#0f0' }} />
@@ -155,11 +155,11 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
         {telemetry.fraudDetection && (
            <div style={{ marginTop: '8px', padding: '4px', backgroundColor: 'rgba(255,0,0,0.1)', border: '1px solid rgba(255,0,0,0.3)', fontSize: '10px' }}>
              <div style={{ color: '#ff4444', marginBottom: '2px', fontWeight: 'bold' }}>Sub-Signals:</div>
-             {telemetry.fraudDetection.printed_photo?.detected && <div>[!] Printed Photo ({telemetry.fraudDetection.printed_photo.confidence.toFixed(2)})</div>}
-             {telemetry.fraudDetection.replay_attack?.detected && <div>[!] Screen Replay ({telemetry.fraudDetection.replay_attack.confidence.toFixed(2)})</div>}
-             {telemetry.fraudDetection.deepfake?.detected && <div>[!] Jitter/Deepfake ({telemetry.fraudDetection.deepfake.confidence.toFixed(2)})</div>}
-             {telemetry.fraudDetection.ai_generated?.detected && <div>[!] AI Symmetry ({telemetry.fraudDetection.ai_generated.confidence.toFixed(2)})</div>}
-             {telemetry.fraudDetection.screen_reflection?.detected && <div>[!] Reflection ({telemetry.fraudDetection.screen_reflection.confidence.toFixed(2)})</div>}
+             {telemetry.fraudDetection.printed_photo?.detected && <div>[!] Printed Photo ({Number(telemetry.fraudDetection.printed_photo.confidence || 0).toFixed(2)})</div>}
+             {telemetry.fraudDetection.replay_attack?.detected && <div>[!] Screen Replay ({Number(telemetry.fraudDetection.replay_attack.confidence || 0).toFixed(2)})</div>}
+             {telemetry.fraudDetection.deepfake?.detected && <div>[!] Jitter/Deepfake ({Number(telemetry.fraudDetection.deepfake.confidence || 0).toFixed(2)})</div>}
+             {telemetry.fraudDetection.ai_generated?.detected && <div>[!] AI Symmetry ({Number(telemetry.fraudDetection.ai_generated.confidence || 0).toFixed(2)})</div>}
+             {telemetry.fraudDetection.screen_reflection?.detected && <div>[!] Reflection ({Number(telemetry.fraudDetection.screen_reflection.confidence || 0).toFixed(2)})</div>}
            </div>
         )}
       </div>
@@ -167,9 +167,9 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
       {/* Identity */}
       <div style={{ marginBottom: '12px' }}>
         <div style={{ color: '#aaa', fontSize: '10px', textTransform: 'uppercase', marginBottom: '4px' }}>Identity</div>
-        <div>Confidence: <span style={{ color: '#fff' }}>{(telemetry.confidence * 100).toFixed(1)}%</span></div>
-        <div>Cosine Sim: <span style={{ color: '#fff' }}>{(telemetry.cosineSimilarity * 100).toFixed(1)}%</span></div>
-        <div>Identity Match: <span style={{ color: telemetry.identityScore > 0.75 ? '#0f0' : '#faa' }}>{(telemetry.identityScore * 100).toFixed(1)}%</span></div>
+        <div>Confidence: <span style={{ color: '#fff' }}>{Number((telemetry.confidence * 100) || 0).toFixed(1)}%</span></div>
+        <div>Cosine Sim: <span style={{ color: '#fff' }}>{Number((telemetry.cosineSimilarity * 100) || 0).toFixed(1)}%</span></div>
+        <div>Identity Match: <span style={{ color: telemetry.identityScore > 0.75 ? '#0f0' : '#faa' }}>{Number((telemetry.identityScore * 100) || 0).toFixed(1)}%</span></div>
       </div>
 
       {/* Challenge Progress */}
@@ -181,7 +181,7 @@ export function AdvancedDebugPanel({ telemetry, onDownloadReport }: AdvancedDebu
           <div style={{ width: '100%', height: '4px', backgroundColor: '#333', marginTop: '2px' }}>
             <div style={{ width: `${telemetry.challengeProgress}%`, height: '100%', backgroundColor: '#00ffcc' }} />
           </div>
-          <div>Timeout In: <span style={{ color: '#fff' }}>{telemetry.challengeTimeout.toFixed(1)}s</span></div>
+          <div>Timeout In: <span style={{ color: '#fff' }}>{Number(telemetry.challengeTimeout || 0).toFixed(1)}s</span></div>
         </div>
       )}
 

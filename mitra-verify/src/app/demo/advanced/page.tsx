@@ -17,15 +17,14 @@ import { TestModeMatrix } from '@/components/developer/TestModeMatrix';
 const CHALLENGE_POOL = [
   { id: 'face_centered', label: 'Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },
   { id: 'blink_once', label: 'Blink Once', instruction: 'Blink your eyes once slowly', icon: '👁️' },
-  { id: 'open_mouth', label: 'Open Mouth', instruction: 'Open your mouth wide', icon: '👄' },
-  { id: 'head_rotation', label: 'Head Rotation', instruction: 'Slowly turn/rotate your head', icon: '🔄' }
+  { id: 'open_mouth', label: 'Open Mouth', instruction: 'Open your mouth wide', icon: '👄' }
 ];
 
 const SpoofGauge = ({ value, label, color }: { value: number; label: string; color: string }) => (
   <div style={{ marginBottom: 16 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
       <span style={{ fontSize: 12, color: '#94a3b8' }}>{label}</span>
-      <span style={{ fontSize: 12, fontWeight: 600, color, fontFamily: 'monospace' }}>{(value * 100).toFixed(1)}%</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color, fontFamily: 'monospace' }}>{Number((value * 100) || 0).toFixed(1)}%</span>
     </div>
   </div>
 );
@@ -762,9 +761,9 @@ export default function AdvancedDemoPage() {
                   display: 'flex', flexDirection: 'column', gap: 4
                 }}>
                   <div style={{ fontWeight: 'bold', color: 'var(--brand-cyan)', marginBottom: 4, textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.05em' }}>Head Pose</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Yaw:</span> <span style={{ color: Math.abs(yaw) > 15 ? '#00ff88' : '#fff' }}>{yaw.toFixed(1)}°</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Pitch:</span> <span>{pitch.toFixed(1)}°</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Roll:</span> <span>{roll.toFixed(1)}°</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Yaw:</span> <span style={{ color: Math.abs(yaw) > 15 ? '#00ff88' : '#fff' }}>{Number(yaw || 0).toFixed(1)}°</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Pitch:</span> <span>{Number(pitch || 0).toFixed(1)}°</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><span>Roll:</span> <span>{Number(roll || 0).toFixed(1)}°</span></div>
                 </div>
               )}
 
@@ -779,7 +778,7 @@ export default function AdvancedDemoPage() {
                   boxShadow: '0 4px 15px rgba(255, 51, 102, 0.4)'
                 }}>
                   <AlertCircle size={16} />
-                  <span>Face missing: {faceMissingCountdown.toFixed(1)}s / 5s</span>
+                  <span>Face missing: {Number(faceMissingCountdown || 0).toFixed(1)}s / 5s</span>
                 </div>
               )}
 
@@ -857,11 +856,11 @@ export default function AdvancedDemoPage() {
                           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 24 }}>
                             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px 20px', borderRadius: 12 }}>
                               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 4, textTransform: 'uppercase' }}>Confidence</div>
-                              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{(confidence * 100).toFixed(0)}%</div>
+                              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{Number((confidence * 100) || 0).toFixed(0)}%</div>
                             </div>
                             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px 20px', borderRadius: 12 }}>
                               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 4, textTransform: 'uppercase' }}>Proc. Time</div>
-                              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{processingTime.toFixed(0)}ms</div>
+                              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{Number(processingTime || 0).toFixed(0)}ms</div>
                             </div>
                           </div>
                         </>

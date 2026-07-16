@@ -381,7 +381,7 @@ function Scene({ phase, isMobile }: { phase: ScanPhase; isMobile: boolean }) {
       const currentFps = 1000 / avgDelta;
       if (currentFps < 45 && !lowPerformance) {
         setLowPerformance(true);
-        console.warn(`[HeroScene] Performance dropped below 45 FPS (${currentFps.toFixed(1)}). Disabling expensive Three.js bloom post-processing.`);
+        console.warn(`[HeroScene] Performance dropped below 45 FPS (${Number(currentFps || 0).toFixed(1)}). Disabling expensive Three.js bloom post-processing.`);
       }
     }
   });

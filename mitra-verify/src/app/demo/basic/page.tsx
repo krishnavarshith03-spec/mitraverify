@@ -91,11 +91,11 @@ function ResultCard({ result, reason, confidence, processingTime, onRestart }: {
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', marginBottom: 32 }}>
           <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px 24px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Confidence</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{(confidence * 100).toFixed(0)}%</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{Number((confidence * 100) || 0).toFixed(0)}%</div>
           </div>
           <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px 24px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Processing Time</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{processingTime.toFixed(0)}ms</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{Number(processingTime || 0).toFixed(0)}ms</div>
           </div>
         </div>
       )}
@@ -1213,7 +1213,7 @@ Result: ${data.result || 'pending'}
                   boxShadow: '0 4px 15px rgba(255, 51, 102, 0.4)'
                 }}>
                   <AlertCircle size={16} />
-                  <span>Face missing: {faceMissingCountdown.toFixed(1)}s / 5s</span>
+                  <span>Face missing: {Number(faceMissingCountdown || 0).toFixed(1)}s / 5s</span>
                 </div>
               )}
 
@@ -1318,7 +1318,7 @@ Result: ${data.result || 'pending'}
               {/* Session Status Tag */}
               {streaming && (
                 <div style={{ position: 'absolute', bottom: 12, left: 12, fontFamily: 'monospace', fontSize: 11, color: '#475569' }}>
-                  {fps} FPS · Proc: {processingTime.toFixed(0)}ms
+                  {fps} FPS · Proc: {Number(processingTime || 0).toFixed(0)}ms
                 </div>
               )}
               </>
@@ -1386,12 +1386,12 @@ Result: ${data.result || 'pending'}
           <div className="lg:col-span-4 flex flex-col gap-4">
             {/* Score cards */}
             <div className="grid grid-cols-2 gap-3">
-              <MetricCard label="Confidence" value={streaming ? `${(confidence * 100).toFixed(0)}` : '0'} unit="%" color="#00d4ff" icon={Activity} />
-              <MetricCard label="Liveness" value={streaming ? `${(livenessScore * 100).toFixed(0)}` : '0'} unit="%" color="#00ff88" icon={Eye} />
+              <MetricCard label="Confidence" value={streaming ? `${Number((confidence * 100) || 0).toFixed(0)}` : '0'} unit="%" color="#00d4ff" icon={Activity} />
+              <MetricCard label="Liveness" value={streaming ? `${Number((livenessScore * 100) || 0).toFixed(0)}` : '0'} unit="%" color="#00ff88" icon={Eye} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <MetricCard label="Proc. Time" value={streaming ? `${processingTime.toFixed(0)}` : '0'} unit="ms" color="#ffb800" icon={Clock} />
-              <MetricCard label="Face Visible" value={streaming ? `${faceVisibleDuration.toFixed(1)}` : '0.0'} unit="s" color="#7c3aed" icon={Zap} />
+              <MetricCard label="Proc. Time" value={streaming ? `${Number(processingTime || 0).toFixed(0)}` : '0'} unit="ms" color="#ffb800" icon={Clock} />
+              <MetricCard label="Face Visible" value={streaming ? `${Number(faceVisibleDuration || 0).toFixed(1)}` : '0.0'} unit="s" color="#7c3aed" icon={Zap} />
             </div>
 
             {/* Instruction Banner */}
@@ -1492,24 +1492,24 @@ Result: ${data.result || 'pending'}
                     <div>Backend Status: <span style={{ color: backendHealthy ? 'var(--brand-green)' : 'var(--brand-red)' }}>{backendHealthy ? 'ONLINE' : 'OFFLINE'}</span></div>
                     <div>Authentication Status: <span style={{ color: user ? 'var(--brand-green)' : 'var(--brand-red)' }}>{user ? 'AUTHENTICATED' : 'UNAUTHENTICATED'}</span></div>
                     <div>Current JWT: <span style={{ color: '#f8fafc' }}>{jwtToken ? `${jwtToken.substring(0, 10)}...${jwtToken.substring(jwtToken.length - 10)}` : 'NULL'}</span></div>
-                    <div>API Latency: <span style={{ color: '#f8fafc' }}>{processingTime.toFixed(0)}ms</span></div>
+                    <div>API Latency: <span style={{ color: '#f8fafc' }}>{Number(processingTime || 0).toFixed(0)}ms</span></div>
                     <div>Environment: <span style={{ color: '#f8fafc' }}>Production</span></div>
                     
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
                     <div style={{ color: 'var(--brand-cyan)', fontWeight: 'bold' }}>PIPELINE METRICS:</div>
                     <div>Detected Faces: <span style={{ color: '#f8fafc' }}>{detectedFaces}</span></div>
                     <div>Landmark Count: <span style={{ color: '#f8fafc' }}>{landmarkCount}</span></div>
-                    <div>Face Confidence: <span style={{ color: '#f8fafc' }}>{(confidence * 100).toFixed(1)}%</span></div>
-                    <div>Liveness Score: <span style={{ color: '#f8fafc' }}>{(livenessScore * 100).toFixed(1)}%</span></div>
-                    <div>Spoof Risk: <span style={{ color: '#f8fafc' }}>{(spoofScore * 100).toFixed(1)}%</span></div>
+                    <div>Face Confidence: <span style={{ color: '#f8fafc' }}>{Number((confidence * 100) || 0).toFixed(1)}%</span></div>
+                    <div>Liveness Score: <span style={{ color: '#f8fafc' }}>{Number((livenessScore * 100) || 0).toFixed(1)}%</span></div>
+                    <div>Spoof Risk: <span style={{ color: '#f8fafc' }}>{Number((spoofScore * 100) || 0).toFixed(1)}%</span></div>
                     <div>Blink Count: <span style={{ color: '#f8fafc' }}>{blinkCount}</span></div>
-                    <div>Eye Aspect Ratio: <span style={{ color: '#f8fafc' }}>{ear.toFixed(4)}</span></div>
-                    <div>Mouth Ratio: <span style={{ color: '#f8fafc' }}>{mar.toFixed(4)}</span></div>
-                    <div>Jaw Ratio: <span style={{ color: '#f8fafc' }}>{jawRatio.toFixed(4)}</span></div>
-                    <div>Yaw: <span style={{ color: '#f8fafc' }}>{yaw.toFixed(2)}°</span></div>
-                    <div>Pitch: <span style={{ color: '#f8fafc' }}>{pitch.toFixed(2)}°</span></div>
-                    <div>Roll: <span style={{ color: '#f8fafc' }}>{roll.toFixed(2)}°</span></div>
-                    <div>Face Visible Time: <span style={{ color: '#f8fafc' }}>{faceVisibleDuration.toFixed(1)}s</span></div>
+                    <div>Eye Aspect Ratio: <span style={{ color: '#f8fafc' }}>{Number(ear || 0).toFixed(4)}</span></div>
+                    <div>Mouth Ratio: <span style={{ color: '#f8fafc' }}>{Number(mar || 0).toFixed(4)}</span></div>
+                    <div>Jaw Ratio: <span style={{ color: '#f8fafc' }}>{Number(jawRatio || 0).toFixed(4)}</span></div>
+                    <div>Yaw: <span style={{ color: '#f8fafc' }}>{Number(yaw || 0).toFixed(2)}°</span></div>
+                    <div>Pitch: <span style={{ color: '#f8fafc' }}>{Number(pitch || 0).toFixed(2)}°</span></div>
+                    <div>Roll: <span style={{ color: '#f8fafc' }}>{Number(roll || 0).toFixed(2)}°</span></div>
+                    <div>Face Visible Time: <span style={{ color: '#f8fafc' }}>{Number(faceVisibleDuration || 0).toFixed(1)}s</span></div>
                     <div>Challenge Progress: <span style={{ color: '#f8fafc' }}>{challengeProgress}%</span></div>
                     
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
@@ -1522,13 +1522,13 @@ Result: ${data.result || 'pending'}
 
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0' }} />
                     <div style={{ color: 'var(--brand-cyan)', fontWeight: 'bold' }}>HEAD ROTATION METRICS:</div>
-                    <div>Raw Yaw: <span style={{ color: '#f8fafc' }}>{rawYaw.toFixed(1)}°</span></div>
-                    <div>Corrected Yaw: <span style={{ color: '#f8fafc' }}>{yaw.toFixed(1)}°</span></div>
+                    <div>Raw Yaw: <span style={{ color: '#f8fafc' }}>{Number(rawYaw || 0).toFixed(1)}°</span></div>
+                    <div>Corrected Yaw: <span style={{ color: '#f8fafc' }}>{Number(yaw || 0).toFixed(1)}°</span></div>
                     <div>Direction: <span style={{ color: '#f8fafc' }}>{yawDirection}</span></div>
-                    <div>Current Yaw: <span style={{ color: '#f8fafc' }}>{yaw.toFixed(1)}°</span></div>
-                    <div>Initial Yaw: <span style={{ color: '#f8fafc' }}>{initialYawState !== null ? `${initialYawState.toFixed(1)}°` : '0.0°'}</span></div>
-                    <div>Rotation Amount: <span style={{ color: '#f8fafc' }}>{rotationAmountState.toFixed(1)}°</span></div>
-                    <div>Rotation: <span style={{ color: '#f8fafc' }}>{rotationAmountState.toFixed(1)}°</span></div>
+                    <div>Current Yaw: <span style={{ color: '#f8fafc' }}>{Number(yaw || 0).toFixed(1)}°</span></div>
+                    <div>Initial Yaw: <span style={{ color: '#f8fafc' }}>{initialYawState !== null ? `${Number(initialYawState || 0).toFixed(1)}°` : '0.0°'}</span></div>
+                    <div>Rotation Amount: <span style={{ color: '#f8fafc' }}>{Number(rotationAmountState || 0).toFixed(1)}°</span></div>
+                    <div>Rotation: <span style={{ color: '#f8fafc' }}>{Number(rotationAmountState || 0).toFixed(1)}°</span></div>
                     <div>Threshold: <span style={{ color: '#f8fafc' }}>12°</span></div>
                     <div>Challenge Status: <span style={{ color: rotationStatus === 'PASS' ? '#00ff88' : '#00d4ff' }}>{rotationStatus}</span></div>
                     <div>Status: <span style={{ color: rotationStatus === 'PASS' ? '#00ff88' : '#00d4ff' }}>{rotationStatus}</span></div>
