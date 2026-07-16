@@ -2169,15 +2169,11 @@ def _process_demo_frame_inner(
                 # Check that it moved at least 10 degrees right
                 challenge_passed = (recent_yaws[-1] - recent_yaws[0]) > 10.0
         elif challenge_type == "look_up":
-            pitches = history["pitch"]
-            if len(pitches) >= 10 and pitch > 10.0:
-                recent_pitches = pitches[-10:]
-                challenge_passed = (recent_pitches[-1] - recent_pitches[0]) > 8.0
+            if pitch > 8.0:
+                challenge_passed = True
         elif challenge_type == "look_down":
-            pitches = history["pitch"]
-            if len(pitches) >= 10 and pitch < -10.0:
-                recent_pitches = pitches[-10:]
-                challenge_passed = (recent_pitches[0] - recent_pitches[-1]) > 8.0
+            if pitch < -8.0:
+                challenge_passed = True
         elif challenge_type == "hold_still":
             yaws = history.get("yaw", [])
             pitches = history.get("pitch", [])
