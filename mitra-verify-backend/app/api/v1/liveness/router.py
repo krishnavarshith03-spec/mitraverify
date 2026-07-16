@@ -230,6 +230,31 @@ class DemoProcessRequest(BaseModel):
     enrolled_embedding: Optional[list[float]] = None
     api_type: Optional[str] = None
 
+@router.get("/debug_cv", tags=["Demo"])
+async def debug_cv():
+    from app.services.cv.mediapipe_engine import MP_AVAILABLE, CV2_AVAILABLE
+    import sys
+    import traceback
+    
+    mp_err = "No error"
+    cv_err = "No error"
+    try:
+        import mediapipe as mp
+    except Exception as e:
+        mp_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+        
+    try:
+        import cv2
+    except Exception as e:
+        cv_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+        
+    return {
+        "MP_AVAILABLE": MP_AVAILABLE,
+        "CV2_AVAILABLE": CV2_AVAILABLE,
+        "mp_import_error": mp_err,
+        "cv_import_error": cv_err
+    }
+
 @router.post("/session/start", tags=["Demo"])
 async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
