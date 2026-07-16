@@ -111,15 +111,23 @@ CHIN = 199
 def b64_to_numpy(image_b64: str) -> Optional[np.ndarray]:
     """Decode a base64 image string to a numpy BGR array."""
     try:
+        print(f"[DIAGNOSTICS] b64_to_numpy called. Raw length: {len(image_b64)}")
         if "," in image_b64:
             image_b64 = image_b64.split(",")[1]
         img_bytes = base64.b64decode(image_b64)
+        print(f"[DIAGNOSTICS] Decoded bytes length: {len(img_bytes)}")
         img = Image.open(BytesIO(img_bytes)).convert("RGB")
+        print(f"[DIAGNOSTICS] PIL Image shape: {img.size}, format: {img.format}, mode: {img.mode}")
         arr = np.array(img)
+        print(f"[DIAGNOSTICS] Numpy array shape: {arr.shape}, dtype: {arr.dtype}")
         if CV2_AVAILABLE:
-            return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+            print("[DIAGNOSTICS] OpenCV RGB to BGR conversion successful.")
+            return bgr
         return arr
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"[DIAGNOSTICS] b64_to_numpy FAILED: {e}\n{traceback.format_exc()}")
         return None
 
 
@@ -1604,12 +1612,19 @@ def _process_demo_frame_inner(
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     
+    # [DIAGNOSTICS] Save first frame to disk for inspection
+    import os
+    if not os.path.exists("/tmp/debug_frame.jpg"):
+        cv2.imwrite("/tmp/debug_frame.jpg", frame)
+        print(f"[DIAGNOSTICS] Saved test frame to /tmp/debug_frame.jpg (size: {w}x{h})")
+    
     t_mediapipe_start = time.perf_counter()
     assert global_face_mesh is not None
     results = global_face_mesh.process(rgb)
     timings["mediapipe_processing"] = (time.perf_counter() - t_mediapipe_start) * 1000
         
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
+    print(f"[DIAGNOSTICS] MediaPipe multi_face_landmarks output: {multi_face_landmarks}")
     if not multi_face_landmarks:
         status_code = "searching_for_face"
         reason_code = "no_face_detected"
