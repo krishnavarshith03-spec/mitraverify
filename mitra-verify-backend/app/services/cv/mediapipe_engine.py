@@ -19,7 +19,8 @@ from PIL import Image  # pyrefly: ignore [missing-import]
 try:
     import cv2  # pyrefly: ignore [missing-import]
     CV2_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"[FATAL] OpenCV Import Error: {e}")
     CV2_AVAILABLE = False
 
 try:
@@ -46,7 +47,8 @@ try:
         mp_face_detection = None
         MP_AVAILABLE = False
         global_face_mesh = None
-except ImportError:
+except ImportError as e:
+    print(f"[FATAL] MediaPipe Import Error: {e}")
     mp_face_mesh = None
     mp_face_detection = None
     MP_AVAILABLE = False
