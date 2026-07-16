@@ -1,19 +1,22 @@
-import { NextResponse } from 'next/server';
-import { verificationEvents } from '@/lib/store';
-
-export const dynamic = 'force-dynamic';
-
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const timeframe = searchParams.get('timeframe') || '24h';
-  
-  const now = Date.now();
-  let cutoff = now - 24 * 60 * 60 * 1000;
-  if (timeframe === '7d') cutoff = now - 7 * 24 * 60 * 60 * 1000;
-  else if (timeframe === '30d') cutoff = now - 30 * 24 * 60 * 60 * 1000;
-  else if (timeframe === '90d') cutoff = now - 90 * 24 * 60 * 60 * 1000;
-
-  const filteredEvents = verificationEvents.filter(ev => new Date(ev.timestamp).getTime() >= cutoff);
+export function transformAnalyticsData(rawOverview: any, rawEvents: any[], timeframe: string = '24h') {
+  // Normalize events from Python backend
+  const filteredEvents = rawEvents.map(ev => ({
+    id: ev.id,
+    timestamp: ev.timestamp,
+    apiType: (ev.apiType || 'basic').charAt(0).toUpperCase() + (ev.apiType || 'basic').slice(1).toLowerCase(),
+    status: ev.status === 'PASS' ? 'VERIFIED' : 
+            ev.status === 'IDENTITY_MATCHED' ? 'IDENTITY MATCHED' :
+            ev.status === 'NO_FACE_DETECTED' ? 'NO FACE DETECTED' :
+            ev.spoofFlag ? 'SPOOF ATTEMPT' : 'FAILED',
+    confidence: ev.confidence || 0,
+    processingTimeMs: ev.processingTimeMs || 0,
+    spoofFlag: !!ev.spoofFlag,
+    faceDetectedFlag: !!ev.faceDetectedFlag,
+    identityMatchedFlag: ev.status === 'IDENTITY_MATCHED',
+    ip: ev.ip || 'Unknown',
+    device: 'Desktop', // Mock device for now if not tracked in DB
+    failureReason: ev.status !== 'PASS' && ev.status !== 'IDENTITY_MATCHED' ? ev.status : null
+  }));
 
   const total = filteredEvents.length;
   let successful = 0;
@@ -40,11 +43,9 @@ export async function GET(req: Request) {
     face_not_found: 0
   };
 
-  // Group events by 10-second intervals for the chart
   const temporalDataMap: Record<string, { time: string, verified: number, failed: number, spoof: number, faceLost: number, multipleFaces: number, count: number, totalLatency: number }> = {};
 
-  // For audit logs, we map the most recent 10 events
-  const auditLogs = filteredEvents.slice(-10).reverse().map(ev => ({
+  const auditLogs = [...filteredEvents].slice(0, 10).map(ev => ({
     id: ev.id,
     timestamp: ev.timestamp,
     action: `Verification via ${ev.apiType} API`,
@@ -56,23 +57,28 @@ export async function GET(req: Request) {
     totalProcessingTime += event.processingTimeMs;
     
     // API Performance
-    if (apiPerformance[event.apiType]) {
-      const perf = apiPerformance[event.apiType];
-      perf.requests++;
-      perf.totalLatency += event.processingTimeMs;
-      perf.lastRequest = event.timestamp;
-      if (event.status === 'VERIFIED' || event.status === 'IDENTITY MATCHED') {
-        perf.pass++;
-      } else if (event.spoofFlag) {
-        perf.spoof++;
-        perf.fail++;
-      } else if (event.status === 'NO FACE DETECTED' || !event.faceDetectedFlag) {
-        perf.faceLost++;
-        perf.fail++;
-      } else {
-        perf.fail++;
-        perf.errors++;
-      }
+    if (!apiPerformance[event.apiType]) {
+        apiPerformance[event.apiType] = { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null };
+    }
+    
+    const perf = apiPerformance[event.apiType];
+    perf.requests++;
+    perf.totalLatency += event.processingTimeMs;
+    if (!perf.lastRequest || new Date(event.timestamp) > new Date(perf.lastRequest)) {
+        perf.lastRequest = event.timestamp;
+    }
+    
+    if (event.status === 'VERIFIED' || event.status === 'IDENTITY MATCHED') {
+      perf.pass++;
+    } else if (event.spoofFlag) {
+      perf.spoof++;
+      perf.fail++;
+    } else if (event.status === 'NO FACE DETECTED' || !event.faceDetectedFlag) {
+      perf.faceLost++;
+      perf.fail++;
+    } else {
+      perf.fail++;
+      perf.errors++;
     }
     
     // Device Analytics
@@ -93,7 +99,6 @@ export async function GET(req: Request) {
 
     if (event.spoofFlag || event.status === 'SPOOF ATTEMPT') {
       spoof++;
-      // We don't have deepfake vs replay stored explicitly, so we bucket them under deepfake for real threat logs
       securityEvents.deepfake++; 
     }
     
@@ -110,17 +115,15 @@ export async function GET(req: Request) {
       identityMatches++;
     }
 
-    // Chart grouping based on timeframe
+    // Chart grouping
     const date = new Date(event.timestamp);
     let timeKey = '';
     
     if (timeframe === '24h') {
-      // Group by minute:seconds rounded to nearest 10s for live-like view
       const seconds = date.getSeconds();
       const roundedSeconds = Math.floor(seconds / 10) * 10;
       timeKey = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${roundedSeconds.toString().padStart(2, '0')}`;
     } else {
-      // Group by YYYY-MM-DD
       timeKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
@@ -142,10 +145,6 @@ export async function GET(req: Request) {
     } else {
        temporalDataMap[timeKey].failed++;
     }
-    
-    if (event.multipleFaces) {
-       temporalDataMap[timeKey].multipleFaces++;
-    }
   }
 
   const successRate = total > 0 ? (successful / total) * 100 : 0;
@@ -159,12 +158,11 @@ export async function GET(req: Request) {
     faceLost: t.faceLost,
     multipleFaces: t.multipleFaces,
     latency: t.count > 0 ? Math.round(t.totalLatency / t.count) : 0,
-    throughput: t.count * 360 // Extrapolate 10s count to req/hr
+    throughput: t.count * 360 
   }));
 
   const avgLatency = total > 0 ? Math.round(totalProcessingTime / total) : 0;
   
-  // Build Top Failure Reasons
   const totalFailures = Object.values(failureReasonCounts).reduce((a,b) => a+b, 0);
   const topFailureReasons = Object.entries(failureReasonCounts)
     .map(([reason, count]) => ({
@@ -175,13 +173,11 @@ export async function GET(req: Request) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Build Recent Alerts dynamically based purely on real metrics
   const recentAlerts = [];
   if (total > 10 && successRate < 80) recentAlerts.push({ type: 'High Failure Rate', message: `Success rate dropped to ${Number(successRate || 0).toFixed(1)}%`, time: new Date().toISOString(), severity: 'warning' });
   if (total > 5 && avgLatency > 500) recentAlerts.push({ type: 'API Latency Warning', message: `Average processing time is ${avgLatency}ms`, time: new Date().toISOString(), severity: 'warning' });
   if (securityEvents.deepfake > 5) recentAlerts.push({ type: 'Repeated Spoof Attempts', message: `Multiple deepfakes detected`, time: new Date().toISOString(), severity: 'critical' });
 
-  // Real Verification Timeline (Heatmap)
   const heatmapCounts: Record<string, number> = {};
   for (let i = 0; i < 24; i++) heatmapCounts[`${i.toString().padStart(2, '0')}:00`] = 0;
   
@@ -195,45 +191,45 @@ export async function GET(req: Request) {
     volume: heatmapCounts[k]
   }));
 
-  return NextResponse.json({
-    data: {
-      executive_overview: {
-        total_verifications: total,
-        successful_verifications: successful,
-        failed_verifications: failed,
-        spoof_attempts_blocked: spoof,
-        identity_matches: identityMatches,
-        face_enrollments: apiPerformance['Enterprise'].requests > 0 ? Math.floor(apiPerformance['Enterprise'].requests * 0.4) : 0,
-        webhook_deliveries: total,
-        face_lost_events: noFace,
-        avg_processing_time_ms: avgProcessingTime || 0,
-        active_api_keys: 1,
+  // Ensure we use the raw overview directly from DB as the primary source of truth,
+  // falling back to local aggregations if rawOverview is missing.
+  return {
+    executive_overview: {
+      total_verifications: rawOverview?.total_requests ?? total,
+      successful_verifications: rawOverview?.successful_verifications ?? successful,
+      failed_verifications: rawOverview?.failed_verifications ?? failed,
+      spoof_attempts_blocked: rawOverview?.spoof_attempts ?? spoof,
+      identity_matches: rawOverview?.identity_matches ?? identityMatches,
+      face_enrollments: apiPerformance['Enterprise'].requests > 0 ? Math.floor(apiPerformance['Enterprise'].requests * 0.4) : 0,
+      webhook_deliveries: rawOverview?.total_requests ?? total,
+      face_lost_events: rawOverview?.no_face_detected ?? noFace,
+      avg_processing_time_ms: rawOverview?.avg_processing_time ?? (avgProcessingTime || 0),
+      active_api_keys: rawOverview?.active_api_keys ?? 1,
+    },
+    analytics_chart: temporalData,
+    security_events: securityEvents,
+    api_performance: apiPerformance,
+    audit_logs: auditLogs,
+    bottom_analytics: {
+      face_quality: {
+        average: 0,
+        low_light: 0,
+        blur: 0,
+        occlusion: 0,
+        head_rotation_fail: 0
       },
-      analytics_chart: temporalData,
-      security_events: securityEvents,
-      api_performance: apiPerformance,
-      audit_logs: auditLogs,
-      bottom_analytics: {
-        face_quality: {
-          average: 0,
-          low_light: 0,
-          blur: 0,
-          occlusion: 0,
-          head_rotation_fail: 0
-        },
-        device_analytics: deviceAnalytics,
-        country_analytics: []
-      },
-      system_health: {
-        face_detection: 'Operational',
-        liveness_engine: 'Operational',
-        anti_spoof_engine: 'Operational',
-        identity_engine: 'Operational',
-        api_gateway: 'Operational'
-      },
-      top_failure_reasons: topFailureReasons,
-      recent_alerts: recentAlerts,
-      timeline_heatmap: timelineHeatmap
-    }
-  });
+      device_analytics: deviceAnalytics,
+      country_analytics: []
+    },
+    system_health: {
+      face_detection: 'Operational',
+      liveness_engine: 'Operational',
+      anti_spoof_engine: 'Operational',
+      identity_engine: 'Operational',
+      api_gateway: 'Operational'
+    },
+    top_failure_reasons: topFailureReasons,
+    recent_alerts: recentAlerts,
+    timeline_heatmap: timelineHeatmap
+  };
 }

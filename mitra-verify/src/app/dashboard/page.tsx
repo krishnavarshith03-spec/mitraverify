@@ -15,6 +15,8 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import { analyticsAPI } from '@/lib/api';
+import { transformAnalyticsData } from '@/lib/analyticsTransformer';
 
 // --- Types ---
 interface ApiPerf {
@@ -99,14 +101,37 @@ export default function DashboardPage() {
   const fetchData = async () => {
     try {
       const [overviewRes, eventsRes] = await Promise.all([
-        fetch(`/api/analytics/overview?timeframe=${timeframe}`),
-        fetch('/api/events')
+        analyticsAPI.overview().catch(() => ({ data: null })),
+        analyticsAPI.events(100).catch(() => ({ data: [] }))
       ]);
-      const overviewData = await overviewRes.json();
-      const eventsData = await eventsRes.json();
       
-      setTelemetry(overviewData.data);
-      setEvents(Array.isArray(eventsData) ? eventsData : []);
+      const rawOverview = overviewRes.data;
+      const rawEvents = eventsRes.data || [];
+      
+      const transformedData = transformAnalyticsData(rawOverview, rawEvents, timeframe);
+      
+      setTelemetry(transformedData as any);
+      
+      // Update events for the search/table below
+      const mappedEvents = rawEvents.map((ev: any) => ({
+        id: ev.id?.toString() || 'Unknown',
+        timestamp: ev.timestamp,
+        apiType: (ev.apiType || 'basic').charAt(0).toUpperCase() + (ev.apiType || 'basic').slice(1).toLowerCase(),
+        status: ev.status === 'PASS' ? 'VERIFIED' : 
+                ev.status === 'IDENTITY_MATCHED' ? 'IDENTITY MATCHED' :
+                ev.status === 'NO_FACE_DETECTED' ? 'NO FACE DETECTED' :
+                ev.spoofFlag ? 'SPOOF ATTEMPT' : 'FAILED',
+        confidence: ev.confidence || 0,
+        processingTimeMs: ev.processingTimeMs || 0,
+        spoofFlag: !!ev.spoofFlag,
+        faceDetectedFlag: !!ev.faceDetectedFlag,
+        identityMatchedFlag: ev.status === 'IDENTITY_MATCHED',
+        user: ev.user || 'Unknown',
+        device: 'Desktop',
+        ip: ev.ip || 'Unknown'
+      }));
+      setEvents(mappedEvents);
+      
       setLastUpdate('Just now');
       
     } catch (err) {

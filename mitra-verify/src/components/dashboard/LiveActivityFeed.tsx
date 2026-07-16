@@ -12,16 +12,28 @@ interface FeedItem {
   ip: string;
 }
 
+import { analyticsAPI } from '@/lib/api';
+
 export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean }) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch('/api/events');
-        const data = await res.json();
+        const res = await analyticsAPI.events(8).catch(() => ({ data: [] }));
+        const data = res.data;
         if (Array.isArray(data)) {
-          setFeed(data.slice(0, 8)); // keep top 8
+          const mappedFeed = data.map(ev => ({
+            id: ev.id?.toString() || Math.random().toString(),
+            timestamp: ev.timestamp,
+            status: ev.status === 'PASS' ? 'VERIFIED' : 
+                    ev.status === 'IDENTITY_MATCHED' ? 'IDENTITY MATCHED' :
+                    ev.status === 'NO_FACE_DETECTED' ? 'NO FACE DETECTED' :
+                    ev.spoofFlag ? 'SPOOF ATTEMPT' : 'FAILED',
+            confidence: ev.confidence || 0,
+            ip: ev.ip || 'Unknown'
+          }));
+          setFeed(mappedFeed.slice(0, 8)); // keep top 8
         }
       } catch (err) {
         console.error('Failed to fetch live events', err);

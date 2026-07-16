@@ -146,6 +146,7 @@ export const livenessAPI = {
 export const analyticsAPI = {
   overview: () => api.get('/analytics/overview'),
   usage: (days?: number) => api.get('/analytics/usage'),
+  events: (limit?: number) => api.get(`/analytics/events?limit=${limit || 100}`),
   logVerificationEvent: (data: {
     apiType: string;
     status: string;

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { analyticsAPI } from '@/lib/api';
 
 export default function BiometricSecurityRadar() {
   const [data, setData] = useState<{
@@ -15,8 +16,8 @@ export default function BiometricSecurityRadar() {
   useEffect(() => {
     const fetchRadarData = async () => {
       try {
-        const res = await fetch('/api/events');
-        const events = await res.json();
+        const res = await analyticsAPI.events(1).catch(() => ({ data: [] }));
+        const events = res.data;
         if (Array.isArray(events) && events.length > 0) {
           const ev = events[0];
           setData({
