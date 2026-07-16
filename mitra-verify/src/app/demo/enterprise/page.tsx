@@ -16,6 +16,7 @@ import { useDiagnosticLogger } from '@/components/developer/useDiagnosticLogger'
 import { AdvancedDebugPanel } from '@/components/developer/AdvancedDebugPanel';
 import { CameraCanvasOverlay } from '@/components/developer/CameraCanvasOverlay';
 import { TestModeMatrix } from '@/components/developer/TestModeMatrix';
+import { TelemetryPanel, FaceTrackingPanel, EyeTrackingPanel, IdentityPanel, AntiSpoofPanel, SecurityEventsLog, HexThreatRadar, FaceQualityPanel, AuthTimeline, HeadMovementPanel } from '@/components/enterprise/panels';
 
 const Biometric3DOverlay = dynamic(() => import('@/components/Biometric3DOverlay'), { ssr: false });
 const HeadPose3DWidget = dynamic(() => import('@/components/HeadPose3DWidget'), { ssr: false });
@@ -123,6 +124,48 @@ interface BiometricResponse {
     valid: boolean;
     score: number;
   };
+  // New enterprise telemetry fields
+  eye_tracking?: {
+    left_direction: string;
+    right_direction: string;
+    horizontal_gaze: number;
+    vertical_gaze: number;
+    eye_openness_left: number;
+    eye_openness_right: number;
+    blink_probability: number;
+  };
+  face_tracking?: {
+    state: string;
+    face_present: boolean;
+    face_locked: boolean;
+    tracking_stable: boolean;
+    tracking_confidence: number;
+    frame_quality: number;
+    face_size: number;
+    face_distance: number;
+  };
+  anti_spoof_details?: {
+    texture_score: number;
+    reflection_score: number;
+    moire_score: number;
+    motion_consistency: number;
+    landmark_stability: number;
+    face_warp: number;
+    depth_consistency: number;
+    overall_spoof_risk: number;
+  };
+  telemetry?: {
+    detection_confidence: number;
+    face_confidence: number;
+    embedding_quality: number;
+    embedding_dimension: number;
+    inference_time_ms: number;
+    frame_processing_time_ms: number;
+    identity_matching_time_ms: number;
+  };
+  identity_match?: number;
+  liveness_score?: number;
+  risk_score?: number;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -356,6 +399,18 @@ export default function EnterpriseDemoPage() {
   const [passiveLiveness, setPassiveLiveness] = useState<BiometricResponse['passive_liveness'] | null>(null);
   const [fraudDetection, setFraudDetection] = useState<BiometricResponse['fraud_detection'] | null>(null);
   const [poseValidation, setPoseValidation] = useState<BiometricResponse['pose_validation'] | null>(null);
+
+  // Enterprise telemetry state
+  const [eyeTracking, setEyeTracking] = useState<BiometricResponse['eye_tracking'] | null>(null);
+  const [faceTracking, setFaceTracking] = useState<BiometricResponse['face_tracking'] | null>(null);
+  const [antiSpoofDetails, setAntiSpoofDetails] = useState<BiometricResponse['anti_spoof_details'] | null>(null);
+  const [telemetryData, setTelemetryData] = useState<BiometricResponse['telemetry'] | null>(null);
+  const [securityEvents, setSecurityEvents] = useState<{time: string; event: string; status: 'secure' | 'warning' | 'critical'}[]>([]);
+  const [verificationCount, setVerificationCount] = useState(0);
+  const [unauthorizedAttempts, setUnauthorizedAttempts] = useState(0);
+  const fpsCounterRef = useRef(0);
+  const lastFpsCalcRef = useRef(Date.now());
+  const [currentFps, setCurrentFps] = useState(0);
 
   // Enrollment states
   const [enrolledEmbedding, setEnrolledEmbedding] = useState<number[] | null>(null);
@@ -659,6 +714,38 @@ export default function EnterpriseDemoPage() {
       if (data.landmark_geometry) setLandmarkGeometry(data.landmark_geometry);
       if (data.passive_liveness) setPassiveLiveness(data.passive_liveness);
       if (data.fraud_detection) setFraudDetection(data.fraud_detection);
+
+      // Enterprise telemetry updates
+      if (data.eye_tracking) setEyeTracking(data.eye_tracking);
+      if (data.face_tracking) setFaceTracking(data.face_tracking);
+      if (data.anti_spoof_details) setAntiSpoofDetails(data.anti_spoof_details);
+      if (data.telemetry) setTelemetryData(data.telemetry);
+      
+      // FPS calculation
+      fpsCounterRef.current++;
+      const fpsNow = Date.now();
+      if (fpsNow - lastFpsCalcRef.current >= 1000) {
+        setCurrentFps(fpsCounterRef.current);
+        fpsCounterRef.current = 0;
+        lastFpsCalcRef.current = fpsNow;
+      }
+      
+      // Track verification counts & security events
+      if (data.similarity_score !== undefined && data.similarity_score > 0 && hasFaceEnrolled) {
+        setVerificationCount(prev => prev + 1);
+        if (data.similarity_score >= 0.80) {
+          // Throttle security events to 1 per 3 seconds
+          if (fpsNow % 3000 < 200) {
+            setSecurityEvents(prev => [{ time: new Date().toLocaleTimeString(), event: 'Identity Verified', status: 'secure' as const }, ...prev].slice(0, 50));
+          }
+        } else if (data.similarity_score < 0.65) {
+          setUnauthorizedAttempts(prev => prev + 1);
+          setSecurityEvents(prev => [{ time: new Date().toLocaleTimeString(), event: 'Identity Mismatch', status: 'critical' as const }, ...prev].slice(0, 50));
+        }
+      }
+      if (data.spoof_score > 0.4) {
+        setSecurityEvents(prev => [{ time: new Date().toLocaleTimeString(), event: 'Spoof Attempt', status: 'critical' as const }, ...prev].slice(0, 50));
+      }
       if (data.pose_validation) setPoseValidation(data.pose_validation);
 
       const isFacePresentAndValid = data.face_present && data.face_confidence > 0.50 && data.detected_faces === 1;
@@ -1306,67 +1393,51 @@ export default function EnterpriseDemoPage() {
               </div>
             )}
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingRight: 4, paddingBottom: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {/* Identity Score */}
-                <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>IDENTITY MATCH</div>
-                  <IdentityScoreRing score={similarity * 100} label="Match" size={120} />
-                </div>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4, paddingBottom: 20 }}>
+              {/* Identity Panel — Highest Priority */}
+              <IdentityPanel
+                similarity={similarity}
+                identityMatch={similarity * 100}
+                embeddingQuality={telemetryData?.embedding_quality ?? 0}
+                lastVerifiedTime={lastMatchTime}
+                status={similarity >= 0.80 ? 'VERIFIED' : similarity >= 0.65 ? 'UNCERTAIN' : hasFaceEnrolled ? 'UNAUTHORIZED' : 'PENDING'}
+                verificationCount={verificationCount}
+                unauthorizedAttempts={unauthorizedAttempts}
+              />
 
-                {/* Threat Radar */}
-                { (
-                  <div className="glass" style={{ padding: 14, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
-                  </div>
-                )}
-              </div>
+              {/* Hex Threat Radar */}
+              <HexThreatRadar
+                spoofRisk={spoofScore}
+                identityRisk={hasFaceEnrolled ? Math.max(0, 1 - similarity) : 0}
+                replayRisk={fraudDetection?.replay_attack?.confidence ?? 0}
+                deepfakeRisk={fraudDetection?.deepfake?.confidence ?? 0}
+                photoRisk={fraudDetection?.printed_photo?.confidence ?? 0}
+                sessionIntegrity={faceTracking?.tracking_stable ? 0.95 : 0.5}
+              />
 
-              {/* Security Metrics */}
-              { (
-                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
-                <MetricBar label="Confidence" value={confidence * 100} />
-                <MetricBar label="Face Quality" value={faceQuality} />
-                <MetricBar label="Pose Quality" value={poseQuality} />
-                <MetricBar label="Lighting" value={lightingQuality * 100} />
-                <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
-                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
-                  <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
-                    {Number((spoofScore * 100) || 0).toFixed(1)}%
-                  </span>
-                </div>
-                </div>
-              )}
+              {/* Face Quality */}
+              <FaceQualityPanel
+                faceQuality={faceQuality / 100}
+                lighting={lightingQuality / 100}
+                poseQuality={poseQuality / 100}
+                blur={antiSpoofDetails?.face_warp ?? 0}
+                confidence={confidence}
+              />
 
-              {/* Continuous Monitoring Panel */}
-              {isMonitoring && (
-                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, color: '#00ff88', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800', boxShadow: `0 0 10px ${faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800'}` }} />
-                      LIVE MONITORING
-                    </div>
-                    <div style={{ fontSize: 10, color: faceTrackingState === 'FACE_PRESENT' ? '#00d4ff' : '#ffb800', fontWeight: 700, fontFamily: 'monospace' }}>
-                      {faceTrackingState === 'FACE_PRESENT' ? 'SECURE' : 'REACQUIRING...'}
-                    </div>
-                  </div>
-                  <MetricBar label="Live Match" value={similarity * 100} />
-                  <MetricBar label="Liveness Score" value={(passiveLiveness?.score ?? 0) * 100} />
-                  
-                  <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', maxHeight: 120, overflowY: 'auto' }}>
-                    <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Audit Timeline</div>
-                    {monitoringAudit.map((log, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 4, fontFamily: 'monospace' }}>
-                        <span>{log.time}</span>
-                        <span style={{ color: log.status === 'secure' ? '#00ff88' : log.status === 'warning' ? '#ffb800' : '#ff3366' }}>{log.event}</span>
-                      </div>
-                    ))}
-                    {monitoringAudit.length === 0 && <div style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', textAlign: 'center' }}>Awaiting events...</div>}
-                  </div>
-                </div>
-              )}
+              {/* Head Movement */}
+              <HeadMovementPanel yaw={yaw} pitch={pitch} roll={roll} />
+
+              {/* Eye Tracking */}
+              <EyeTrackingPanel eyeData={eyeTracking ?? null} />
+
+              {/* Face Tracking */}
+              <FaceTrackingPanel tracking={faceTracking ?? null} />
+
+              {/* Anti-Spoof Details */}
+              <AntiSpoofPanel details={antiSpoofDetails ?? null} />
+
+              {/* Security Events Log */}
+              <SecurityEventsLog events={securityEvents} />
 
               {/* Session Shield */}
               { (
@@ -1380,7 +1451,7 @@ export default function EnterpriseDemoPage() {
                   </div>
                 </div>
               )}
-            
+
               {/* Fraud Detection Panel */}
               { (
                 <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
@@ -1406,19 +1477,17 @@ export default function EnterpriseDemoPage() {
                 </div>
               )}
 
-              {/* Verification Timeline */}
-              { (
-                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>VERIFICATION TIMELINE</div>
-                <VerificationTimeline stages={[
-                  { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
-                  { label: 'Biometric Enrollment', complete: hasFaceEnrolled, active: streaming && !hasFaceEnrolled && detectedFaces > 0 },
-                  { label: 'Identity Matching', complete: similarity >= 0.75, active: hasFaceEnrolled && similarity < 0.75 },
-                  { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
-                  { label: 'Authenticated', complete: isVerified, active: challengePassed.every(Boolean) && !isVerified },
-                ]} />
-                </div>
-              )}
+              {/* Authentication Timeline */}
+              <AuthTimeline stages={[
+                { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
+                { label: 'Biometric Enrollment', complete: hasFaceEnrolled, active: streaming && !hasFaceEnrolled && detectedFaces > 0 },
+                { label: 'Identity Matching', complete: similarity >= 0.75, active: hasFaceEnrolled && similarity < 0.75 },
+                { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
+                { label: 'Continuous Monitoring', complete: isMonitoring, active: challengePassed.every(Boolean) && !isMonitoring },
+              ]} />
+
+              {/* Live Telemetry */}
+              <TelemetryPanel telemetry={telemetryData ?? null} fps={currentFps} />
 
               {/* Landmark Geometry */}
               { landmarkGeometry && landmarkGeometry.regions && (

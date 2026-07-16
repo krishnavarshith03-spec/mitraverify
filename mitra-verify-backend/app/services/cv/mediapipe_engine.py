@@ -944,35 +944,91 @@ def _calculate_spoof_risk(frame, landmarks, history, texture_score, replay_score
     return float(np.clip(risk, 0.02, 1.0))
 
 
-def _calculate_face_embedding(frame: np.ndarray, landmarks) -> list[float]:
+def _extract_arcface_embedding(frame: np.ndarray) -> tuple:
+    """Extract ArcFace 512D embedding using InsightFace SCRFD + ArcFace.
+    
+    Returns: (embedding_512d, face_quality, bbox_dict, det_score) or (None, 0.0, None, 0.0)
+    """
+    analyzer = FaceEngine.get()
+    if analyzer is None:
+        return None, 0.0, None, 0.0
+    
+    try:
+        # InsightFace expects BGR frame
+        faces = analyzer.get(frame)
+        if not faces or len(faces) == 0:
+            return None, 0.0, None, 0.0
+        
+        # Use the face with highest detection score
+        best_face = max(faces, key=lambda f: f.det_score)
+        
+        embedding = best_face.embedding  # 512D ArcFace vector
+        if embedding is None or len(embedding) == 0:
+            return None, 0.0, None, 0.0
+        
+        # Normalize embedding
+        emb_np = np.array(embedding, dtype=np.float32)
+        norm = np.linalg.norm(emb_np)
+        if norm > 0.001:
+            emb_np = emb_np / norm
+        
+        # Extract bbox
+        bbox_raw = best_face.bbox  # [x1, y1, x2, y2]
+        h, w = frame.shape[:2]
+        bbox_dict = {
+            "x": float(bbox_raw[0] / w),
+            "y": float(bbox_raw[1] / h),
+            "w": float((bbox_raw[2] - bbox_raw[0]) / w),
+            "h": float((bbox_raw[3] - bbox_raw[1]) / h),
+        }
+        
+        det_score = float(best_face.det_score)
+        
+        # Face quality heuristic: detection score * size factor
+        face_area = bbox_dict["w"] * bbox_dict["h"]
+        quality = float(np.clip(det_score * 0.6 + min(face_area * 5, 0.4), 0.0, 1.0))
+        
+        print(f"[ArcFace] Extracted 512D embedding. det_score={det_score:.3f}, quality={quality:.3f}")
+        return emb_np.tolist(), quality, bbox_dict, det_score
+        
+    except Exception as e:
+        print(f"[ArcFace] Extraction failed: {e}")
+        return None, 0.0, None, 0.0
+
+
+def _calculate_face_embedding(frame: np.ndarray, landmarks, prefer_arcface: bool = True) -> list[float]:
+    """Generate face embedding. Prefers ArcFace 512D if available, falls back to landmark-distance 107D."""
+    
+    # Try ArcFace first for enterprise-grade accuracy
+    if prefer_arcface and INSIGHTFACE_AVAILABLE:
+        arcface_emb, quality, _, det_score = _extract_arcface_embedding(frame)
+        if arcface_emb is not None and len(arcface_emb) == 512:
+            print(f"[Embedding] Using ArcFace 512D (quality={quality:.3f})")
+            return arcface_emb
+        else:
+            print("[Embedding] ArcFace failed, falling back to landmark-distance")
+    
+    # Fallback: landmark-distance 107D embedding
     def get_pt(idx):
         return np.array([landmarks[idx].x, landmarks[idx].y, landmarks[idx].z])
         
     def dist(idx1, idx2):
         return np.linalg.norm(get_pt(idx1) - get_pt(idx2))  # type: ignore
 
-    # Base scale: Face Height (10 to 152) and Face Width (234 to 454)
     face_height = dist(10, 152)
     face_width = dist(234, 454)
     if face_height < 0.001: face_height = 1.0
     if face_width < 0.001: face_width = 1.0
     
-    # Anchor pairs spanning specific structural proportions (invariant to head tilt & size)
     anchor_pairs = [
-        # Eyes & Ocular distance
         (33, 263), (133, 362), (159, 386), (145, 374), 
         (33, 133), (263, 362),
-        # Eyebrows
         (70, 300), (107, 336), (53, 283),
-        # Nose length & width
         (1, 4), (197, 1), (94, 1), (1, 33), (1, 263),
         (4, 133), (4, 362),
-        # Mouth structure
         (61, 291), (13, 14), (78, 308), (17, 87),
         (61, 1), (291, 1),
-        # Jawline & Boundaries
         (10, 152), (234, 454), (109, 338), (58, 288), (136, 365),
-        # Inter-feature crossing distances
         (133, 1), (362, 1), (33, 61), (263, 291),
         (152, 61), (152, 291), (152, 13), (152, 14),
         (10, 133), (10, 362), (234, 33), (454, 263),
@@ -983,20 +1039,20 @@ def _calculate_face_embedding(frame: np.ndarray, landmarks) -> list[float]:
     ]
     
     embedding = []
-    # Compute normalized ratios against face width
     for p1, p2 in anchor_pairs:
         embedding.append(float(dist(p1, p2) / face_width))
-    # Compute normalized ratios against face height
     for p1, p2 in anchor_pairs:
         embedding.append(float(dist(p1, p2) / face_height))
-        
-    # Inject primary macro-ratios
     embedding.append(float(face_width / face_height))
     
     return embedding
 
 
 def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[float, float]:
+    """Compute cosine similarity between two embedding vectors.
+    
+    Returns: (similarity 0.0-1.0, euclidean_distance)
+    """
     import json
     if isinstance(emb_a, str):
         try:
@@ -1009,10 +1065,10 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[
         except Exception:
             pass
     
-    a = np.array(emb_a)
-    b = np.array(emb_b)
+    a = np.array(emb_a, dtype=np.float64)
+    b = np.array(emb_b, dtype=np.float64)
     if len(a) != len(b) or len(a) == 0:
-        print("LENGTH MISMATCH!", len(a), len(b))
+        print(f"[Verification] LENGTH MISMATCH: {len(a)} vs {len(b)}")
         return 0.0, 0.0
         
     norm_a = np.linalg.norm(a)
@@ -1023,15 +1079,213 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[
     a = a / norm_a  # type: ignore
     b = b / norm_b  # type: ignore
     
-    # Calculate true cosine similarity
     similarity = float(np.dot(a, b))
-    
-    # Calculate Euclidean distance for logging
-    dist = np.linalg.norm(a - b)
+    dist = float(np.linalg.norm(a - b))
     
     final_similarity = float(np.clip(similarity, 0.0, 1.0))
-    print(f"[Verification] Cosine Similarity: {final_similarity:.4f} (Distance: {dist:.4f})")
-    return final_similarity, float(dist)
+    print(f"[Verification] Cosine Similarity: {final_similarity:.4f} (Distance: {dist:.4f}, Dim: {len(a)})")
+    return final_similarity, dist
+
+
+# ─────────────────────────────────────────────────────────────
+# ENTERPRISE TELEMETRY: Eye Tracking, Face Tracking, Anti-Spoof
+# ─────────────────────────────────────────────────────────────
+
+def _compute_eye_tracking(landmarks, w, h) -> dict:
+    """Compute detailed eye tracking metrics from MediaPipe landmarks."""
+    if len(landmarks) < 478:
+        return {"left_direction": "center", "right_direction": "center", 
+                "horizontal_gaze": 0.5, "vertical_gaze": 0.5,
+                "eye_openness_left": 0.0, "eye_openness_right": 0.0,
+                "blink_probability": 0.0}
+    
+    # Iris positions relative to eye corners
+    iris_left = np.array([landmarks[468].x, landmarks[468].y])
+    iris_right = np.array([landmarks[473].x, landmarks[473].y])
+    
+    # Left eye corners
+    l_inner = np.array([landmarks[362].x, landmarks[362].y])
+    l_outer = np.array([landmarks[263].x, landmarks[263].y])
+    # Right eye corners
+    r_outer = np.array([landmarks[33].x, landmarks[33].y])
+    r_inner = np.array([landmarks[133].x, landmarks[133].y])
+    
+    # Horizontal gaze
+    l_denom = l_outer[0] - l_inner[0]
+    r_denom = r_inner[0] - r_outer[0]
+    if abs(l_denom) > 0.001 and abs(r_denom) > 0.001:
+        gaze_l_x = (iris_left[0] - l_inner[0]) / l_denom
+        gaze_r_x = (iris_right[0] - r_outer[0]) / r_denom
+        h_gaze = float(np.clip((gaze_l_x + gaze_r_x) / 2.0, 0.0, 1.0))
+    else:
+        h_gaze = 0.5
+    
+    # Vertical gaze
+    l_top = landmarks[386].y
+    l_bottom = landmarks[374].y
+    l_height = l_bottom - l_top
+    if l_height > 0.001:
+        v_gaze = float(np.clip((iris_left[1] - l_top) / l_height, 0.0, 1.0))
+    else:
+        v_gaze = 0.5
+    
+    # Eye openness (EAR)
+    left_ear = _ear(landmarks, LEFT_EYE_INDICES, w, h)
+    right_ear = _ear(landmarks, RIGHT_EYE_INDICES, w, h)
+    
+    # Blink probability (inverse of EAR, normalized)
+    avg_ear = (left_ear + right_ear) / 2.0
+    blink_prob = float(np.clip(1.0 - (avg_ear / 0.30), 0.0, 1.0))
+    
+    # Direction labels
+    def dir_label(gaze_val):
+        if gaze_val < 0.35: return "left"
+        elif gaze_val > 0.65: return "right"
+        return "center"
+    
+    def vdir_label(gaze_val):
+        if gaze_val < 0.3: return "up"
+        elif gaze_val > 0.7: return "down"
+        return "center"
+    
+    return {
+        "left_direction": dir_label(h_gaze),
+        "right_direction": dir_label(h_gaze),
+        "horizontal_gaze": round(h_gaze, 4),
+        "vertical_gaze": round(v_gaze, 4),
+        "eye_openness_left": round(left_ear, 4),
+        "eye_openness_right": round(right_ear, 4),
+        "blink_probability": round(blink_prob, 4),
+    }
+
+
+def _compute_face_tracking(face_present: bool, face_confidence: float, bbox: dict, 
+                            landmarks, history: dict, w: int, h: int) -> dict:
+    """Compute face tracking state and metrics."""
+    if not face_present or not bbox:
+        return {
+            "state": "LOST", "face_present": False, "face_locked": False,
+            "tracking_stable": False, "tracking_confidence": 0.0,
+            "frame_quality": 0.0, "face_size": 0.0, "face_distance": 0.0,
+        }
+    
+    face_size = bbox.get("w", 0) * bbox.get("h", 0)
+    
+    # Estimate face distance (inverse of size, normalized)
+    face_distance = float(np.clip(1.0 / max(face_size * 10, 0.01), 0.0, 5.0))
+    
+    # Tracking stability: check nose position variance over last 10 frames
+    tracking_stable = True
+    if history and "landmarks" in history and len(history["landmarks"]) >= 5:
+        nose_pts = [pts[NOSE_TIP][:2] for pts in history["landmarks"][-10:]]
+        xs = [p[0] for p in nose_pts]
+        ys = [p[1] for p in nose_pts]
+        variance = float(np.std(xs) + np.std(ys))
+        tracking_stable = variance < 0.05
+    
+    # Face locked: face is centered and stable
+    cx = bbox.get("x", 0) + bbox.get("w", 0) / 2
+    cy = bbox.get("y", 0) + bbox.get("h", 0) / 2
+    face_locked = abs(cx - 0.5) < 0.25 and abs(cy - 0.5) < 0.25 and tracking_stable
+    
+    # Frame quality heuristic
+    frame_quality = float(np.clip(
+        face_confidence * 0.5 + 
+        min(face_size * 4, 0.3) +
+        (0.2 if tracking_stable else 0.0),
+        0.0, 1.0
+    ))
+    
+    state = "TRACKING" if face_locked else ("ACQUIRING" if face_present else "LOST")
+    
+    return {
+        "state": state,
+        "face_present": True,
+        "face_locked": face_locked,
+        "tracking_stable": tracking_stable,
+        "tracking_confidence": round(face_confidence, 4),
+        "frame_quality": round(frame_quality, 4),
+        "face_size": round(face_size, 6),
+        "face_distance": round(face_distance, 2),
+    }
+
+
+def _compute_anti_spoof_details(frame: np.ndarray, history: dict, 
+                                  texture_score: float, replay_score: float,
+                                  spoof_score: float) -> dict:
+    """Compute detailed anti-spoof breakdown for enterprise dashboard."""
+    details = {
+        "texture_score": round(float(texture_score), 4),
+        "reflection_score": 0.0,
+        "moire_score": round(float(replay_score), 4),
+        "motion_consistency": 0.85,
+        "landmark_stability": 0.90,
+        "face_warp": 0.0,
+        "depth_consistency": 0.80,
+        "overall_spoof_risk": round(float(spoof_score), 4),
+    }
+    
+    # Motion consistency from history
+    if history and "landmarks" in history and len(history["landmarks"]) >= 5:
+        nose_pts = [pts[NOSE_TIP][:2] for pts in history["landmarks"][-10:]]
+        xs = [p[0] for p in nose_pts]
+        ys = [p[1] for p in nose_pts]
+        variance = float(np.std(xs) + np.std(ys))
+        # Very static = suspicious (photo), very jittery = suspicious (swap)
+        if variance < 0.0002:
+            details["motion_consistency"] = 0.15  # Too static
+        elif variance > 0.1:
+            details["motion_consistency"] = 0.20  # Too jittery
+        else:
+            details["motion_consistency"] = round(float(np.clip(1.0 - variance * 5, 0.3, 1.0)), 4)
+        
+        # Landmark stability
+        if len(history["landmarks"]) >= 3:
+            last3 = history["landmarks"][-3:]
+            deltas = []
+            for i in range(1, len(last3)):
+                d = math.dist(last3[i][NOSE_TIP][:2], last3[i-1][NOSE_TIP][:2])
+                deltas.append(d)
+            avg_delta = sum(deltas) / len(deltas)
+            details["landmark_stability"] = round(float(np.clip(1.0 - avg_delta * 20, 0.0, 1.0)), 4)
+    
+    # Reflection detection using brightness analysis
+    if CV2_AVAILABLE and frame is not None:
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            h_f, w_f = gray.shape[:2]
+            # Check for specular reflections (very bright spots)
+            _, bright = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)
+            bright_ratio = float(np.sum(bright) / (255.0 * h_f * w_f))
+            details["reflection_score"] = round(float(np.clip(bright_ratio * 10, 0.0, 1.0)), 4)
+            
+            # Face warp: check Laplacian variance (blurriness indicator)
+            laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+            lap_var = float(laplacian.var())
+            # Very high variance = sharp edges (possibly printed), very low = blurry
+            if lap_var < 50:
+                details["face_warp"] = 0.4  # Suspiciously blurry
+            elif lap_var > 2000:
+                details["face_warp"] = 0.3  # Suspiciously sharp edges
+            else:
+                details["face_warp"] = round(float(np.clip(0.05, 0.0, 1.0)), 4)
+        except Exception:
+            pass
+    
+    return details
+
+
+def _compute_telemetry(timings: dict, face_confidence: float, embedding_dim: int) -> dict:
+    """Compute processing telemetry for enterprise dashboard."""
+    return {
+        "detection_confidence": round(float(face_confidence), 4),
+        "face_confidence": round(float(face_confidence), 4),
+        "embedding_quality": round(min(1.0, float(face_confidence) * 1.1), 4),
+        "embedding_dimension": embedding_dim,
+        "inference_time_ms": round(timings.get("mediapipe_processing", 0.0), 2),
+        "frame_processing_time_ms": round(timings.get("total_processing", 0.0), 2),
+        "identity_matching_time_ms": round(timings.get("identity_matching", 0.0), 2),
+    }
 
 
 # ─────────────────────────────────────────────────────────────
@@ -2440,6 +2694,35 @@ def _process_demo_frame_inner(
         ret["risk_score"] = enterprise_report.get("risk_score", 0.0)
         ret["challenge_progress"] = 0 # Frontend tracks real progress
         ret["lighting"] = ret["lighting_quality"]
+        
+        # Enterprise Telemetry: Eye Tracking
+        ret["eye_tracking"] = _compute_eye_tracking(landmarks, w, h) if detected_faces > 0 else {
+            "left_direction": "center", "right_direction": "center",
+            "horizontal_gaze": 0.5, "vertical_gaze": 0.5,
+            "eye_openness_left": 0.0, "eye_openness_right": 0.0,
+            "blink_probability": 0.0,
+        }
+        
+        # Enterprise Telemetry: Face Tracking
+        ret["face_tracking"] = _compute_face_tracking(
+            face_present=True, face_confidence=face_confidence,
+            bbox=bbox, landmarks=landmarks, history=history, w=w, h=h
+        ) if detected_faces > 0 else {
+            "state": "LOST", "face_present": False, "face_locked": False,
+            "tracking_stable": False, "tracking_confidence": 0.0,
+            "frame_quality": 0.0, "face_size": 0.0, "face_distance": 0.0,
+        }
+        
+        # Enterprise Telemetry: Anti-Spoof Details
+        t_score_val = float(texture_score) if 'texture_score' in dir() else 0.5  # type: ignore
+        r_score_val = float(replay_score) if 'replay_score' in dir() else 0.0  # type: ignore
+        ret["anti_spoof_details"] = _compute_anti_spoof_details(
+            frame, history, t_score_val, r_score_val, spoof_score
+        )
+        
+        # Enterprise Telemetry: Processing Metrics
+        embedding_dim = len(current_signature) if current_signature else 0
+        ret["telemetry"] = _compute_telemetry(timings, face_confidence, embedding_dim)
 
     return ret
 

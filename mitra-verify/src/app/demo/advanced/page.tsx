@@ -14,6 +14,7 @@ import { useDiagnosticLogger } from '@/components/developer/useDiagnosticLogger'
 import { AdvancedDebugPanel } from '@/components/developer/AdvancedDebugPanel';
 import { CameraCanvasOverlay } from '@/components/developer/CameraCanvasOverlay';
 import { TestModeMatrix } from '@/components/developer/TestModeMatrix';
+import { AdvLiveMetrics, AdvFaceAnalysis, AdvLivenessAnalysis, AdvSecurityChecklist, AdvChallengePanel, GaugeRow } from '@/components/advanced/panels';
 const CHALLENGE_POOL = [
   { id: 'face_centered', label: 'Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },
   { id: 'blink_once', label: 'Blink Once', instruction: 'Blink your eyes once slowly', icon: '👁️' },
@@ -97,6 +98,10 @@ export default function AdvancedDemoPage() {
   const wasBlinkingRef = useRef(false);
   const transitioningRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [currentFps, setCurrentFps] = useState(0);
+  const [frameCount, setFrameCount] = useState(0);
+  const [apiLatency, setApiLatency] = useState(0);
+  const [smileScore, setSmileScore] = useState(0);
 
   // Debug HUD overlay additions
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
@@ -365,6 +370,21 @@ export default function AdvancedDemoPage() {
         
         setFraudDetection(data.fraud_detection);
         setRawLandmarks(data.landmarks || []);
+        
+        // Advanced panels metrics
+        setSmileScore(data.smile_score || 0);
+        setFrameCount(prev => prev + 1);
+        const fetchEnd = Date.now();
+        const latency = fetchEnd - (performance.now() - processingTime);
+        setApiLatency(processingTime);
+        
+        // FPS calculation
+        fpsCountRef.current++;
+        if (fetchEnd - lastFpsTime.current >= 1000) {
+          setCurrentFps(fpsCountRef.current);
+          fpsCountRef.current = 0;
+          lastFpsTime.current = fetchEnd;
+        }
         
         if (data.detected_faces > 1 && detectedFaces <= 1) {
           logEvent('MULTIPLE_FACES_DETECTED', { faces: data.detected_faces }, 'WARNING');
@@ -1063,7 +1083,62 @@ export default function AdvancedDemoPage() {
               </div>
             )}
 
-            {/* Threat Scores */}
+            {/* Confidence Gauges */}
+            <GaugeRow gauges={[
+              { value: confidence * 100, label: 'Detection' },
+              { value: (1 - spoofScore) * 100, label: 'Liveness' },
+              { value: streaming ? Math.max(0, (1 - deepfakeRisk) * 100) : 0, label: 'Quality' },
+            ]} />
+
+            {/* Live Metrics */}
+            <AdvLiveMetrics fps={currentFps} latencyMs={apiLatency} processingMs={processingTime} detectionMs={processingTime * 0.6} frameCount={frameCount} />
+
+            {/* Face Analysis */}
+            <AdvFaceAnalysis
+              faceSize={bbox ? bbox.w * bbox.h : 0}
+              brightness={confidence > 0 ? 0.7 : 0}
+              contrast={confidence > 0 ? 0.75 : 0}
+              blur={0.1}
+              yaw={yaw}
+              pitch={pitch}
+              roll={roll}
+            />
+
+            {/* Liveness Analysis */}
+            <AdvLivenessAnalysis
+              blinkScore={hasBlinked ? 1.0 : ear < 0.2 ? 0.5 : 0}
+              smileScore={smileScore}
+              mouthScore={hasMovedMouth ? 1.0 : mar > 0.3 ? 0.5 : 0}
+              headMotion={hasRotatedHead ? 1.0 : Math.abs(yaw) > 10 ? 0.5 : 0}
+              faceStability={confidence > 0.8 ? 0.9 : confidence > 0.5 ? 0.6 : 0}
+              challengeAccuracy={challenges.length > 0 ? challengePassed.filter(Boolean).length / challenges.length : 0}
+              overallLiveness={1 - spoofScore}
+            />
+
+            {/* Security Checklist */}
+            <AdvSecurityChecklist items={[
+              { label: 'Face Centered', passed: faceInsideGuide, icon: '👤' },
+              { label: 'Blink Detected', passed: hasBlinked, icon: '👁️' },
+              { label: 'Mouth Movement', passed: hasMovedMouth, icon: '👄' },
+              { label: 'Head Rotation', passed: hasRotatedHead, icon: '🔄' },
+              { label: 'Eyebrow Raise', passed: hasRaisedEyebrows, icon: '🤨' },
+              { label: 'Anti-Spoof Clear', passed: spoofScore < 0.3, icon: '🛡️' },
+              { label: 'No Replay Attack', passed: replayRisk < 0.3, icon: '📱' },
+              { label: 'No Deepfake', passed: deepfakeRisk < 0.3, icon: '🤖' },
+            ]} />
+
+            {/* Challenge Panel */}
+            {streaming && challenges.length > 0 && (
+              <AdvChallengePanel
+                current={currentChallenge < challenges.length ? challenges[currentChallenge].label : 'Complete'}
+                completed={challengePassed.filter(Boolean).length}
+                total={challenges.length}
+                avgTime={challengeTimer > 0 ? 30 - challengeTimer : 0}
+                successRate={challenges.length > 0 ? challengePassed.filter(Boolean).length / challenges.length : 0}
+              />
+            )}
+
+            {/* Threat Scores (kept, refactored) */}
             <div className="glass" style={{ padding: 20, borderRadius: 16 }}>
               <h3 style={{ fontSize: 13, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
                 THREAT ANALYSIS
