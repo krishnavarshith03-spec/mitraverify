@@ -2217,6 +2217,11 @@ def _process_demo_frame_inner(
     match_reason = ""
     current_signature = None
     
+    is_high_quality = True
+    if float(face_confidence) < 0.70: is_high_quality = False
+    if bbox and (bbox["h"] < 0.20 or bbox["h"] > 0.80): is_high_quality = False
+    if abs(yaw) > 25.0 or abs(pitch) > 20.0: is_high_quality = False
+    
     active_enrollment = enrolled_embedding if enrolled_embedding is not None else enrolled_signature
     if active_enrollment and api_type == "enterprise":
         if session_id and session_id in SESSION_CACHE:
