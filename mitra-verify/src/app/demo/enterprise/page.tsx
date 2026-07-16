@@ -20,69 +20,6 @@ import { TestModeMatrix } from '@/components/developer/TestModeMatrix';
 const Biometric3DOverlay = dynamic(() => import('@/components/Biometric3DOverlay'), { ssr: false });
 const HeadPose3DWidget = dynamic(() => import('@/components/HeadPose3DWidget'), { ssr: false });
 
-function calculateFaceEmbedding(landmarks: number[][]): number[] {
-  const featureNodes = [
-    1, 2, 4, 5, 6, 197, 94,
-    33, 133, 159, 145, 46, 53, 70, 107,
-    263, 362, 386, 374, 276, 283, 300, 336,
-    61, 291, 13, 14, 78, 308, 17, 87, 317,
-    10, 152, 234, 454, 109, 338, 58, 288, 136, 365
-  ];
-  
-  if (landmarks.length < 455) return [];
-  
-  const center = landmarks[1];
-  const centerX = center[0];
-  const centerY = center[1];
-  const centerZ = center[2];
-  
-  const leftJaw = landmarks[234];
-  const rightJaw = landmarks[454];
-  const dx = rightJaw[0] - leftJaw[0];
-  const dy = rightJaw[1] - leftJaw[1];
-  const dz = rightJaw[2] - leftJaw[2];
-  let scale = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  if (scale < 0.001) scale = 1.0;
-  
-  const embedding: number[] = [];
-  for (const idx of featureNodes) {
-    if (idx < landmarks.length) {
-      const lm = landmarks[idx];
-      const rx = (lm[0] - centerX) / scale;
-      const ry = (lm[1] - centerY) / scale;
-      const rz = (lm[2] - centerZ) / scale;
-      embedding.push(rx, ry, rz);
-    }
-  }
-  return embedding;
-}
-
-function cosineSimilarity(embA: number[], embB: number[]): number {
-  if (embA.length !== embB.length || embA.length === 0) return 0.0;
-  let dot = 0.0;
-  let normA = 0.0;
-  let normB = 0.0;
-  for (let i = 0; i < embA.length; i++) {
-    dot += embA[i] * embB[i];
-    normA += embA[i] * embA[i];
-    normB += embB[i] * embB[i];
-  }
-  normA = Math.sqrt(normA);
-  normB = Math.sqrt(normB);
-  if (normA < 0.001 || normB < 0.001) return 0.0;
-  const cosine = dot / (normA * normB);
-  
-  if (cosine >= 0.96) {
-    return 0.95 + (cosine - 0.96) * (0.05 / 0.04);
-  } else if (cosine >= 0.88) {
-    return 0.85 + (cosine - 0.88) * (0.10 / 0.08);
-  } else {
-    if (cosine >= 0.70) {
-      return 0.50 + (cosine - 0.70) * (0.35 / 0.18);
-    }
-    return cosine;
-  }
-}
 
 interface BiometricResponse {
   status?: string;
@@ -518,7 +455,7 @@ export default function EnterpriseDemoPage() {
   const [recoveredFrames, setRecoveredFrames] = useState(0);
   const [timeSinceFaceSeen, setTimeSinceFaceSeen] = useState(0);
 
-  const [liveEmbedding, setLiveEmbedding] = useState<number[]>([]);
+
   const [lastMatchTime, setLastMatchTime] = useState<number | null>(null);
 
   const lastFaceSeenTimeRef = useRef<number | null>(null);
@@ -707,6 +644,12 @@ export default function EnterpriseDemoPage() {
         triggerSessionTermination(terminalStatuses[data.status]);
         return;
       }
+      
+      if (data.status === 'IDENTITY_LOST') {
+        setFaceTrackingState('FACE_RECOVERY');
+        // The backend handles pausing challenge progression by returning challenge_passed = False
+      }
+
 
       // Update enterprise analytics
       if (data.enterprise_report) setEnterpriseReport(data.enterprise_report);
@@ -736,19 +679,12 @@ export default function EnterpriseDemoPage() {
         
         lastFaceSeenTimeRef.current = Date.now(); setTimeSinceFaceSeen(0);
 
-        if (data.landmarks && data.landmarks.length > 0) {
-          const liveEmb = calculateFaceEmbedding(data.landmarks);
-          if (liveEmb && liveEmb.length > 0) {
-            setLiveEmbedding(liveEmb);
-            if (enrolledEmbedding) {
-              const sim = cosineSimilarity(enrolledEmbedding, liveEmb);
-              similarityHistoryRef.current.push(sim);
-              if (similarityHistoryRef.current.length > 15) similarityHistoryRef.current.shift();
-              const smoothedSim = similarityHistoryRef.current.reduce((a, b) => a + b, 0) / similarityHistoryRef.current.length;
-              setSimilarity(smoothedSim);
-              setLastMatchTime(Date.now());
-            }
-          }
+        if (hasFaceEnrolled && data.similarity_score !== undefined && data.similarity_score > 0) {
+           similarityHistoryRef.current.push(data.similarity_score);
+           if (similarityHistoryRef.current.length > 15) similarityHistoryRef.current.shift();
+           const smoothedSim = similarityHistoryRef.current.reduce((a, b) => a + b, 0) / similarityHistoryRef.current.length;
+           setSimilarity(smoothedSim);
+           setLastMatchTime(Date.now());
         }
 
         setDetectedFaces(data.detected_faces); setLandmarkCount(data.landmark_count); setConfidence(data.face_confidence);
@@ -910,7 +846,7 @@ export default function EnterpriseDemoPage() {
     consecutiveValidFramesRef.current = 0; currentChallengeRef.current = 0; setConsecutiveValidFrames(0);
     setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
     setLostFrames(0); setRecoveredFrames(0); setTimeSinceFaceSeen(0);
-    setLiveEmbedding([]); setLastMatchTime(null);
+    setLastMatchTime(null);
     lastFaceSeenTimeRef.current = null; lostFramesRef.current = 0; recoveredFramesRef.current = 0;
     setFaceConfidenceMetric(0); setTrackingConfidence(1.0);
     setEnterpriseReport(null); setFaceQuality(0); setPoseQuality(0); setLightingQuality(0);
@@ -962,7 +898,8 @@ export default function EnterpriseDemoPage() {
     setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
     setIsMonitoring(false); setMonitoringAudit([]);
     setLostFrames(0); setRecoveredFrames(0); setTimeSinceFaceSeen(0);
-    setLiveEmbedding([]); setLastMatchTime(null); setRawYaw(0); setYawDirection('CENTER');
+    setSpoofScore(0); setDeepfakeRisk(0);
+    setLastMatchTime(null); setRawYaw(0); setYawDirection('CENTER');
     setYaw(0); setPitch(0); setRoll(0);
     lastFaceSeenTimeRef.current = null; lostFramesRef.current = 0; recoveredFramesRef.current = 0;
     setFaceConfidenceMetric(0); setTrackingConfidence(1.0);

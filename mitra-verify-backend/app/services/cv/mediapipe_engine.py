@@ -2208,52 +2208,88 @@ def _process_demo_frame_inner(
 
     # 12. Face signature & matching
     t_identity_start = time.perf_counter()
-    current_signature = _calculate_face_embedding(frame, landmarks)
-    print("EMBEDDING_GENERATED")
     
-    # Identity verification against stored enrollment
     similarity_score = 0.0
     embedding_distance = 0.0
     enrolled_matched = False
     status = "ready"
     reason = None
     match_reason = ""
+    current_signature = None
     
     active_enrollment = enrolled_embedding if enrolled_embedding is not None else enrolled_signature
     if active_enrollment and api_type == "enterprise":
-        raw_similarity, dist = _compute_cosine_similarity(current_signature, active_enrollment)
-        similarity_score = raw_similarity
-        embedding_distance = dist
+        if session_id and session_id in SESSION_CACHE:
+            session = SESSION_CACHE[session_id]
+            frame_count = session.get("embedding_frame_count", 0) + 1
+            session["embedding_frame_count"] = frame_count
             
-        required_threshold = 0.85
-        low_confidence_threshold = 0.70
-        
-        print(f"[Verification] Threshold={required_threshold}, Distance={embedding_distance:.4f}, Similarity={similarity_score:.4f}")
-        
-        if similarity_score >= required_threshold:
-            enrolled_matched = True
-            match_reason = "PASS"
-            print(f"[Verification] Decision: {match_reason}")
-            if history:
-                history["wrong_person_frames"] = 0
-        elif similarity_score >= low_confidence_threshold:
-            enrolled_matched = False
-            match_reason = "LOW CONFIDENCE"
-            print(f"[Verification] Decision: {match_reason}")
-            if history:
-                history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
-        else:
-            enrolled_matched = False
-            match_reason = "FAIL"
-            print(f"[Verification] Decision: {match_reason}")
-            if history:
-                history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
+            # Generate new embedding every 5 frames for performance, but ONLY if high quality
+            if (frame_count % 5 == 0 and is_high_quality) or "cached_signature" not in session:
+                current_signature = _calculate_face_embedding(frame, landmarks)
+                raw_similarity, dist = _compute_cosine_similarity(current_signature, active_enrollment)
                 
-        if history and history.get("wrong_person_frames", 0) >= 5:
-            return {
-                "face_present": True, "detected_faces": int(detected_faces), "face_confidence": float(face_confidence), "landmark_count": int(landmark_count), # type: ignore
-                "bbox": bbox, "status": "UNAUTHORIZED_PERSON", "reason": match_reason, "challenge_passed": False, "enrolled_matched": False, "similarity_score": float(similarity_score), "distance": float(embedding_distance), "spoof_score": 1.0 # type: ignore
-            }
+                # Cache the results
+                session["cached_signature"] = current_signature
+                session["cached_similarity"] = raw_similarity
+                session["cached_distance"] = dist
+            else:
+                # Use cached values for fast path
+                current_signature = session.get("cached_signature")
+                raw_similarity = session.get("cached_similarity", 0.0)
+                dist = session.get("cached_distance", 0.0)
+                
+            similarity_score = raw_similarity
+            embedding_distance = dist
+            
+            required_threshold = 0.85
+            low_confidence_threshold = 0.70
+            
+            if similarity_score >= required_threshold:
+                enrolled_matched = True
+                match_reason = "PASS"
+                if history: history["wrong_person_frames"] = 0
+            elif similarity_score >= low_confidence_threshold:
+                enrolled_matched = False
+                match_reason = "LOW CONFIDENCE"
+                if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
+            else:
+                enrolled_matched = False
+                match_reason = "FAIL"
+                if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
+        else:
+            # Fallback if no session
+            current_signature = _calculate_face_embedding(frame, landmarks)
+            raw_similarity, dist = _compute_cosine_similarity(current_signature, active_enrollment)
+            similarity_score = raw_similarity
+            embedding_distance = dist
+            
+            if similarity_score >= 0.85:
+                enrolled_matched = True
+                match_reason = "PASS"
+            else:
+                enrolled_matched = False
+                match_reason = "FAIL"
+    else:
+        current_signature = _calculate_face_embedding(frame, landmarks)
+                
+    if enrolled_matched == False and history and history.get("wrong_person_frames", 0) >= 15:
+        ret_early = {
+            "face_present": True, "detected_faces": int(detected_faces), "face_confidence": float(face_confidence), "landmark_count": int(landmark_count), # type: ignore
+            "bbox": bbox, "status": "UNAUTHORIZED_PERSON", "reason": match_reason, "challenge_passed": False, "enrolled_matched": False, "similarity_score": float(similarity_score), "distance": float(embedding_distance), "spoof_score": 1.0 # type: ignore
+        }
+        if api_type == "enterprise":
+            ret_early["enterprise_report"] = _build_enterprise_report(
+                identity_match=similarity_score,
+                confidence=face_confidence,
+                pose_quality=pose_quality,
+                lighting_quality=lighting_quality,
+                blur_level=0.1,
+                texture_score=0.5,
+                landmark_precision=1.0,
+                presentation_attack_score=spoof_score
+            )
+        return ret_early
 
     # Default status logic
     if status == "ready" and session_id and session_id in SESSION_CACHE:
@@ -2331,6 +2367,10 @@ def _process_demo_frame_inner(
     timings["identity_matching"] = (time.perf_counter() - t_identity_start) * 1000
     timings["total_processing"] = (time.perf_counter() - timings["request_received"]) * 1000
 
+    if challenge_passed:
+        if spoof_score >= 0.45 or detected_faces != 1 or (api_type == "enterprise" and active_enrollment and not enrolled_matched):
+            challenge_passed = False
+
     ret = {
         "face_present": True,
         "detected_faces": int(detected_faces),  # type: ignore
@@ -2372,8 +2412,7 @@ def _process_demo_frame_inner(
         "timings": timings
     }
 
-    # Append enterprise-exclusive analytics
-    if api_type == "enterprise":
+    if api_type == "enterprise" and enterprise_report:
         ret["enterprise_report"] = enterprise_report
         ret["landmark_geometry"] = landmark_geometry
         ret["passive_liveness"] = passive_liveness
