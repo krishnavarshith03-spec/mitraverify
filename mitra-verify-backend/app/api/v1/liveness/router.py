@@ -310,13 +310,13 @@ async def debug_cv():
 async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
     
-    advanced_pool = ['blink_once', 'open_mouth']
+    advanced_pool = ['blink_once', 'open_mouth', 'turn_left', 'turn_right', 'smile', 'look_up']
     enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'hold_still']
     
     if data.api_type == "enterprise":
         selected = secrets.SystemRandom().sample(enterprise_pool, len(enterprise_pool))
     elif data.api_type == "advanced":
-        num_challenges = secrets.choice([5, 6])
+        num_challenges = secrets.choice([3, 4, 5])
         selected = secrets.SystemRandom().sample(advanced_pool, num_challenges)
     else:
         # basic
