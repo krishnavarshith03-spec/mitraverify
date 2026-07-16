@@ -106,8 +106,10 @@ async def identity_enroll(
     import mediapipe as mp
     
     if not MP_AVAILABLE or not CV2_AVAILABLE:
-        print("RAISE: HTTPException(500, Computer vision engine is unavailable)")
-        raise HTTPException(status_code=500, detail="Computer vision engine is unavailable")
+        from app.services.cv.mediapipe_engine import MP_INIT_ERROR
+        error_msg = f"Computer vision engine is unavailable. Details: {MP_INIT_ERROR}" if MP_INIT_ERROR else "Computer vision engine is unavailable."
+        print(f"RAISE: HTTPException(500, {error_msg})")
+        raise HTTPException(status_code=500, detail=error_msg)
         
     # --- Stage 1: Camera initialized ---
     print("[Enrollment] Stage 1: Camera initialized")
@@ -131,19 +133,14 @@ async def identity_enroll(
         print(f"RAISE: HTTPException(400, Stage 1 Failed: Frame Decode Error - {str(e)})")
         raise HTTPException(status_code=400, detail=f"Stage 1 Failed: Frame Decode Error - {str(e)}")
     
-    from app.services.cv.mediapipe_engine import mp_face_mesh, SESSION_CACHE
-    if mp_face_mesh is None:
-        print("RAISE: HTTPException(500, CV Engine unavailable)")
-        raise HTTPException(status_code=500, detail="CV Engine unavailable")
+    from app.services.cv.mediapipe_engine import global_face_mesh, MP_INIT_ERROR
+    if global_face_mesh is None:
+        error_msg = f"CV Engine unavailable. Details: {MP_INIT_ERROR}" if MP_INIT_ERROR else "CV Engine unavailable"
+        print(f"RAISE: HTTPException(500, {error_msg})")
+        raise HTTPException(status_code=500, detail=error_msg)
 
     try:
-        with mp_face_mesh.FaceMesh(  # type: ignore
-            static_image_mode=True,
-            max_num_faces=2,
-            refine_landmarks=True,
-            min_detection_confidence=0.5
-        ) as face_mesh:
-            results = face_mesh.process(rgb)
+        results = global_face_mesh.process(rgb)
             
         multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
         

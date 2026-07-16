@@ -23,41 +23,29 @@ except ImportError as e:
     print(f"[FATAL] OpenCV Import Error: {e}")
     CV2_AVAILABLE = False
 
+MP_INIT_ERROR = None
 try:
     import mediapipe as mp  # pyrefly: ignore [missing-import]
     import cv2  # pyrefly: ignore [missing-import]
     import numpy as np  # pyrefly: ignore [missing-import]
     import traceback
     
-    # In some environments, solutions might be nested or need explicit import
-    if not hasattr(mp, 'solutions'):
-        try:
-            import mediapipe.python.solutions as mp_solutions
-            mp.solutions = mp_solutions
-        except Exception as explicit_e:
-            print(f"[WARNING] Failed to explicitly import mediapipe.python.solutions: {explicit_e}")
-            
-    if hasattr(mp, 'solutions'):
-        mp_face_mesh = mp.solutions.face_mesh
-        mp_face_detection = mp.solutions.face_detection
-        MP_AVAILABLE = True
-        
-        # Instantiate global models to avoid per-frame loading overhead
-        global_face_mesh = mp_face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=4,
-            refine_landmarks=True,
-            min_detection_confidence=0.3,
-            min_tracking_confidence=0.3
-        )
-    else:
-        mp_face_mesh = None
-        mp_face_detection = None
-        MP_AVAILABLE = False
-        global_face_mesh = None
+    mp_face_mesh = mp.solutions.face_mesh
+    mp_face_detection = mp.solutions.face_detection
+    MP_AVAILABLE = True
+    
+    # Instantiate global models to avoid per-frame loading overhead
+    global_face_mesh = mp_face_mesh.FaceMesh(
+        static_image_mode=True,
+        max_num_faces=2,
+        refine_landmarks=True,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5
+    )
 except Exception as e:
     import traceback
-    print(f"[FATAL] MediaPipe Import/Init Error: {e}\n{traceback.format_exc()}")
+    MP_INIT_ERROR = f"MediaPipe Import/Init Error: {e}\n{traceback.format_exc()}"
+    print(f"[FATAL] {MP_INIT_ERROR}")
     mp_face_mesh = None
     mp_face_detection = None
     MP_AVAILABLE = False
@@ -201,14 +189,8 @@ def run_basic_liveness(image_b64: str) -> dict:
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    assert mp_face_mesh is not None
-    with mp_face_mesh.FaceMesh(
-        static_image_mode=True,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5
-    ) as face_mesh:
-        results = face_mesh.process(rgb)
+    assert global_face_mesh is not None
+    results = global_face_mesh.process(rgb)
 
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
     if not multi_face_landmarks:
@@ -573,18 +555,20 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
 # ─────────────────────────────────────────────────────────────
 def _fallback_basic(session_id, start):
     elapsed = (time.time() - start) * 1000
+    error_msg = f"CV engine not available. Details: {MP_INIT_ERROR}" if MP_INIT_ERROR else "CV engine not available."
     return {
         "session_id": session_id, "result": "error", "confidence": 0.0,
         "liveness_score": 0.0, "processing_time": round(elapsed, 2),
-        "checks": {}, "error": "CV engine not available. Install: pip install mediapipe opencv-python-headless"
+        "checks": {}, "error": error_msg
     }
 
 def _fallback_advanced(session_id, start, challenge_type):
     elapsed = (time.time() - start) * 1000
+    error_msg = f"CV engine not available. Details: {MP_INIT_ERROR}" if MP_INIT_ERROR else "CV engine not available."
     return {
         "session_id": session_id, "result": "error", "confidence": 0.0,
         "processing_time": round(elapsed, 2), "spoof_score": 0.0, "deepfake_risk": 0.0,
-        "challenge_result": None, "checks": {}, "error": "CV engine not available."
+        "challenge_result": None, "checks": {}, "error": error_msg
     }
 
 def _fallback_enterprise(session_id, start, subject_id):
