@@ -27,6 +27,7 @@ try:
     import mediapipe as mp  # pyrefly: ignore [missing-import]
     import cv2  # pyrefly: ignore [missing-import]
     import numpy as np  # pyrefly: ignore [missing-import]
+    import traceback
     
     # In some environments, solutions might be nested
     if hasattr(mp, 'solutions'):
@@ -47,8 +48,9 @@ try:
         mp_face_detection = None
         MP_AVAILABLE = False
         global_face_mesh = None
-except ImportError as e:
-    print(f"[FATAL] MediaPipe Import Error: {e}")
+except Exception as e:
+    import traceback
+    print(f"[FATAL] MediaPipe Import/Init Error: {e}\n{traceback.format_exc()}")
     mp_face_mesh = None
     mp_face_detection = None
     MP_AVAILABLE = False

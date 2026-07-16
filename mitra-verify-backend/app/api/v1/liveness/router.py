@@ -238,8 +238,14 @@ async def debug_cv():
     
     mp_err = "No error"
     cv_err = "No error"
+    mp_dir = []
+    mp_version = "unknown"
     try:
         import mediapipe as mp
+        mp_dir = dir(mp)
+        mp_version = getattr(mp, '__version__', 'unknown')
+        if not hasattr(mp, 'solutions'):
+            mp_err = "mediapipe does not have 'solutions' attribute!"
     except Exception as e:
         mp_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
         
@@ -252,7 +258,9 @@ async def debug_cv():
         "MP_AVAILABLE": MP_AVAILABLE,
         "CV2_AVAILABLE": CV2_AVAILABLE,
         "mp_import_error": mp_err,
-        "cv_import_error": cv_err
+        "cv_import_error": cv_err,
+        "mp_version": mp_version,
+        "mp_dir": mp_dir
     }
 
 @router.post("/session/start", tags=["Demo"])
