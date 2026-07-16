@@ -114,7 +114,7 @@ export default function DashboardPage() {
       
       const rawOverview = overviewRes.data;
       const rawEvents = eventsRes.data || [];
-      console.log(`[DASHBOARD POLLING] Overview Status: ${overviewRes.status || 'Fallback'}`, rawOverview);
+      console.log(`[DASHBOARD POLLING] Overview Status: ${'status' in overviewRes ? overviewRes.status : 'Fallback'}`, rawOverview);
       console.log(`[DASHBOARD POLLING] Events count: ${rawEvents.length}`);
       
       const transformedData = transformAnalyticsData(rawOverview, rawEvents, timeframe);
