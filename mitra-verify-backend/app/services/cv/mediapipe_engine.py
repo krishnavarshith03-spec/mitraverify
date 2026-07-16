@@ -120,7 +120,7 @@ class FaceEngine:
             try:
                 # Use buffalo_sc (16MB) instead of buffalo_l (300MB) to fit in 512MB RAM limit
                 # Only load detection and recognition to save memory
-                cls._analyzer = insightface.app.FaceAnalysis(
+                cls._analyzer = insightface.app.FaceAnalysis(  # type: ignore
                     name='buffalo_sc', 
                     allowed_modules=['detection', 'recognition'],
                     providers=['CPUExecutionProvider']
@@ -279,14 +279,14 @@ def run_basic_liveness(image_b64: str) -> dict:
     
     # Liveness score: Calculate using texture and replay scores directly
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
+    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]  # type: ignore
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(face_region))  # type: ignore
         texture_score = min(1.0, local_std / 30.0)
         try:
-            f = np.fft.fft2(face_region.astype(float))
+            f = np.fft.fft2(face_region.astype(float))  # type: ignore
             fshift = np.fft.fftshift(f)
-            magnitude = 20 * np.log(np.abs(fshift) + 1)
+            magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
             center = magnitude[magnitude.shape[0]//2-5:magnitude.shape[0]//2+5,
                                magnitude.shape[1]//2-5:magnitude.shape[1]//2+5]
             edge   = np.mean(magnitude) 
@@ -360,18 +360,18 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
 
     # Texture anti-spoof: check for natural skin variance using LBP-inspired metric
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
+    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]  # type: ignore
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(face_region))  # type: ignore
         texture_score = min(1.0, local_std / 30.0)
     else:
         texture_score = 0.5
 
     # Frequency analysis for screen/moiré
     if face_region.size > 0:
-        f = np.fft.fft2(face_region.astype(float))
+        f = np.fft.fft2(face_region.astype(float))  # type: ignore
         fshift = np.fft.fftshift(f)
-        magnitude = 20 * np.log(np.abs(fshift) + 1)
+        magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
         center = magnitude[magnitude.shape[0]//2-5:magnitude.shape[0]//2+5,
                            magnitude.shape[1]//2-5:magnitude.shape[1]//2+5]
         edge   = np.mean(magnitude) 
@@ -421,10 +421,10 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
     
     p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
     p_right_mouth = np.array([landmarks[61].x, landmarks[61].y])
-    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)
+    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)  # type: ignore
     p_left_jaw = np.array([landmarks[234].x, landmarks[234].y])
     p_right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)
+    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)  # type: ignore
     smile_ratio = mouth_width / face_width if face_width > 0.001 else 0.32
     smile_score = float(np.clip((smile_ratio - 0.32) / 0.08, 0.0, 1.0))
     
@@ -645,14 +645,14 @@ def _head_pose_3d(landmarks, w, h):
     
     # Roll: eye slope angle in degrees
     # Corrected subtraction direction: left_eye - right_eye so upright face is close to 0
-    dx = left_eye[0] - right_eye[0]
-    dy = left_eye[1] - right_eye[1]
+    dx = left_eye[0] - right_eye[0]  # type: ignore
+    dy = left_eye[1] - right_eye[1]  # type: ignore
     roll = math.atan2(dy, dx) * 180.0 / math.pi
     
     # Yaw: horizontal ratio of nose deviation from eye center
-    eye_center = (left_eye + right_eye) / 2.0
-    left_dist = np.linalg.norm(nose - left_eye)
-    right_dist = np.linalg.norm(nose - right_eye)
+    eye_center = (left_eye + right_eye) / 2.0  # type: ignore
+    left_dist = np.linalg.norm(nose - left_eye)  # type: ignore
+    right_dist = np.linalg.norm(nose - right_eye)  # type: ignore
     if left_dist > 0.001:
         ratio = right_dist / left_dist
         yaw = -(ratio - 1.0) * 45.0  # corrected degrees: right = positive, left = negative
@@ -660,8 +660,8 @@ def _head_pose_3d(landmarks, w, h):
         yaw = 0.0
         
     # Pitch: vertical eye-nose vs nose-chin ratio
-    eye_nose_y = nose[1] - eye_center[1]
-    nose_chin_y = chin[1] - nose[1]
+    eye_nose_y = nose[1] - eye_center[1]  # type: ignore
+    nose_chin_y = chin[1] - nose[1]  # type: ignore
     if nose_chin_y > 0.001:
         ratio_pitch = eye_nose_y / nose_chin_y
         pitch = (0.6 - ratio_pitch) * 50.0  # scale around standard front ratio 0.6
@@ -783,8 +783,8 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     
     # Smile ratio (Lip corner distance vs face width)
     if len(landmarks) > 291:
-        w_mouth = np.linalg.norm(np.array([landmarks[291].x, landmarks[291].y]) - np.array([landmarks[61].x, landmarks[61].y]))
-        w_face = np.linalg.norm(np.array([landmarks[454].x, landmarks[454].y]) - np.array([landmarks[234].x, landmarks[234].y]))
+        w_mouth = np.linalg.norm(np.array([landmarks[291].x, landmarks[291].y]) - np.array([landmarks[61].x, landmarks[61].y]))  # type: ignore
+        w_face = np.linalg.norm(np.array([landmarks[454].x, landmarks[454].y]) - np.array([landmarks[234].x, landmarks[234].y]))  # type: ignore
         smile_ratio = float(w_mouth / w_face if w_face > 0.001 else 0.32)
         cache.setdefault("smile_ratios", []).append(smile_ratio)
     
@@ -841,8 +841,8 @@ def _calculate_face_confidence(landmarks, w, h) -> float:
     left_eye = np.array([landmarks[LEFT_EYE_CORNER].x, landmarks[LEFT_EYE_CORNER].y])
     right_eye = np.array([landmarks[RIGHT_EYE_CORNER].x, landmarks[RIGHT_EYE_CORNER].y])
     
-    d_left = float(np.linalg.norm(nose - left_eye))
-    d_right = float(np.linalg.norm(nose - right_eye))
+    d_left = float(np.linalg.norm(nose - left_eye))  # type: ignore
+    d_right = float(np.linalg.norm(nose - right_eye))  # type: ignore
     
     if d_left + d_right > 0.001:
         symmetry = 1.0 - abs(d_left - d_right) / (d_left + d_right)
@@ -876,12 +876,12 @@ def _gaze_estimation(landmarks, w, h):
     corner_right_inner = np.array([landmarks[133].x, landmarks[133].y])
     
     # Left eye delta, right eye delta
-    left_denom = corner_left_outer[0] - corner_left_inner[0]
-    right_denom = corner_right_inner[0] - corner_right_outer[0]
+    left_denom = corner_left_outer[0] - corner_left_inner[0]  # type: ignore
+    right_denom = corner_right_inner[0] - corner_right_outer[0]  # type: ignore
     
     if abs(left_denom) > 0.001 and abs(right_denom) > 0.001:
-        gaze_left_x = (iris_left[0] - corner_left_inner[0]) / left_denom
-        gaze_right_x = (iris_right[0] - corner_right_outer[0]) / right_denom
+        gaze_left_x = (iris_left[0] - corner_left_inner[0]) / left_denom  # type: ignore
+        gaze_right_x = (iris_right[0] - corner_right_outer[0]) / right_denom  # type: ignore
         gaze_x = float(np.clip((gaze_left_x + gaze_right_x) / 2.0, 0.0, 1.0))
     else:
         gaze_x = 0.5
@@ -890,7 +890,7 @@ def _gaze_estimation(landmarks, w, h):
     left_eye_bottom = landmarks[374].y
     left_eye_height = left_eye_bottom - left_eye_top
     if left_eye_height > 0.001:
-        gaze_y = float(np.clip((iris_left[1] - left_eye_top) / left_eye_height, 0.0, 1.0))
+        gaze_y = float(np.clip((iris_left[1] - left_eye_top) / left_eye_height, 0.0, 1.0))  # type: ignore
     else:
         gaze_y = 0.5
         
@@ -949,7 +949,7 @@ def _calculate_face_embedding(frame: np.ndarray, landmarks) -> list[float]:
         return np.array([landmarks[idx].x, landmarks[idx].y, landmarks[idx].z])
         
     def dist(idx1, idx2):
-        return np.linalg.norm(get_pt(idx1) - get_pt(idx2))
+        return np.linalg.norm(get_pt(idx1) - get_pt(idx2))  # type: ignore
 
     # Base scale: Face Height (10 to 152) and Face Width (234 to 454)
     face_height = dist(10, 152)
@@ -1020,8 +1020,8 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[
     if norm_a < 0.001 or norm_b < 0.001:
         return 0.0, 0.0
         
-    a = a / norm_a
-    b = b / norm_b
+    a = a / norm_a  # type: ignore
+    b = b / norm_b  # type: ignore
     
     # Calculate true cosine similarity
     similarity = float(np.dot(a, b))
@@ -1117,8 +1117,8 @@ def _validate_landmark_geometry(landmarks, w: int, h: int) -> dict:
     left_jaw = np.array([landmarks[234].x, landmarks[234].y])
     right_jaw = np.array([landmarks[454].x, landmarks[454].y])
     chin = np.array([landmarks[152].x, landmarks[152].y])
-    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))
-    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))
+    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))  # type: ignore
+    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))  # type: ignore
     jaw_symmetry = 1.0 - abs(jaw_left_dist - jaw_right_dist) / max(jaw_left_dist + jaw_right_dist, 0.001)
     jaw_score = float(np.clip(jaw_symmetry, 0.0, 1.0))
 
@@ -1394,8 +1394,8 @@ def _advanced_fraud_detection(frame, landmarks, history, texture_score: float, r
         left_eye = np.array([landmarks[33].x, landmarks[33].y])
         right_eye = np.array([landmarks[263].x, landmarks[263].y])
         nose = np.array([landmarks[1].x, landmarks[1].y])
-        d_left = float(np.linalg.norm(nose - left_eye))
-        d_right = float(np.linalg.norm(nose - right_eye))
+        d_left = float(np.linalg.norm(nose - left_eye))  # type: ignore
+        d_right = float(np.linalg.norm(nose - right_eye))  # type: ignore
         symmetry_diff = abs(d_left - d_right) / max(d_left + d_right, 0.001)
         # Real faces: symmetry_diff typically 0.02-0.15. AI: < 0.005
         if symmetry_diff < 0.003:
@@ -1767,7 +1767,7 @@ def _process_demo_frame_inner(
             mp_drawing.draw_landmarks(
                 image=debug_img,
                 landmark_list=face_landmarks,
-                connections=mp_face_mesh.FACEMESH_TESSELATION,
+                connections=mp_face_mesh.FACEMESH_TESSELATION,  # type: ignore
                 landmark_drawing_spec=None,
                 connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style())
         cv2.imwrite(debug_lm_path, cv2.cvtColor(debug_img, cv2.COLOR_RGB2BGR))
@@ -1940,7 +1940,7 @@ def _process_demo_frame_inner(
         
         # Blur detection
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()  # type: ignore
         if laplacian_var < 50:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
@@ -1968,7 +1968,7 @@ def _process_demo_frame_inner(
         # Confidence check
         if face_confidence < 0.5:
             return {
-                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
+                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
                 "bbox": bbox, "status": "LOW_CONFIDENCE", "reason": "Face confidence too low", "challenge_passed": False, "enrolled_matched": False,
                 "enterprise_report": {
                     "identity_match_pct": 0.0,
@@ -2005,10 +2005,10 @@ def _process_demo_frame_inner(
     # 5. Smile (Mouth corner expansion ratio normalized by face width)
     p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
     p_right_mouth = np.array([landmarks[61].x, landmarks[61].y])
-    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)
+    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)  # type: ignore
     p_left_jaw = np.array([landmarks[234].x, landmarks[234].y])
     p_right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)
+    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)  # type: ignore
     smile_ratio = mouth_width / face_width if face_width > 0.001 else 0.32
     smile_score = float(np.clip((smile_ratio - 0.32) / 0.08, 0.0, 1.0))
     
@@ -2038,7 +2038,7 @@ def _process_demo_frame_inner(
     # Strict Yaw/Pitch validation for embedding comparison
     if api_type == "enterprise" and head_rotation:
         return {
-            "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
+            "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
             "bbox": bbox, "status": "POSE_INVALID", "reason": "Face turned beyond allowed yaw/pitch", "challenge_passed": False, "enrolled_matched": False
         }
     
@@ -2058,7 +2058,7 @@ def _process_demo_frame_inner(
         ys = [pt[1] for pt in nose_pts]
         if np.std(xs) < 1e-6 and np.std(ys) < 1e-6:
             return {
-                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
+                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
                 "bbox": bbox, "status": "CAMERA_FEED_FROZEN", "challenge_passed": False, "enrolled_matched": False
             }
 
@@ -2085,15 +2085,15 @@ def _process_demo_frame_inner(
     w_px = max(10, min(w - x_px, w_px))
     h_px = max(10, min(h - y_px, h_px))
     
-    face_region = gray[y_px:y_px+h_px, x_px:x_px+w_px]
+    face_region = gray[y_px:y_px+h_px, x_px:x_px+w_px]  # type: ignore
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(face_region))  # type: ignore
         texture_score = min(1.0, local_std / 30.0)
         
         try:
-            f = np.fft.fft2(face_region.astype(float))
+            f = np.fft.fft2(face_region.astype(float))  # type: ignore
             fshift = np.fft.fftshift(f)
-            magnitude = 20 * np.log(np.abs(fshift) + 1)
+            magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
             center_h, center_w = magnitude.shape[0] // 2, magnitude.shape[1] // 2
             center = magnitude[max(0, center_h-5):min(magnitude.shape[0], center_h+5),
                                max(0, center_w-5):min(magnitude.shape[1], center_w+5)]
@@ -2262,9 +2262,9 @@ def _process_demo_frame_inner(
         if challenge_type != "monitoring" and time.time() - SESSION_CACHE[session_id].get("challenge_start_time", time.time()) > 30.0:
             return {
                 "face_present": True,
-                "detected_faces": int(detected_faces),
-                "face_confidence": float(face_confidence),
-                "landmark_count": int(landmark_count),
+                "detected_faces": int(detected_faces),  # type: ignore
+                "face_confidence": float(face_confidence),  # type: ignore
+                "landmark_count": int(landmark_count),  # type: ignore
                 "bbox": bbox,
                 "status": "SPOOF_DETECTED",
                 "reason": "CHALLENGE_TIMEOUT",
@@ -2291,8 +2291,8 @@ def _process_demo_frame_inner(
         passive_liveness = _passive_liveness_analysis(history, landmarks, w, h) if history else {"score": 0.0}
 
         # 3. Advanced fraud detection
-        t_score = float(texture_score) if 'texture_score' in dir() else 0.5
-        r_score = float(replay_score) if 'replay_score' in dir() else 0.0
+        t_score = float(texture_score) if 'texture_score' in dir() else 0.5  # type: ignore
+        r_score = float(replay_score) if 'replay_score' in dir() else 0.0  # type: ignore
         fraud_result = _advanced_fraud_detection(
             frame, landmarks, history,
             t_score,

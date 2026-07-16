@@ -551,7 +551,11 @@ export default function AdvancedDemoPage() {
     }
   }, [overallResult]);
 
+  const [isStarting, setIsStarting] = useState(false);
+
   async function startCamera() {
+    if (isStarting) return;
+    setIsStarting(true);
     setError(null);
     setModelStatus('Loading');
     
@@ -584,6 +588,7 @@ export default function AdvancedDemoPage() {
         setError('Biometric services failed to respond within 5 seconds. Please check connection and try again.');
         reset();
       }
+      setIsStarting(false);
     }, 5000);
 
     try {
@@ -600,6 +605,7 @@ export default function AdvancedDemoPage() {
         clearTimeout(loadingTimeoutRef.current);
         loadingTimeoutRef.current = null;
       }
+      setIsStarting(false);
       return;
     }
 
@@ -620,6 +626,7 @@ export default function AdvancedDemoPage() {
         };
         await videoRef.current.play();
         setStreaming(true);
+        setIsStarting(false);
       }
     } catch (err) {
       setCameraStatus('Inactive');
@@ -629,6 +636,7 @@ export default function AdvancedDemoPage() {
         loadingTimeoutRef.current = null;
       }
       setModelStatus('Failed');
+      setIsStarting(false);
     }
   }
 
@@ -647,6 +655,7 @@ export default function AdvancedDemoPage() {
     setStreaming(false);
     setCameraStatus('Inactive');
     setCurrentChallenge(0);
+    setIsStarting(false);
     setChallengePassed([false, false, false, false, false, false]);
     setHasBlinked(false);
     setHasMovedMouth(false);
@@ -915,18 +924,18 @@ export default function AdvancedDemoPage() {
                 <button
                   className="btn-primary"
                   onClick={startCamera}
-                  disabled={backendHealthy !== true}
+                  disabled={isStarting}
                   style={{
                     flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    opacity: backendHealthy === true ? 1 : 0.6,
-                    cursor: backendHealthy === true ? 'pointer' : 'not-allowed'
+                    opacity: isStarting ? 0.7 : 1,
+                    cursor: isStarting ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <Camera size={16} /> {backendHealthy === null ? 'Checking Backend...' : 'Start Challenge'}
+                  <Camera size={16} /> {isStarting ? 'Starting...' : 'Start Challenge'}
                 </button>
               ) : (
                 <>

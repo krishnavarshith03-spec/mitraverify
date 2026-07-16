@@ -17,9 +17,9 @@ try:
         with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5) as face_mesh:
             rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             results = face_mesh.process(rgb)
-            if results.multi_face_landmarks:
-                print(f"Number of faces: {len(results.multi_face_landmarks)}")
-                print(f"Number of landmarks: {len(results.multi_face_landmarks[0].landmark)}")
+            if results.multi_face_landmarks:  # type: ignore
+                print(f"Number of faces: {len(results.multi_face_landmarks)}")  # type: ignore
+                print(f"Number of landmarks: {len(results.multi_face_landmarks[0].landmark)}")  # type: ignore
             else:
                 print("No faces detected in lena.jpg.")
 except Exception as e:

@@ -932,7 +932,17 @@ export default function EnterpriseDemoPage() {
     setError(null); faceVisibleStartRef.current = null; setFaceVisibleDuration(0);
     setSessionTime(0); setOverallResult(null); setSessionTerminated(false); setTerminationReason('');
     setModelStatus('Loading'); faceDetectionHistoryRef.current = []; similarityHistoryRef.current = [];
-    setMismatchCount(0); setPhase('ENROLLMENT'); setShowReport(false); setIsMonitoring(false); setMonitoringAudit([]);
+    setMismatchCount(0); 
+    
+    // Check if enrolled face exists locally before jumping phase
+    const stored = typeof window !== 'undefined' ? (localStorage.getItem('enrolledEmbedding') || localStorage.getItem('mv_enrolled_signature')) : null;
+    if (enrolledEmbedding || stored) {
+      setPhase('CHALLENGES');
+    } else {
+      setPhase('ENROLLMENT');
+    }
+    
+    setShowReport(false); setIsMonitoring(false); setMonitoringAudit([]);
     if (typeof window !== 'undefined') sessionStorage.removeItem('mv_mismatch_count');
     consecutiveValidFramesRef.current = 0; currentChallengeRef.current = 0; setConsecutiveValidFrames(0);
     setFaceTrackingState('FACE_PRESENT'); prevTrackingStateRef.current = 'FACE_PRESENT';
@@ -1047,6 +1057,7 @@ export default function EnterpriseDemoPage() {
     setEnrolledEmbedding(null);
     localStorage.removeItem('enrolledEmbedding'); localStorage.removeItem('mv_enrolled_signature');
     setSimilarity(0); similarityHistoryRef.current = []; setConsecutiveValidFrames(0);
+    setPhase('ENROLLMENT');
     await refreshUser();
   };
 
@@ -1272,44 +1283,58 @@ export default function EnterpriseDemoPage() {
 
             {/* Enrollment Controls */}
             {streaming && !overallResult && (
-              <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {!hasFaceEnrolled ? (
-                  <button 
-                    onClick={enrollFace} 
-                    disabled={enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT'}
-                    style={{ 
-                      flex: 1, 
-                      padding: '10px 0', 
-                      borderRadius: 10, 
-                      background: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', 
-                      color: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? '#94a3b8' : '#000', 
-                      fontWeight: 700, 
-                      fontSize: 13, 
-                      border: 'none', 
-                      cursor: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'not-allowed' : 'pointer', 
-                      transition: 'all 0.3s ease'
-                    }}>
-                    {enrolling ? 'Enrolling...' : 'Enroll Current Face'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button 
+                      onClick={enrollFace} 
+                      disabled={enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT'}
+                      style={{ 
+                        flex: 1, 
+                        padding: '10px 0', 
+                        borderRadius: 10, 
+                        background: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #00ff88, #00cc66)', 
+                        color: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? '#94a3b8' : '#000', 
+                        fontWeight: 700, 
+                        fontSize: 13, 
+                        border: 'none', 
+                        cursor: (enrolling || confidence < 0.90 || !faceInsideGuide || detectedFaces !== 1 || phase !== 'ENROLLMENT') ? 'not-allowed' : 'pointer', 
+                        transition: 'all 0.3s ease'
+                      }}>
+                      {enrolling ? 'Enrolling...' : 'Enroll Current Face'}
+                    </button>
+                  </div>
+                ) : phase === 'ENROLLMENT' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                    <div style={{ textAlign: 'center', color: '#00ff88', fontSize: 13, fontWeight: 'bold' }}>✓ Identity enrolled</div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => setPhase('CHALLENGES')} style={{ flex: 2, padding: '10px 0', borderRadius: 10, background: 'linear-gradient(135deg, #00ff88, #00cc66)', color: '#000', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+                        Continue Verification
+                      </button>
+                      <button onClick={clearEnrollment} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                        Clear Enrollment
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <>
+                  <div style={{ display: 'flex', gap: 10 }}>
                     <button onClick={clearEnrollment} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
                       Clear Enrollment
                     </button>
                     <button onClick={stopCamera} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'rgba(100,100,100,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
                       Stop Camera
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             )}
           </div>
 
           {/* RIGHT SIDEBAR — Security Metrics */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
+          <div className="lg:col-span-4 flex flex-col gap-4" style={{ height: 'calc(100vh - 120px)', position: 'sticky', top: 100 }}>
             {/* 3-Stage Workflow Indicator */}
             {streaming && !overallResult && (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+              <div className="glass" style={{ padding: 16, borderRadius: 14, flexShrink: 0 }}>
                 <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>Enterprise Verification Stages</div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1340,165 +1365,173 @@ export default function EnterpriseDemoPage() {
                 </div>
               </div>
             )}
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {/* Identity Score */}
-              <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>IDENTITY MATCH</div>
-                <IdentityScoreRing score={similarity * 100} label="Match" size={120} />
-              </div>
 
-              {/* Threat Radar */}
-              { (
-                <div className="glass" style={{ padding: 14, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
-                </div>
-              )}
-            </div>
-
-            {/* Security Metrics */}
-            { (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
-              <MetricBar label="Confidence" value={confidence * 100} />
-              <MetricBar label="Face Quality" value={faceQuality} />
-              <MetricBar label="Pose Quality" value={poseQuality} />
-              <MetricBar label="Lighting" value={lightingQuality * 100} />
-              <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
-                <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
-                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
-                  {Number((spoofScore * 100) || 0).toFixed(1)}%
-                </span>
-              </div>
-              </div>
-            )}
-
-            {/* Continuous Monitoring Panel */}
-            {isMonitoring && (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: '#00ff88', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800', boxShadow: `0 0 10px ${faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800'}` }} />
-                    LIVE MONITORING
-                  </div>
-                  <div style={{ fontSize: 10, color: faceTrackingState === 'FACE_PRESENT' ? '#00d4ff' : '#ffb800', fontWeight: 700, fontFamily: 'monospace' }}>
-                    {faceTrackingState === 'FACE_PRESENT' ? 'SECURE' : 'REACQUIRING...'}
-                  </div>
-                </div>
-                <MetricBar label="Live Match" value={similarity * 100} />
-                <MetricBar label="Liveness Score" value={(passiveLiveness?.score ?? 0) * 100} />
-                
-                <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', maxHeight: 120, overflowY: 'auto' }}>
-                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Audit Timeline</div>
-                  {monitoringAudit.map((log, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 4, fontFamily: 'monospace' }}>
-                      <span>{log.time}</span>
-                      <span style={{ color: log.status === 'secure' ? '#00ff88' : log.status === 'warning' ? '#ffb800' : '#ff3366' }}>{log.event}</span>
-                    </div>
-                  ))}
-                  {monitoringAudit.length === 0 && <div style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', textAlign: 'center' }}>Awaiting events...</div>}
-                </div>
-              </div>
-            )}
-
-            {/* Session Shield */}
-            { (
-              <div className="glass" style={{ padding: 14, borderRadius: 14, textAlign: 'center' }}>
-                <SessionShield authenticated={isVerified} invalidated={sessionTerminated} color={accentColor} />
-                <div style={{ fontSize: 10, color: accentColor, fontWeight: 600, marginTop: 4 }}>
-                  {sessionTerminated ? 'SESSION INVALIDATED' : isVerified ? 'AUTHENTICATED' : streaming ? 'VERIFYING' : 'STANDBY'}
-                </div>
-                <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', marginTop: 4 }}>
-                  {formatTime(sessionTime)}
-                </div>
-              </div>
-            )}
-          
-            
             {/* Challenge Progress */}
             {phase === 'CHALLENGES' && (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>CHALLENGE SEQUENCE</div>
-                <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 700, fontFamily: 'monospace' }}>{challengeProgress}%</div>
+              <div className="glass" style={{ padding: 16, borderRadius: 14, display: 'flex', flexDirection: 'column', maxHeight: '400px', flexShrink: 0 }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>CHALLENGE SEQUENCE</div>
+                    <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 700, fontFamily: 'monospace' }}>{challengeProgress}%</div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
+                    <motion.div animate={{ width: `${challengeProgress}%` }} transition={{ duration: 0.5 }} style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #00d4ff, #00ff88)' }} />
+                  </div>
+                </div>
+                
+                {/* Scrollable List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', flex: 1, paddingRight: 4, minHeight: 0 }}>
+                  {challenges.map((ch, i) => (
+                    <CheckBadge key={ch.id} label={`${ch.icon} ${ch.label}`} passed={challengePassed[i]} checking={i === currentChallenge && streaming && !overallResult} />
+                  ))}
+                </div>
+                
+                <div style={{ flexShrink: 0 }}>
+                  {challengeError && (
+                    <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(255,51,102,0.15)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', fontSize: 11, fontWeight: 600 }}>
+                      {challengeError}
+                    </div>
+                  )}
+                  {/* Show instructions explicitly */}
+                  {challenges[currentChallenge] && (
+                    <div style={{ marginTop: 12, padding: 12, background: 'rgba(0,212,255,0.1)', border: '1px solid #00d4ff', borderRadius: 8, textAlign: 'center' }}>
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>{challenges[currentChallenge].icon}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#00d4ff' }}>{challenges[currentChallenge].label}</div>
+                      <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 4 }}>{challenges[currentChallenge].instruction}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8 }}>Time remaining: {challengeTimer}s</div>
+                    </div>
+                  )}
+                </div>
               </div>
-              {/* Progress bar */}
-              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
-                <motion.div animate={{ width: `${challengeProgress}%` }} transition={{ duration: 0.5 }} style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #00d4ff, #00ff88)' }} />
+            )}
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingRight: 4, paddingBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Identity Score */}
+                <div className="glass" style={{ padding: 16, borderRadius: 14, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 16 }}>IDENTITY MATCH</div>
+                  <IdentityScoreRing score={similarity * 100} label="Match" size={120} />
+                </div>
+
+                {/* Threat Radar */}
+                { (
+                  <div className="glass" style={{ padding: 14, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ThreatRadarWidget spoofScore={spoofScore} color={spoofScore > 0.3 ? '#ff3366' : '#00ff88'} />
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
-                {challenges.map((ch, i) => (
-                  <CheckBadge key={ch.id} label={`${ch.icon} ${ch.label}`} passed={challengePassed[i]} checking={i === currentChallenge && streaming && !overallResult} />
-                ))}
-              </div>
-              {challengeError && (
-                <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(255,51,102,0.15)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', fontSize: 11, fontWeight: 600 }}>
-                  {challengeError}
+
+              {/* Security Metrics */}
+              { (
+                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>ENTERPRISE SECURITY</div>
+                <MetricBar label="Confidence" value={confidence * 100} />
+                <MetricBar label="Face Quality" value={faceQuality} />
+                <MetricBar label="Pose Quality" value={poseQuality} />
+                <MetricBar label="Lighting" value={lightingQuality * 100} />
+                <MetricBar label="Liveness" value={(passiveLiveness?.score ?? 0) * 100} />
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)' }}>
+                  <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>RISK SCORE</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: spoofScore < 0.2 ? '#00ff88' : spoofScore < 0.4 ? '#ffb800' : '#ff3366' }}>
+                    {Number((spoofScore * 100) || 0).toFixed(1)}%
+                  </span>
+                </div>
                 </div>
               )}
-              {/* Show instructions explicitly */}
-              {challenges[currentChallenge] && (
-                <div style={{ marginTop: 12, padding: 12, background: 'rgba(0,212,255,0.1)', border: '1px solid #00d4ff', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>{challenges[currentChallenge].icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#00d4ff' }}>{challenges[currentChallenge].label}</div>
-                  <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 4 }}>{challenges[currentChallenge].instruction}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8 }}>Time remaining: {challengeTimer}s</div>
+
+              {/* Continuous Monitoring Panel */}
+              {isMonitoring && (
+                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: '#00ff88', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800', boxShadow: `0 0 10px ${faceTrackingState === 'FACE_PRESENT' ? '#00ff88' : '#ffb800'}` }} />
+                      LIVE MONITORING
+                    </div>
+                    <div style={{ fontSize: 10, color: faceTrackingState === 'FACE_PRESENT' ? '#00d4ff' : '#ffb800', fontWeight: 700, fontFamily: 'monospace' }}>
+                      {faceTrackingState === 'FACE_PRESENT' ? 'SECURE' : 'REACQUIRING...'}
+                    </div>
+                  </div>
+                  <MetricBar label="Live Match" value={similarity * 100} />
+                  <MetricBar label="Liveness Score" value={(passiveLiveness?.score ?? 0) * 100} />
+                  
+                  <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', maxHeight: 120, overflowY: 'auto' }}>
+                    <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Audit Timeline</div>
+                    {monitoringAudit.map((log, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 4, fontFamily: 'monospace' }}>
+                        <span>{log.time}</span>
+                        <span style={{ color: log.status === 'secure' ? '#00ff88' : log.status === 'warning' ? '#ffb800' : '#ff3366' }}>{log.event}</span>
+                      </div>
+                    ))}
+                    {monitoringAudit.length === 0 && <div style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', textAlign: 'center' }}>Awaiting events...</div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Session Shield */}
+              { (
+                <div className="glass" style={{ padding: 14, borderRadius: 14, textAlign: 'center' }}>
+                  <SessionShield authenticated={isVerified} invalidated={sessionTerminated} color={accentColor} />
+                  <div style={{ fontSize: 10, color: accentColor, fontWeight: 600, marginTop: 4 }}>
+                    {sessionTerminated ? 'SESSION INVALIDATED' : isVerified ? 'AUTHENTICATED' : streaming ? 'VERIFYING' : 'STANDBY'}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', marginTop: 4 }}>
+                    {formatTime(sessionTime)}
+                  </div>
+                </div>
+              )}
+            
+              {/* Fraud Detection Panel */}
+              { (
+                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>FRAUD DETECTION</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <FraudCheckItem label="Printed Photo" detected={fraudDetection?.printed_photo?.detected ?? false} icon="🖼️" />
+                  <FraudCheckItem label="Replay Attack" detected={fraudDetection?.replay_attack?.detected ?? false} icon="📱" />
+                  <FraudCheckItem label="Deepfake" detected={fraudDetection?.deepfake?.detected ?? false} icon="🤖" />
+                  <FraudCheckItem label="AI Generated" detected={fraudDetection?.ai_generated?.detected ?? false} icon="🧠" />
+                  <FraudCheckItem label="Screen Reflect" detected={fraudDetection?.screen_reflection?.detected ?? false} icon="💡" />
+                  <FraudCheckItem label="Mask Attack" detected={fraudDetection?.mask_attack?.detected ?? false} icon="🎭" />
+                  <FraudCheckItem label="Cropped Face" detected={fraudDetection?.cropped_face?.detected ?? false} icon="✂️" />
+                  <FraudCheckItem label="Multi-Face" detected={(detectedFaces > 1)} icon="👥" />
+                </div>
+                {fraudDetection && (
+                  <div style={{ marginTop: 8, padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>THREAT LEVEL</span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: fraudDetection.threat_level === 'CRITICAL' ? '#ff3366' : fraudDetection.threat_level === 'HIGH' ? '#ff6633' : fraudDetection.threat_level === 'MEDIUM' ? '#ffb800' : '#00ff88' }}>
+                      {fraudDetection.threat_level}
+                    </span>
+                  </div>
+                )}
+                </div>
+              )}
+
+              {/* Verification Timeline */}
+              { (
+                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>VERIFICATION TIMELINE</div>
+                <VerificationTimeline stages={[
+                  { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
+                  { label: 'Biometric Enrollment', complete: hasFaceEnrolled, active: streaming && !hasFaceEnrolled && detectedFaces > 0 },
+                  { label: 'Identity Matching', complete: similarity >= 0.75, active: hasFaceEnrolled && similarity < 0.75 },
+                  { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
+                  { label: 'Authenticated', complete: isVerified, active: challengePassed.every(Boolean) && !isVerified },
+                ]} />
+                </div>
+              )}
+
+              {/* Landmark Geometry */}
+              { landmarkGeometry && landmarkGeometry.regions && (
+                <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
+                  <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>LANDMARK GEOMETRY</div>
+                  <MetricBar label="Eye Geometry" value={landmarkGeometry.regions.eye_geometry * 100} />
+                  <MetricBar label="Nose Geometry" value={landmarkGeometry.regions.nose_geometry * 100} />
+                  <MetricBar label="Jaw Shape" value={landmarkGeometry.regions.jaw_shape * 100} />
+                  <MetricBar label="Mouth Geometry" value={landmarkGeometry.regions.mouth_geometry * 100} />
+                  <MetricBar label="Proportions" value={landmarkGeometry.regions.face_proportions * 100} />
                 </div>
               )}
             </div>
-            )}
-
-            {/* Fraud Detection Panel */}
-            { (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>FRAUD DETECTION</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <FraudCheckItem label="Printed Photo" detected={fraudDetection?.printed_photo?.detected ?? false} icon="🖼️" />
-                <FraudCheckItem label="Replay Attack" detected={fraudDetection?.replay_attack?.detected ?? false} icon="📱" />
-                <FraudCheckItem label="Deepfake" detected={fraudDetection?.deepfake?.detected ?? false} icon="🤖" />
-                <FraudCheckItem label="AI Generated" detected={fraudDetection?.ai_generated?.detected ?? false} icon="🧠" />
-                <FraudCheckItem label="Screen Reflect" detected={fraudDetection?.screen_reflection?.detected ?? false} icon="💡" />
-                <FraudCheckItem label="Mask Attack" detected={fraudDetection?.mask_attack?.detected ?? false} icon="🎭" />
-                <FraudCheckItem label="Cropped Face" detected={fraudDetection?.cropped_face?.detected ?? false} icon="✂️" />
-                <FraudCheckItem label="Multi-Face" detected={(detectedFaces > 1)} icon="👥" />
-              </div>
-              {fraudDetection && (
-                <div style={{ marginTop: 8, padding: '6px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>THREAT LEVEL</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: fraudDetection.threat_level === 'CRITICAL' ? '#ff3366' : fraudDetection.threat_level === 'HIGH' ? '#ff6633' : fraudDetection.threat_level === 'MEDIUM' ? '#ffb800' : '#00ff88' }}>
-                    {fraudDetection.threat_level}
-                  </span>
-                </div>
-              )}
-              </div>
-            )}
-
-            {/* Verification Timeline */}
-            { (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-              <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>VERIFICATION TIMELINE</div>
-              <VerificationTimeline stages={[
-                { label: 'Face Detection', complete: detectedFaces > 0 && confidence > 0.5, active: streaming && detectedFaces === 0 },
-                { label: 'Biometric Enrollment', complete: hasFaceEnrolled, active: streaming && !hasFaceEnrolled && detectedFaces > 0 },
-                { label: 'Identity Matching', complete: similarity >= 0.75, active: hasFaceEnrolled && similarity < 0.75 },
-                { label: 'Challenge Verification', complete: challengePassed.length > 0 && challengePassed.every(Boolean), active: similarity >= 0.75 && !challengePassed.every(Boolean) },
-                { label: 'Authenticated', complete: isVerified, active: challengePassed.every(Boolean) && !isVerified },
-              ]} />
-              </div>
-            )}
-
-            {/* Landmark Geometry */}
-            { landmarkGeometry && landmarkGeometry.regions && (
-              <div className="glass" style={{ padding: 16, borderRadius: 14 }}>
-                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 10 }}>LANDMARK GEOMETRY</div>
-                <MetricBar label="Eye Geometry" value={landmarkGeometry.regions.eye_geometry * 100} />
-                <MetricBar label="Nose Geometry" value={landmarkGeometry.regions.nose_geometry * 100} />
-                <MetricBar label="Jaw Shape" value={landmarkGeometry.regions.jaw_shape * 100} />
-                <MetricBar label="Mouth Geometry" value={landmarkGeometry.regions.mouth_geometry * 100} />
-                <MetricBar label="Proportions" value={landmarkGeometry.regions.face_proportions * 100} />
-              </div>
-            )}
           </div>
         </div>
       </div>
