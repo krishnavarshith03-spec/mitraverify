@@ -133,6 +133,41 @@ async def lifespan(app: FastAPI):
                 db.add(audit)
             await db.commit()
             print("Seeded mock audit logs.")
+    
+    # ─── CV Engine Startup Diagnostics ───────────────────────
+    print("=" * 60)
+    print("[STARTUP] CV ENGINE DIAGNOSTICS")
+    try:
+        from app.services.cv.mediapipe_engine import (
+            MP_AVAILABLE, CV2_AVAILABLE, MP_INIT_ERROR, CV2_INIT_ERROR,
+            INSIGHTFACE_AVAILABLE, INSIGHTFACE_INIT_ERROR, global_face_mesh
+        )
+        print(f"  MP_AVAILABLE:         {MP_AVAILABLE}")
+        print(f"  CV2_AVAILABLE:        {CV2_AVAILABLE}")
+        print(f"  INSIGHTFACE_AVAILABLE:{INSIGHTFACE_AVAILABLE}")
+        print(f"  global_face_mesh:     {'LOADED' if global_face_mesh is not None else 'NONE'}")
+        
+        if MP_INIT_ERROR:
+            print(f"  [ERROR] MP_INIT_ERROR:\n{MP_INIT_ERROR}")
+        if CV2_INIT_ERROR:
+            print(f"  [ERROR] CV2_INIT_ERROR:\n{CV2_INIT_ERROR}")
+        if INSIGHTFACE_INIT_ERROR:
+            print(f"  [WARNING] INSIGHTFACE_INIT_ERROR:\n{INSIGHTFACE_INIT_ERROR}")
+
+        # Quick FaceMesh smoke test with a synthetic image
+        if MP_AVAILABLE and CV2_AVAILABLE and global_face_mesh is not None:
+            import numpy as np
+            import cv2
+            # Create a small test image (blank) just to confirm process() doesn't crash
+            test_img = np.zeros((100, 100, 3), dtype=np.uint8)
+            test_result = global_face_mesh.process(test_img)
+            print(f"  FaceMesh smoke test: process() returned {type(test_result).__name__} (faces: {len(test_result.multi_face_landmarks) if test_result.multi_face_landmarks else 0})")
+            print("[STARTUP] ✓ CV Engine is READY")
+        else:
+            print("[STARTUP] ✗ CV Engine is NOT AVAILABLE — see errors above")
+    except Exception as e:
+        print(f"[STARTUP] CV diagnostics exception: {e}\n{traceback.format_exc()}")
+    print("=" * 60)
             
     yield
 

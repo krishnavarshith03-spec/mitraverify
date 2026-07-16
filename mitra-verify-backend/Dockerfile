@@ -25,6 +25,22 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Download buffalo_sc model during build so it's baked into the image and prevents startup downloads
 RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buffalo_sc', allowed_modules=['detection', 'recognition'], providers=['CPUExecutionProvider']); app.prepare(ctx_id=0, det_size=(640,640))"
 
+# Build-time CV verification — fail the build if any dependency is broken
+RUN python -c "\
+import sys, platform; \
+print(f'Python: {sys.version}'); \
+print(f'Platform: {platform.platform()}'); \
+print(f'Arch: {platform.machine()}'); \
+import cv2; print(f'OpenCV: {cv2.__version__}'); \
+import mediapipe as mp; print(f'MediaPipe: {getattr(mp, \"__version__\", \"unknown\")}'); \
+import numpy as np; print(f'numpy: {np.__version__}'); \
+fm = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5); \
+r = fm.process(np.zeros((100,100,3), dtype=np.uint8)); \
+print(f'FaceMesh smoke test: OK (faces={len(r.multi_face_landmarks) if r.multi_face_landmarks else 0})'); \
+fm.close(); \
+print('BUILD VERIFICATION PASSED') \
+"
+
 COPY mitra-verify-backend/ .
 
 # Expose a default port (Railway will override this internally, but it's good practice)

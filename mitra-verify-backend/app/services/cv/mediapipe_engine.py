@@ -9,32 +9,60 @@ import base64
 import time
 import uuid
 import math
+import sys
+import platform
+import traceback
+import os
 import numpy as np  # pyrefly: ignore [missing-import]
 from typing import Optional
 from datetime import datetime, timezone
 from io import BytesIO
 from PIL import Image  # pyrefly: ignore [missing-import]
 
-# Try importing CV libs; graceful fallback if not installed
+# ─────────────────────────────────────────────────────────────
+# STARTUP DIAGNOSTICS — prints the complete runtime environment
+# ─────────────────────────────────────────────────────────────
+print("=" * 60)
+print("[CV ENGINE] STARTUP DIAGNOSTICS")
+print(f"  Python version:  {sys.version}")
+print(f"  Platform:        {platform.platform()}")
+print(f"  Architecture:    {platform.machine()}")
+print(f"  Processor:       {platform.processor()}")
+print(f"  numpy version:   {np.__version__}")
+print("=" * 60)
+
+# ─────────────────────────────────────────────────────────────
+# OpenCV import
+# ─────────────────────────────────────────────────────────────
+CV2_AVAILABLE = False
+CV2_INIT_ERROR = None
 try:
     import cv2  # pyrefly: ignore [missing-import]
     CV2_AVAILABLE = True
-except ImportError as e:
-    print(f"[FATAL] OpenCV Import Error: {e}")
-    CV2_AVAILABLE = False
+    print(f"[CV ENGINE] OpenCV loaded: {cv2.__version__}")
+except Exception as e:
+    CV2_INIT_ERROR = traceback.format_exc()
+    print(f"[FATAL] OpenCV Import FAILED:\n{CV2_INIT_ERROR}")
 
+# ─────────────────────────────────────────────────────────────
+# MediaPipe import + FaceMesh singleton init
+# ─────────────────────────────────────────────────────────────
+MP_AVAILABLE = False
 MP_INIT_ERROR = None
+mp_face_mesh = None
+mp_face_detection = None
+global_face_mesh = None
+
 try:
     import mediapipe as mp  # pyrefly: ignore [missing-import]
-    import cv2  # pyrefly: ignore [missing-import]
-    import numpy as np  # pyrefly: ignore [missing-import]
-    import traceback
-    
+    print(f"[CV ENGINE] MediaPipe loaded: {getattr(mp, '__version__', 'unknown')}")
+
     mp_face_mesh = mp.solutions.face_mesh
     mp_face_detection = mp.solutions.face_detection
-    MP_AVAILABLE = True
-    
-    # Instantiate global models to avoid per-frame loading overhead
+    print(f"[CV ENGINE] mp.solutions.face_mesh: {mp_face_mesh}")
+    print(f"[CV ENGINE] mp.solutions.face_detection: {mp_face_detection}")
+
+    # Instantiate the global FaceMesh singleton — this is the ONLY instance
     global_face_mesh = mp_face_mesh.FaceMesh(
         static_image_mode=True,
         max_num_faces=2,
@@ -42,22 +70,43 @@ try:
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5
     )
+    MP_AVAILABLE = True
+    print("[CV ENGINE] ✓ FaceMesh singleton initialized successfully")
 except Exception as e:
-    import traceback
-    MP_INIT_ERROR = f"MediaPipe Import/Init Error: {e}\n{traceback.format_exc()}"
-    print(f"[FATAL] {MP_INIT_ERROR}")
+    MP_INIT_ERROR = traceback.format_exc()
+    print(f"[FATAL] MediaPipe Import/Init FAILED:\n{MP_INIT_ERROR}")
     mp_face_mesh = None
     mp_face_detection = None
-    MP_AVAILABLE = False
     global_face_mesh = None
 
-# Try importing InsightFace for production embeddings
+# ─────────────────────────────────────────────────────────────
+# InsightFace import
+# ─────────────────────────────────────────────────────────────
+INSIGHTFACE_AVAILABLE = False
+INSIGHTFACE_INIT_ERROR = None
+insightface = None
 try:
     import insightface  # pyrefly: ignore [missing-import]
     INSIGHTFACE_AVAILABLE = True
-except ImportError:
-    insightface = None
-    INSIGHTFACE_AVAILABLE = False
+    print(f"[CV ENGINE] InsightFace loaded: {getattr(insightface, '__version__', 'unknown')}")
+except Exception as e:
+    INSIGHTFACE_INIT_ERROR = traceback.format_exc()
+    print(f"[WARNING] InsightFace import failed:\n{INSIGHTFACE_INIT_ERROR}")
+
+# ─────────────────────────────────────────────────────────────
+# Summary
+# ─────────────────────────────────────────────────────────────
+print("=" * 60)
+print(f"[CV ENGINE] INIT SUMMARY:")
+print(f"  CV2_AVAILABLE:        {CV2_AVAILABLE}")
+print(f"  MP_AVAILABLE:         {MP_AVAILABLE}")
+print(f"  INSIGHTFACE_AVAILABLE:{INSIGHTFACE_AVAILABLE}")
+print(f"  global_face_mesh:     {global_face_mesh is not None}")
+if MP_INIT_ERROR:
+    print(f"  MP_INIT_ERROR:        YES (see above)")
+if CV2_INIT_ERROR:
+    print(f"  CV2_INIT_ERROR:       YES (see above)")
+print("=" * 60)
 
 class FaceEngine:
     _analyzer = None
@@ -573,11 +622,12 @@ def _fallback_advanced(session_id, start, challenge_type):
 
 def _fallback_enterprise(session_id, start, subject_id):
     elapsed = (time.time() - start) * 1000
+    error_msg = f"CV engine not available. Details: {MP_INIT_ERROR}" if MP_INIT_ERROR else "CV engine not available."
     return {
         "session_id": session_id, "result": "error", "confidence": 0.0,
         "processing_time": round(elapsed, 2),
         "identity": {"matched": False, "subject_id": subject_id, "similarity_score": 0.0},
-        "checks": {}, "continuous_session": None, "error": "CV engine not available."
+        "checks": {}, "continuous_session": None, "error": error_msg
     }
 
 def _error_response(session_id, msg, start):
@@ -1542,6 +1592,16 @@ def _process_demo_frame_inner(
     
     print("FACE_DETECTION_STARTED")
     if not MP_AVAILABLE or not CV2_AVAILABLE:
+        error_detail = {
+            "mp_available": MP_AVAILABLE,
+            "cv2_available": CV2_AVAILABLE,
+            "mp_init_error": MP_INIT_ERROR,
+            "cv2_init_error": CV2_INIT_ERROR,
+            "python_version": sys.version,
+            "platform": platform.platform(),
+            "architecture": platform.machine(),
+        }
+        print(f"[FATAL] CV engine unavailable at request time. Details: {error_detail}")
         return {
             "face_present": False,
             "detected_faces": 0,
@@ -1567,7 +1627,8 @@ def _process_demo_frame_inner(
             "enrolled_matched": False,
             "enrollment_signature": None,
             "bbox": None,
-            "status": "cv_engine_unavailable"
+            "status": "cv_init_failed",
+            "error": error_detail
         }
         
     frame = b64_to_numpy(image_b64)
@@ -1602,23 +1663,52 @@ def _process_demo_frame_inner(
         
     timings["image_decoding"] = (time.perf_counter() - t_start) * 1000
     
-    h, w = frame.shape[:2]
+    h, w, channels = frame.shape
+    print(f"[DIAGNOSTICS] Frame received: shape={w}x{h}, channels={channels}, dtype={frame.dtype}")
+    
+    if w == 0 or h == 0 or channels != 3:
+        print("[FATAL] Invalid frame dimensions")
+        return {"status": "invalid_image", "face_present": False}
+        
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     
-    # [DIAGNOSTICS] Save first frame to disk for inspection
-    import os
-    if not os.path.exists("/tmp/debug_frame.jpg"):
-        cv2.imwrite("/tmp/debug_frame.jpg", frame)
-        print(f"[DIAGNOSTICS] Saved test frame to /tmp/debug_frame.jpg (size: {w}x{h})")
+    # [DIAGNOSTICS] Save debug frame to disk
+    debug_path = "/tmp/debug_frame.jpg"
+    if not os.path.exists(debug_path):
+        cv2.imwrite(debug_path, frame)
+        print(f"[DIAGNOSTICS] Saved test frame to {debug_path} (size: {w}x{h})")
     
     t_mediapipe_start = time.perf_counter()
-    assert global_face_mesh is not None
-    results = global_face_mesh.process(rgb)
+    if global_face_mesh is None:
+        print("[FATAL] global_face_mesh is None at processing time. Check startup logs.")
+        return {
+            "face_present": False, "status": "cv_init_failed", 
+            "error": "FaceMesh singleton was not initialized. Check server logs."
+        }
+        
+    try:
+        results = global_face_mesh.process(rgb)
+    except Exception as e:
+        print(f"[FATAL] MediaPipe process() threw exception:\n{traceback.format_exc()}")
+        return {
+            "face_present": False, "status": "cv_runtime_error", 
+            "error": traceback.format_exc()
+        }
+        
     timings["mediapipe_processing"] = (time.perf_counter() - t_mediapipe_start) * 1000
         
     multi_face_landmarks = getattr(results, "multi_face_landmarks", None)
-    print(f"[DIAGNOSTICS] MediaPipe multi_face_landmarks output: {multi_face_landmarks}")
+    if multi_face_landmarks:
+        print(f"[DIAGNOSTICS] MediaPipe detected {len(multi_face_landmarks)} faces.")
+    else:
+        print("[DIAGNOSTICS] MediaPipe detected 0 faces.")
     if not multi_face_landmarks:
+        # [DIAGNOSTICS] Save the frame even if 0 faces found to see what MediaPipe saw
+        debug_lm_path = "/tmp/debug_landmarks.jpg"
+        if not os.path.exists(debug_lm_path):
+            cv2.imwrite(debug_lm_path, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+            print(f"[DIAGNOSTICS] Saved 0-face frame to {debug_lm_path}")
+            
         status_code = "searching_for_face"
         reason_code = "no_face_detected"
         
@@ -1665,6 +1755,24 @@ def _process_demo_frame_inner(
         
     print("FACE_DETECTED")
     print("LANDMARKS_FOUND")
+    
+    # [DIAGNOSTICS] Draw landmarks and save
+    debug_lm_path = "/tmp/debug_landmarks.jpg"
+    if not os.path.exists(debug_lm_path):
+        debug_img = rgb.copy()
+        import mediapipe as mp
+        mp_drawing = mp.solutions.drawing_utils
+        mp_drawing_styles = mp.solutions.drawing_styles
+        for face_landmarks in multi_face_landmarks:
+            mp_drawing.draw_landmarks(
+                image=debug_img,
+                landmark_list=face_landmarks,
+                connections=mp_face_mesh.FACEMESH_TESSELATION,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style())
+        cv2.imwrite(debug_lm_path, cv2.cvtColor(debug_img, cv2.COLOR_RGB2BGR))
+        print(f"[DIAGNOSTICS] Saved {len(multi_face_landmarks)}-face landmark frame to {debug_lm_path}")
+        
     if session_id and session_id in SESSION_CACHE:
         SESSION_CACHE[session_id]["last_face_seen"] = time.time()
         # If face wasn't already marked as stable, start the timer now
@@ -1677,6 +1785,8 @@ def _process_demo_frame_inner(
             conf = _calculate_face_confidence(face_landmarks.landmark, w, h)
             if conf >= 0.4:
                 valid_faces.append(face_landmarks)
+            else:
+                print(f"[DIAGNOSTICS] Rejected face due to low confidence: {conf} < 0.4")
                 
     if not valid_faces:
         if session_id and session_id in SESSION_CACHE:

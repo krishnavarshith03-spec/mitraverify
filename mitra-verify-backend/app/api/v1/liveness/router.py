@@ -232,40 +232,79 @@ class DemoProcessRequest(BaseModel):
 
 @router.get("/debug_cv", tags=["Demo"])
 async def debug_cv():
-    from app.services.cv.mediapipe_engine import MP_AVAILABLE, CV2_AVAILABLE
+    """Complete CV engine runtime diagnostics. Returns the exact state of every dependency,
+    the complete init traceback if any failed, and a live FaceMesh test result."""
     import sys
+    import platform
     import traceback
+    import numpy as np
     
-    mp_err = "No error"
-    cv_err = "No error"
-    mp_dir = []
-    mp_version = "unknown"
+    from app.services.cv.mediapipe_engine import (
+        MP_AVAILABLE, CV2_AVAILABLE, MP_INIT_ERROR,
+        global_face_mesh
+    )
+    # Also import the new CV2_INIT_ERROR if available
     try:
-        import mediapipe as mp
-        mp_dir = dir(mp)
-        mp_version = getattr(mp, '__version__', 'unknown')
-        if not hasattr(mp, 'solutions'):
-            try:
-                import mediapipe.python.solutions as mp_solutions
-                mp_err = f"solutions missing from mp, but mediapipe.python.solutions imported ok! dir: {dir(mp_solutions)}"
-            except Exception as e2:
-                mp_err = f"mediapipe does not have 'solutions' attribute, and importing mediapipe.python.solutions failed: {e2}"
-    except Exception as e:
-        mp_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
-        
+        from app.services.cv.mediapipe_engine import CV2_INIT_ERROR
+    except ImportError:
+        CV2_INIT_ERROR = None
     try:
-        import cv2
-    except Exception as e:
-        cv_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
-        
-    return {
+        from app.services.cv.mediapipe_engine import INSIGHTFACE_INIT_ERROR
+    except ImportError:
+        INSIGHTFACE_INIT_ERROR = None
+    
+    result = {
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "architecture": platform.machine(),
+        "processor": platform.processor(),
         "MP_AVAILABLE": MP_AVAILABLE,
         "CV2_AVAILABLE": CV2_AVAILABLE,
-        "mp_import_error": mp_err,
-        "cv_import_error": cv_err,
-        "mp_version": mp_version,
-        "mp_dir": mp_dir
+        "global_face_mesh_loaded": global_face_mesh is not None,
+        "mp_init_error": MP_INIT_ERROR,
+        "cv2_init_error": CV2_INIT_ERROR,
+        "insightface_init_error": INSIGHTFACE_INIT_ERROR,
+        "dependency_versions": {},
+        "import_tests": {},
+        "facemesh_live_test": None,
     }
+    
+    # Test each dependency import individually
+    for pkg_name in ["cv2", "mediapipe", "numpy", "insightface", "onnxruntime", "PIL", "scipy"]:
+        try:
+            mod = __import__(pkg_name)
+            ver = getattr(mod, "__version__", "unknown")
+            result["dependency_versions"][pkg_name] = ver
+            result["import_tests"][pkg_name] = "OK"
+        except Exception as e:
+            result["dependency_versions"][pkg_name] = None
+            result["import_tests"][pkg_name] = f"{type(e).__name__}: {e}"
+    
+    # Live FaceMesh test: create a blank image and run process()
+    if global_face_mesh is not None:
+        try:
+            test_img = np.zeros((240, 320, 3), dtype=np.uint8)
+            test_result = global_face_mesh.process(test_img)
+            faces = test_result.multi_face_landmarks if test_result.multi_face_landmarks else []
+            result["facemesh_live_test"] = {
+                "status": "OK",
+                "faces_detected": len(faces),
+                "note": "Blank image used — 0 faces expected. This confirms FaceMesh runs without crashing."
+            }
+        except Exception as e:
+            result["facemesh_live_test"] = {
+                "status": "FAILED",
+                "exception_type": type(e).__name__,
+                "exception_message": str(e),
+                "traceback": traceback.format_exc()
+            }
+    else:
+        result["facemesh_live_test"] = {
+            "status": "NOT_LOADED",
+            "reason": "global_face_mesh is None — see mp_init_error for details"
+        }
+    
+    return result
 
 @router.post("/session/start", tags=["Demo"])
 async def start_session(data: SessionStartRequest):
