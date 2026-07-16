@@ -29,7 +29,14 @@ try:
     import numpy as np  # pyrefly: ignore [missing-import]
     import traceback
     
-    # In some environments, solutions might be nested
+    # In some environments, solutions might be nested or need explicit import
+    if not hasattr(mp, 'solutions'):
+        try:
+            import mediapipe.python.solutions as mp_solutions
+            mp.solutions = mp_solutions
+        except Exception as explicit_e:
+            print(f"[WARNING] Failed to explicitly import mediapipe.python.solutions: {explicit_e}")
+            
     if hasattr(mp, 'solutions'):
         mp_face_mesh = mp.solutions.face_mesh
         mp_face_detection = mp.solutions.face_detection

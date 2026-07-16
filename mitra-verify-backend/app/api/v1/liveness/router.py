@@ -245,7 +245,11 @@ async def debug_cv():
         mp_dir = dir(mp)
         mp_version = getattr(mp, '__version__', 'unknown')
         if not hasattr(mp, 'solutions'):
-            mp_err = "mediapipe does not have 'solutions' attribute!"
+            try:
+                import mediapipe.python.solutions as mp_solutions
+                mp_err = f"solutions missing from mp, but mediapipe.python.solutions imported ok! dir: {dir(mp_solutions)}"
+            except Exception as e2:
+                mp_err = f"mediapipe does not have 'solutions' attribute, and importing mediapipe.python.solutions failed: {e2}"
     except Exception as e:
         mp_err = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
         
