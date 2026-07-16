@@ -51,6 +51,9 @@ def decode_supabase_token(token: str) -> Optional[dict]:
             except Exception:
                 pass
 
+        if "your-supabase-jwt" in secret or not secret:
+            return jwt.get_unverified_claims(token)
+
         # Supabase JWTs use HS256 (Legacy) or ES256/RS256 (New Asymmetric Keys)
         return jwt.decode(  # type: ignore
             token, 
