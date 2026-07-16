@@ -78,11 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback((token: string, userDetails: User) => {
     // Legacy function, kept for signature but state is handled by onAuthStateChange
-    console.log('[Auth] Legacy login called');
   }, []);
 
   const logout = useCallback(async (callbackUrl?: string) => {
-    console.log('[Auth] logout() via Supabase');
     setLoading(true);
     await supabase.auth.signOut();
     setUser(null);

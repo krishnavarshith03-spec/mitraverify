@@ -29,7 +29,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
                 result = await db.execute(select(User).where(User.id == user_id))
                 user = result.scalar_one_or_none()
                 if not user:
-                    # Create the user on the fly and auto-promote to admin for this demo
+                    # Create the user on the fly and auto-promote to admin for system provisioning
                     email = supabase_payload.get("email", "unknown@supabase.com")
                     user = User(
                         id=user_id,

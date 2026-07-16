@@ -155,7 +155,6 @@ export default function AdvancedDemoPage() {
   useEffect(() => {
     if (spoofScore > 0.5) {
       setOverallResult('spoof');
-      console.log("Spoof score exceeded threshold in API 2. Auto-logout disabled per requirements.");
     }
   }, [spoofScore]);
 
@@ -266,8 +265,6 @@ export default function AdvancedDemoPage() {
 
     try {
       const base64Image = canvas.toDataURL('image/jpeg', 0.65);
-      console.log("FRAME_RECEIVED: Captured frame for processing");
-      console.log("FACE_DETECTION_STARTED");
       
       const activeChallengeId = currentChallenge < challenges.length ? challenges[currentChallenge].id : undefined;
       const res = await livenessAPI.processDemoFrame(base64Image, sessionId, activeChallengeId, undefined, 'advanced');
@@ -284,7 +281,6 @@ export default function AdvancedDemoPage() {
         setStreaming(false);
         
         if (data.status === 'SPOOF_DETECTED' || data.status === 'MULTIPLE_FACES_DETECTED') {
-          console.log("Backend terminal state handled");
         }
       }
 
@@ -339,8 +335,6 @@ export default function AdvancedDemoPage() {
       }
 
       if (data.face_present) {
-        console.log("FACE_DETECTED: YES");
-        console.log(`LANDMARKS_FOUND: count=${data.landmark_count}`);
         searchingForFaceStartRef.current = null;
 
         setFaceDetected(true);
@@ -348,24 +342,24 @@ export default function AdvancedDemoPage() {
         lastFaceSeenTimestampRef.current = Date.now();
         setFaceMissingCountdown(5.0);
 
-        setDetectedFaces(data.detected_faces);
-        setLandmarkCount(data.landmark_count);
-        setConfidence(data.face_confidence);
+        setDetectedFaces(data.detected_faces ?? 0);
+        setLandmarkCount(data.landmark_count ?? 0);
+        setConfidence(data.face_confidence ?? 0);
         
         // Correct yaw using processHeadPose utility (Task 4)
-        const pose = processHeadPose(data.yaw, data.raw_yaw);
+        const pose = processHeadPose(data.yaw ?? 0, data.raw_yaw ?? 0);
         setYaw(pose.correctedYaw);
         setRawYaw(pose.rawYaw);
         setYawDirection(pose.direction);
 
-        setPitch(data.pitch);
-        setRoll(data.roll);
-        setSpoofScore(data.spoof_score);
-        setReplayRisk(data.checks?.replay_attack_score || 0.0);
-        setDeepfakeRisk(data.deepfake_risk);
-        setEar(data.ear !== undefined ? data.ear : 0.0);
-        setMar(data.mar !== undefined ? data.mar : 0.0);
-        setJawRatio(data.jaw_ratio !== undefined ? data.jaw_ratio : 0.0);
+        setPitch(data.pitch ?? 0);
+        setRoll(data.roll ?? 0);
+        setSpoofScore(data.spoof_score ?? 0);
+        setReplayRisk(data.checks?.replay_attack_score ?? 0);
+        setDeepfakeRisk(data.deepfake_risk ?? 0);
+        setEar(data.ear ?? 0);
+        setMar(data.mar ?? 0);
+        setJawRatio(data.jaw_ratio ?? 0);
         setBbox(data.bbox);
         
         setFraudDetection(data.fraud_detection);
@@ -413,14 +407,10 @@ export default function AdvancedDemoPage() {
             if (!centerTimerStartedRef.current) {
               centerTimerStartedRef.current = true;
               centerTimerStartTimeRef.current = Date.now();
-              console.log("CENTER_TIMER_STARTED");
             } else {
               const centeredDur = (Date.now() - centerTimerStartTimeRef.current) / 1000;
               setFaceVisibleDuration(centeredDur);
               if (centeredDur >= 2.0) {
-                console.log("CENTER_TIMER_COMPLETE");
-                console.log("FACE_CENTERED");
-                console.log("CHALLENGE_1_COMPLETE");
                 setIsFacePrepared(true);
                 setChallengePassed(prev => {
                   const next = [...prev];
@@ -438,8 +428,6 @@ export default function AdvancedDemoPage() {
           const activeChallenge = challenges[currentChallenge];
           if (activeChallenge) {
             if (data.challenge_passed) {
-              console.log(`${activeChallenge.id.toUpperCase()}_DETECTED`);
-              console.log(`CHALLENGE_${currentChallenge + 1}_COMPLETE`);
               
               if (activeChallenge.id === 'blink_twice') setHasBlinked(true);
               if (activeChallenge.id === 'open_mouth') setHasMovedMouth(true);
@@ -457,7 +445,6 @@ export default function AdvancedDemoPage() {
               stepStartTimeRef.current = Date.now();
               
               if (nextStep >= challenges.length) {
-                console.log("ALL_CHALLENGES_COMPLETE");
                 
                 // All challenges passed — show PASS screen and stop processing
                 setOverallResult('pass');
@@ -474,7 +461,6 @@ export default function AdvancedDemoPage() {
 
       } else {
         // Face missing
-        console.log(`Face detection failure reason: ${data.status || 'No face detected'}`);
         if (searchingForFaceStartRef.current === null) {
           searchingForFaceStartRef.current = Date.now();
         } else if (Date.now() - searchingForFaceStartRef.current > 3000) {
@@ -634,7 +620,6 @@ export default function AdvancedDemoPage() {
         video: { width: 640, height: 480, facingMode: 'user' }
       });
       if (stream && stream.active) {
-        console.log("CAMERA_STARTED: Web camera stream obtained successfully.");
         setCameraStatus('Active');
       } else {
         throw new Error("No active stream returned");
@@ -642,7 +627,6 @@ export default function AdvancedDemoPage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
-          console.log("VIDEO_READY: Video element metadata loaded successfully.");
         };
         await videoRef.current.play();
         setStreaming(true);

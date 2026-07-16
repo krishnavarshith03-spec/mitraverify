@@ -30,7 +30,7 @@ async def identity_verify(
     res = await db.execute(stmt)
     enrolled = res.scalar_one_or_none()
     
-    enrolled_vector = getattr(enrolled, "embedding_vector", None)  # type: ignore
+    enrolled_vector = getattr(enrolled, "embedding_vector", None)
     
     cv_result = run_identity_verify(data.image, subject_id, enrolled_vector)
 
@@ -154,7 +154,7 @@ async def identity_enroll(
             print("RAISE: HTTPException(400, Stage 2 Failed: Multiple faces detected)")
             raise HTTPException(status_code=400, detail="Stage 2 Failed: Multiple faces detected")
             
-        landmarks = multi_face_landmarks[0].landmark  # type: ignore
+        landmarks = multi_face_landmarks[0].landmark
         
         # --- Stage 3: 468/478 landmarks detected ---
         print("[Enrollment] Stage 3: 468/478 landmarks detected")
@@ -206,8 +206,8 @@ async def identity_enroll(
                 # Use averaged embedding from multiple frames for best quality
                 embeddings = []
                 for frame_lms in history_landmarks[-20:]:  # Use last 20 frames max
-                    mock_lms = [LM(pt[0], pt[1], pt[2]) for pt in frame_lms]
-                    emb = _calculate_face_embedding(frame, mock_lms)
+                    mapped_lms = [LM(pt[0], pt[1], pt[2]) for pt in frame_lms]
+                    emb = _calculate_face_embedding(frame, mapped_lms)
                     embeddings.append(emb)
                     
                 avg_embedding = np.mean(embeddings, axis=0)
@@ -256,7 +256,7 @@ async def identity_enroll(
         user_id = str(data.subject_id or current_user.id)
         await db.execute(delete(FaceProfile).where(FaceProfile.user_id == user_id))
         
-        embedding_list = embedding_vector.tolist() if hasattr(embedding_vector, "tolist") else embedding_vector  # type: ignore
+        embedding_list = embedding_vector.tolist() if hasattr(embedding_vector, "tolist") else embedding_vector
         
         new_embedding = FaceProfile(
             id=str(uuid.uuid4()),

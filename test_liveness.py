@@ -14,7 +14,7 @@ with open("lena.jpg", "rb") as f:
     b64 = base64.b64encode(f.read()).decode('utf-8')
 
 payload = {
-    "image": f"data:image/jpeg;base64,{b64}",
+    "image_b64": f"data:image/jpeg;base64,{b64}",
     "api_type": "basic"
 }
 

@@ -123,9 +123,9 @@ export function TelemetryPanel({ telemetry, fps = 0 }: { telemetry: TelemetryDat
       <PanelHeader title="Live Telemetry" icon={<Cpu size={12} />} accent="#00d4ff" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
         <MiniMetric label="FPS" value={fps} color="#00ff88" />
-        <MiniMetric label="Inference" value={`${t.inference_time_ms.toFixed(0)}`} suffix="ms" color="#00d4ff" />
-        <MiniMetric label="Frame Proc" value={`${t.frame_processing_time_ms.toFixed(0)}`} suffix="ms" color="#00d4ff" />
-        <MiniMetric label="ID Match" value={`${t.identity_matching_time_ms.toFixed(0)}`} suffix="ms" color="#00d4ff" />
+        <MiniMetric label="Inference" value={`${Number(t.inference_time_ms || 0).toFixed(0)}`} suffix="ms" color="#00d4ff" />
+        <MiniMetric label="Frame Proc" value={`${Number(t.frame_processing_time_ms || 0).toFixed(0)}`} suffix="ms" color="#00d4ff" />
+        <MiniMetric label="ID Match" value={`${Number(t.identity_matching_time_ms || 0).toFixed(0)}`} suffix="ms" color="#00d4ff" />
         <MiniMetric label="Detect Conf" value={(t.detection_confidence * 100).toFixed(1)} suffix="%" color={t.detection_confidence > 0.8 ? '#00ff88' : '#ffb800'} />
         <MiniMetric label="Embed Dim" value={t.embedding_dimension} color="#7c3aed" />
         <MiniMetric label="Embed Quality" value={(t.embedding_quality * 100).toFixed(1)} suffix="%" color={t.embedding_quality > 0.7 ? '#00ff88' : '#ffb800'} />
@@ -155,7 +155,7 @@ export function FaceTrackingPanel({ tracking }: { tracking: FaceTrackingData | n
         <MiniMetric label="Confidence" value={(t.tracking_confidence * 100).toFixed(1)} suffix="%" color={stateColor} />
         <MiniMetric label="Quality" value={(t.frame_quality * 100).toFixed(1)} suffix="%" color={t.frame_quality > 0.6 ? '#00ff88' : '#ffb800'} />
         <MiniMetric label="Stable" value={t.tracking_stable ? 'YES' : 'NO'} color={t.tracking_stable ? '#00ff88' : '#ff3366'} />
-        <MiniMetric label="Distance" value={t.face_distance.toFixed(1)} suffix="m" color="#00d4ff" />
+        <MiniMetric label="Distance" value={Number(t.face_distance || 0).toFixed(1)} suffix="m" color="#00d4ff" />
       </div>
     </div>
   );
@@ -226,7 +226,7 @@ export function IdentityPanel({
       {/* Big identity score */}
       <div style={{ textAlign: 'center', marginBottom: 10 }}>
         <div style={{ fontSize: 32, fontWeight: 800, color: matchColor, fontFamily: 'monospace', lineHeight: 1 }}>
-          {identityMatch.toFixed(1)}%
+          {Number(identityMatch || 0).toFixed(1)}%
         </div>
         <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Identity Match</div>
         <div style={{ marginTop: 6, display: 'inline-block', padding: '3px 10px', borderRadius: 12, background: `${matchColor}15`, border: `1px solid ${matchColor}33`, fontSize: 10, fontWeight: 700, color: matchColor }}>{statusLabel}</div>
@@ -279,7 +279,7 @@ export function AntiSpoofPanel({ details }: { details: AntiSpoofData | null }) {
               <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{ width: `${score}%`, height: '100%', borderRadius: 2, background: safe ? '#00ff88' : '#ff3366', transition: 'width 0.3s ease' }} />
               </div>
-              <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'monospace', color: safe ? '#00ff88' : '#ff3366', width: 36, textAlign: 'right' }}>{score.toFixed(0)}%</span>
+              <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'monospace', color: safe ? '#00ff88' : '#ff3366', width: 36, textAlign: 'right' }}>{Number(score || 0).toFixed(0)}%</span>
             </div>
           );
         })}
@@ -498,17 +498,17 @@ export function HeadMovementPanel({ yaw, pitch, roll }: { yaw: number; pitch: nu
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, textAlign: 'center' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: yawColor, fontFamily: 'monospace' }}>{yaw.toFixed(1)}°</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: yawColor, fontFamily: 'monospace' }}>{Number(yaw || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 8, color: '#64748b', fontWeight: 600 }}>YAW</div>
           <div style={{ fontSize: 7, color: yawColor }}>{yawLabel}</div>
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: pitchColor, fontFamily: 'monospace' }}>{pitch.toFixed(1)}°</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: pitchColor, fontFamily: 'monospace' }}>{Number(pitch || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 8, color: '#64748b', fontWeight: 600 }}>PITCH</div>
           <div style={{ fontSize: 7, color: pitchColor }}>{pitchLabel}</div>
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#00d4ff', fontFamily: 'monospace' }}>{roll.toFixed(1)}°</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#00d4ff', fontFamily: 'monospace' }}>{Number(roll || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 8, color: '#64748b', fontWeight: 600 }}>ROLL</div>
           <div style={{ fontSize: 7, color: '#00d4ff' }}>{Math.abs(roll) > 10 ? 'TILTED' : 'LEVEL'}</div>
         </div>

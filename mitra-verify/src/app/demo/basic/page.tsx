@@ -621,23 +621,23 @@ Result: ${data.result || 'pending'}
 
         const continuousDur = Date.now() - faceContinuousDetectionStartRef.current;
 
-        setDetectedFaces(data.detected_faces);
-        setLandmarkCount(data.landmark_count);
-        setConfidence(data.face_confidence);
+        setDetectedFaces(data.detected_faces ?? 0);
+        setLandmarkCount(data.landmark_count ?? 0);
+        setConfidence(data.face_confidence ?? 0);
         
         // Correct yaw using processHeadPose utility (Task 4)
-        const pose = processHeadPose(data.yaw);
+        const pose = processHeadPose(data.yaw ?? 0);
         setYaw(pose.correctedYaw);
         setRawYaw(pose.rawYaw);
         setYawDirection(pose.direction);
 
-        setPitch(data.pitch);
-        setRoll(data.roll);
-        setSpoofScore(data.spoof_score);
-        setLivenessScore(1.0 - data.spoof_score);
-        setEar(data.ear !== undefined ? data.ear : 0.0);
-        setMar(data.mar !== undefined ? data.mar : 0.0);
-        setJawRatio(data.jaw_ratio !== undefined ? data.jaw_ratio : 0.0);
+        setPitch(data.pitch ?? 0);
+        setRoll(data.roll ?? 0);
+        setSpoofScore(data.spoof_score ?? 0);
+        setLivenessScore(1.0 - (data.spoof_score ?? 0));
+        setEar(data.ear ?? 0);
+        setMar(data.mar ?? 0);
+        setJawRatio(data.jaw_ratio ?? 0);
         setBbox(data.bbox);
         
         setFraudDetection(data.fraud_detection);

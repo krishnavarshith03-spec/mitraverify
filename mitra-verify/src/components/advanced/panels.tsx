@@ -52,9 +52,9 @@ export function AdvLiveMetrics({ fps, latencyMs, processingMs, detectionMs, fram
       <PanelHeader title="Live Metrics" icon={<Activity size={12} />} accent="#00d4ff" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
         <MiniMetric label="FPS" value={fps} color="#00ff88" />
-        <MiniMetric label="Latency" value={`${latencyMs.toFixed(0)}`} suffix="ms" color="#00d4ff" />
-        <MiniMetric label="Processing" value={`${processingMs.toFixed(0)}`} suffix="ms" color="#00d4ff" />
-        <MiniMetric label="Detection" value={`${detectionMs.toFixed(0)}`} suffix="ms" color="#7c3aed" />
+        <MiniMetric label="Latency" value={`${Number(latencyMs || 0).toFixed(0)}`} suffix="ms" color="#00d4ff" />
+        <MiniMetric label="Processing" value={`${Number(processingMs || 0).toFixed(0)}`} suffix="ms" color="#00d4ff" />
+        <MiniMetric label="Detection" value={`${Number(detectionMs || 0).toFixed(0)}`} suffix="ms" color="#7c3aed" />
         <MiniMetric label="Frames" value={frameCount} color="#94a3b8" />
       </div>
     </div>
@@ -80,17 +80,17 @@ export function AdvFaceAnalysis({ faceSize, brightness, contrast, blur, yaw, pit
       <MetricBarAdv label="Sharpness" value={(1 - blur) * 100} />
       <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, textAlign: 'center' }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: Math.abs(yaw) > 20 ? '#ff3366' : '#00d4ff', fontFamily: 'monospace' }}>{yaw.toFixed(1)}°</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: Math.abs(yaw) > 20 ? '#ff3366' : '#00d4ff', fontFamily: 'monospace' }}>{Number(yaw || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 7, color: '#64748b', fontWeight: 600 }}>YAW</div>
           <div style={{ fontSize: 7, color: Math.abs(yaw) > 20 ? '#ff3366' : '#00ff88' }}>{yawLabel}</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: Math.abs(pitch) > 15 ? '#ff3366' : '#00d4ff', fontFamily: 'monospace' }}>{pitch.toFixed(1)}°</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: Math.abs(pitch) > 15 ? '#ff3366' : '#00d4ff', fontFamily: 'monospace' }}>{Number(pitch || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 7, color: '#64748b', fontWeight: 600 }}>PITCH</div>
           <div style={{ fontSize: 7, color: Math.abs(pitch) > 15 ? '#ff3366' : '#00ff88' }}>{pitchLabel}</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4ff', fontFamily: 'monospace' }}>{roll.toFixed(1)}°</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4ff', fontFamily: 'monospace' }}>{Number(roll || 0).toFixed(1)}°</div>
           <div style={{ fontSize: 7, color: '#64748b', fontWeight: 600 }}>ROLL</div>
           <div style={{ fontSize: 7, color: '#00d4ff' }}>{Math.abs(roll) > 10 ? 'TILTED' : 'LEVEL'}</div>
         </div>
@@ -198,7 +198,7 @@ export function AdvChallengePanel({ current, completed, total, avgTime, successR
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
         <MiniMetric label="Completed" value={`${completed}/${total}`} color="#ffb800" />
         <MiniMetric label="Remaining" value={Math.max(0, total - completed)} color="#94a3b8" />
-        <MiniMetric label="Avg Time" value={`${avgTime.toFixed(1)}`} suffix="s" color="#00d4ff" />
+        <MiniMetric label="Avg Time" value={`${Number(avgTime || 0).toFixed(1)}`} suffix="s" color="#00d4ff" />
         <MiniMetric label="Success" value={`${(successRate * 100).toFixed(0)}`} suffix="%" color={successRate > 0.8 ? '#00ff88' : '#ffb800'} />
       </div>
     </div>
@@ -236,7 +236,7 @@ export function CircularGauge({ value, label, size = 80, color = '#00d4ff' }: {
           />
         </svg>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: finalColor, fontFamily: 'monospace', lineHeight: 1 }}>{progress.toFixed(0)}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: finalColor, fontFamily: 'monospace', lineHeight: 1 }}>{Number(progress || 0).toFixed(0)}</div>
           <div style={{ fontSize: 7, color: '#64748b', fontWeight: 600 }}>%</div>
         </div>
       </div>

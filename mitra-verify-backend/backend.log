@@ -54,3 +54,434 @@ WHERE users.email = ? AND users.is_active = 1
 2026-07-16 15:55:11,453 INFO sqlalchemy.engine.Engine [generated in 0.00218s] ('test@example.com',)
 2026-07-16 15:55:11,468 INFO sqlalchemy.engine.Engine ROLLBACK
 INFO:     127.0.0.1:62578 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+2026-07-16 22:31:04,028 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-07-16 22:31:04,038 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.password_hash, users.full_name, users.role, users.email_verified, users.is_active, users.created_at, users.updated_at, users.last_login 
+FROM users 
+WHERE users.email = ?
+2026-07-16 22:31:04,038 INFO sqlalchemy.engine.Engine [cached since 4.209e+04s ago] ('test_90aa9af6-5c15-4931-bd43-846c92ae6fca@mitraverify.com',)
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2026-07-16 22:31:04,107 INFO sqlalchemy.engine.Engine ROLLBACK
+[UNHANDLED ERROR] POST http://127.0.0.1:8000/api/v1/auth/register
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2683, in app
+    await route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1753, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2738, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1773, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1264, in handle
+    await app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 150, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 136, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 690, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 344, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/api/v1/auth/router.py", line 81, in register
+    password_hash=hash_password(data.password),
+                  ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/core/security.py", line 20, in hash_password
+    return pwd_context.verify(_prehash(plain_password), hashed_password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/context.py", line 2258, in hash
+    return record.hash(secret, **kwds)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 779, in hash
+    self.checksum = self._calc_checksum(secret)
+                    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+
+INFO:     127.0.0.1:64566 - "POST /api/v1/auth/register HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2683, in app
+    await route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1753, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2738, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1773, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1264, in handle
+    await app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 150, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 136, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 690, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 344, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/api/v1/auth/router.py", line 81, in register
+    password_hash=hash_password(data.password),
+                  ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/core/security.py", line 20, in hash_password
+    return pwd_context.verify(_prehash(plain_password), hashed_password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/context.py", line 2258, in hash
+    return record.hash(secret, **kwds)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 779, in hash
+    self.checksum = self._calc_checksum(secret)
+                    ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-07-16 22:31:05,526 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-07-16 22:31:05,527 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.password_hash, users.full_name, users.role, users.email_verified, users.is_active, users.created_at, users.updated_at, users.last_login 
+FROM users 
+WHERE users.email = ? AND users.is_active = 1
+2026-07-16 22:31:05,527 INFO sqlalchemy.engine.Engine [cached since 1.058e+04s ago] ('test@example.com',)
+2026-07-16 22:31:05,529 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64569 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+2026-07-16 22:31:05,586 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-07-16 22:31:05,587 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.password_hash, users.full_name, users.role, users.email_verified, users.is_active, users.created_at, users.updated_at, users.last_login 
+FROM users 
+WHERE users.email = ? AND users.is_active = 1
+2026-07-16 22:31:05,587 INFO sqlalchemy.engine.Engine [cached since 1.058e+04s ago] ('admin@mitraverify.com',)
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2026-07-16 22:31:05,605 INFO sqlalchemy.engine.Engine ROLLBACK
+[UNHANDLED ERROR] POST http://localhost:8000/api/v1/auth/login
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2683, in app
+    await route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1753, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2738, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1773, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1264, in handle
+    await app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 150, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 136, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 690, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 344, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/api/v1/auth/router.py", line 109, in login
+    if not user or not verify_password(data.password, str(user.password_hash)):
+                       ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/core/security.py", line 17, in verify_password
+    return base64.b64encode(digest).decode("ascii")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/context.py", line 2347, in verify
+    return record.verify(secret, hash, **kwds)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+
+INFO:     127.0.0.1:64572 - "POST /api/v1/auth/login HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2683, in app
+    await route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1753, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 2738, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1773, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 1264, in handle
+    await app(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 150, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 136, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 690, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/fastapi/routing.py", line 344, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/api/v1/auth/router.py", line 109, in login
+    if not user or not verify_password(data.password, str(user.password_hash)):
+                       ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/app/core/security.py", line 17, in verify_password
+    return base64.b64encode(digest).decode("ascii")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/context.py", line 2347, in verify
+    return record.verify(secret, hash, **kwds)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+    self._stub_requires_backend()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+    cls.set_backend()
+    ~~~~~~~~~~~~~~~^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+    return owner.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+    return cls.set_backend(name, dryrun=dryrun)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+    cls._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+    super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+    ok = loader(**kwds)
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+    return mixin_cls._finalize_backend_mixin(name, dryrun)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+    if detect_wrap_bug(IDENT_2A):
+       ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+    if verify(secret, bug_hash):
+       ~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/utils/handlers.py", line 792, in verify
+    return consteq(self._calc_checksum(secret), chk)
+                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+    hash = _bcrypt.hashpw(secret, config)
+ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])

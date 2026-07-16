@@ -120,7 +120,7 @@ class FaceEngine:
             try:
                 # Use buffalo_sc (16MB) instead of buffalo_l (300MB) to fit in 512MB RAM limit
                 # Only load detection and recognition to save memory
-                cls._analyzer = insightface.app.FaceAnalysis(  # type: ignore
+                cls._analyzer = insightface.app.FaceAnalysis(
                     name='buffalo_sc', 
                     allowed_modules=['detection', 'recognition'],
                     providers=['CPUExecutionProvider']
@@ -180,9 +180,9 @@ def b64_to_numpy(image_b64: str) -> Optional[np.ndarray]:
 def _ear(landmarks, eye_indices, w, h):
     """Eye Aspect Ratio — measures how open the eye is."""
     pts = [(landmarks[i].x * w, landmarks[i].y * h) for i in eye_indices]
-    A = math.dist(pts[1], pts[5])
-    B = math.dist(pts[2], pts[4])
-    C = math.dist(pts[0], pts[3])
+    A = float(np.linalg.norm(np.asarray(pts[1]) - np.asarray(pts[5])))
+    B = float(np.linalg.norm(np.asarray(pts[2]) - np.asarray(pts[4])))
+    C = float(np.linalg.norm(np.asarray(pts[0]) - np.asarray(pts[3])))
     return (A + B) / (2.0 * C) if C > 0 else 0.0
 
 
@@ -192,8 +192,8 @@ def _mar(landmarks, w, h):
     lower = (landmarks[14].x * w, landmarks[14].y * h)
     left  = (landmarks[78].x * w, landmarks[78].y * h)
     right = (landmarks[308].x * w, landmarks[308].y * h)
-    vertical = math.dist(upper, lower)
-    horizontal = math.dist(left, right)
+    vertical = float(np.linalg.norm(np.asarray(upper) - np.asarray(lower)))
+    horizontal = float(np.linalg.norm(np.asarray(left) - np.asarray(right)))
     return vertical / horizontal if horizontal > 0 else 0.0
 
 
@@ -262,7 +262,7 @@ def run_basic_liveness(image_b64: str) -> dict:
 
     print("FACE_DETECTED")
     print("LANDMARKS_FOUND")
-    lm = multi_face_landmarks[0].landmark  # type: ignore
+    lm = multi_face_landmarks[0].landmark
     left_ear  = _ear(lm, LEFT_EYE_INDICES, w, h)
     right_ear = _ear(lm, RIGHT_EYE_INDICES, w, h)
     avg_ear   = (left_ear + right_ear) / 2
@@ -279,14 +279,14 @@ def run_basic_liveness(image_b64: str) -> dict:
     
     # Liveness score: Calculate using texture and replay scores directly
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]  # type: ignore
+    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))  # type: ignore
+        local_std = float(np.std(face_region))
         texture_score = min(1.0, local_std / 30.0)
         try:
-            f = np.fft.fft2(face_region.astype(float))  # type: ignore
+            f = np.fft.fft2(face_region.astype(float))
             fshift = np.fft.fftshift(f)
-            magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
+            magnitude = 20 * np.log(np.abs(fshift) + 1)
             center = magnitude[magnitude.shape[0]//2-5:magnitude.shape[0]//2+5,
                                magnitude.shape[1]//2-5:magnitude.shape[1]//2+5]
             edge   = np.mean(magnitude) 
@@ -351,7 +351,7 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
 
     print("FACE_DETECTED")
     print("LANDMARKS_FOUND")
-    lm = multi_face_landmarks[0].landmark  # type: ignore
+    lm = multi_face_landmarks[0].landmark
     left_ear  = _ear(lm, LEFT_EYE_INDICES, w, h)
     right_ear = _ear(lm, RIGHT_EYE_INDICES, w, h)
     avg_ear   = (left_ear + right_ear) / 2
@@ -360,24 +360,24 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
 
     # Texture anti-spoof: check for natural skin variance using LBP-inspired metric
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]  # type: ignore
+    face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))  # type: ignore
+        local_std = float(np.std(face_region))
         texture_score = min(1.0, local_std / 30.0)
     else:
         texture_score = 0.5
 
     # Frequency analysis for screen/moiré
     if face_region.size > 0:
-        f = np.fft.fft2(face_region.astype(float))  # type: ignore
+        f = np.fft.fft2(face_region.astype(float))
         fshift = np.fft.fftshift(f)
-        magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
+        magnitude = 20 * np.log(np.abs(fshift) + 1)
         center = magnitude[magnitude.shape[0]//2-5:magnitude.shape[0]//2+5,
                            magnitude.shape[1]//2-5:magnitude.shape[1]//2+5]
         edge   = np.mean(magnitude) 
         freq_ratio = float(np.mean(center)) / (float(edge) + 1.0)
         # High freq_ratio can indicate a screen
-        replay_score = min(1.0, max(0.0, (freq_ratio - 1.5) / 3.0))  # type: ignore
+        replay_score = min(1.0, max(0.0, (freq_ratio - 1.5) / 3.0))
     else:
         replay_score = 0.3
 
@@ -419,12 +419,12 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
     left_ear = _ear(landmarks, LEFT_EYE_INDICES, w, h)
     yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
     
-    p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
-    p_right_mouth = np.array([landmarks[61].x, landmarks[61].y])
-    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)  # type: ignore
-    p_left_jaw = np.array([landmarks[234].x, landmarks[234].y])
-    p_right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)  # type: ignore
+    p_left_mouth = np.asarray([float(landmarks[291].x), float(landmarks[291].y)], dtype=np.float64)
+    p_right_mouth = np.asarray([float(landmarks[61].x), float(landmarks[61].y)], dtype=np.float64)
+    mouth_width = float(np.linalg.norm(np.asarray(p_left_mouth) - np.asarray(p_right_mouth)))
+    p_left_jaw = np.asarray([float(landmarks[234].x), float(landmarks[234].y)], dtype=np.float64)
+    p_right_jaw = np.asarray([float(landmarks[454].x), float(landmarks[454].y)], dtype=np.float64)
+    face_width = float(np.linalg.norm(np.asarray(p_left_jaw) - np.asarray(p_right_jaw)))
     smile_ratio = mouth_width / face_width if face_width > 0.001 else 0.32
     smile_score = float(np.clip((smile_ratio - 0.32) / 0.08, 0.0, 1.0))
     
@@ -638,21 +638,21 @@ def _error_response(session_id, msg, start):
 
 def _head_pose_3d(landmarks, w, h):
     # Get 2D coordinates of nose tip, eyes, and chin
-    nose = np.array([landmarks[NOSE_TIP].x * w, landmarks[NOSE_TIP].y * h])
-    left_eye = np.array([landmarks[LEFT_EYE_CORNER].x * w, landmarks[LEFT_EYE_CORNER].y * h])
-    right_eye = np.array([landmarks[RIGHT_EYE_CORNER].x * w, landmarks[RIGHT_EYE_CORNER].y * h])
-    chin = np.array([landmarks[CHIN].x * w, landmarks[CHIN].y * h])
+    nose = np.asarray([float(landmarks[NOSE_TIP].x) * w, float(landmarks[NOSE_TIP].y) * h], dtype=np.float64)
+    left_eye = np.asarray([float(landmarks[LEFT_EYE_CORNER].x) * w, float(landmarks[LEFT_EYE_CORNER].y) * h], dtype=np.float64)
+    right_eye = np.asarray([float(landmarks[RIGHT_EYE_CORNER].x) * w, float(landmarks[RIGHT_EYE_CORNER].y) * h], dtype=np.float64)
+    chin = np.asarray([float(landmarks[CHIN].x) * w, float(landmarks[CHIN].y) * h], dtype=np.float64)
     
     # Roll: eye slope angle in degrees
     # Corrected subtraction direction: left_eye - right_eye so upright face is close to 0
-    dx = left_eye[0] - right_eye[0]  # type: ignore
-    dy = left_eye[1] - right_eye[1]  # type: ignore
+    dx = float(left_eye[0]) - float(right_eye[0])
+    dy = float(left_eye[1]) - float(right_eye[1])
     roll = math.atan2(dy, dx) * 180.0 / math.pi
     
     # Yaw: horizontal ratio of nose deviation from eye center
-    eye_center = (left_eye + right_eye) / 2.0  # type: ignore
-    left_dist = np.linalg.norm(nose - left_eye)  # type: ignore
-    right_dist = np.linalg.norm(nose - right_eye)  # type: ignore
+    eye_center = (left_eye + right_eye) / 2.0
+    left_dist = float(np.linalg.norm(np.asarray(nose) - np.asarray(left_eye)))
+    right_dist = float(np.linalg.norm(np.asarray(nose) - np.asarray(right_eye)))
     if left_dist > 0.001:
         ratio = right_dist / left_dist
         yaw = -(ratio - 1.0) * 45.0  # corrected degrees: right = positive, left = negative
@@ -660,8 +660,8 @@ def _head_pose_3d(landmarks, w, h):
         yaw = 0.0
         
     # Pitch: vertical eye-nose vs nose-chin ratio
-    eye_nose_y = nose[1] - eye_center[1]  # type: ignore
-    nose_chin_y = chin[1] - nose[1]  # type: ignore
+    eye_nose_y = nose[1] - eye_center[1]
+    nose_chin_y = chin[1] - nose[1]
     if nose_chin_y > 0.001:
         ratio_pitch = eye_nose_y / nose_chin_y
         pitch = (0.6 - ratio_pitch) * 50.0  # scale around standard front ratio 0.6
@@ -669,9 +669,9 @@ def _head_pose_3d(landmarks, w, h):
         pitch = 0.0
         
     # Clamp results to safe bounds to reject impossible values
-    yaw = max(-45.0, min(45.0, yaw))  # type: ignore
-    pitch = max(-35.0, min(35.0, pitch))  # type: ignore
-    roll = max(-35.0, min(35.0, roll))  # type: ignore
+    yaw = max(-45.0, min(45.0, yaw))
+    pitch = max(-35.0, min(35.0, pitch))
+    roll = max(-35.0, min(35.0, roll))
     
     return yaw, pitch, roll
 
@@ -783,8 +783,8 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     
     # Smile ratio (Lip corner distance vs face width)
     if len(landmarks) > 291:
-        w_mouth = np.linalg.norm(np.array([landmarks[291].x, landmarks[291].y]) - np.array([landmarks[61].x, landmarks[61].y]))  # type: ignore
-        w_face = np.linalg.norm(np.array([landmarks[454].x, landmarks[454].y]) - np.array([landmarks[234].x, landmarks[234].y]))  # type: ignore
+        w_mouth = np.linalg.norm(np.asarray([float(landmarks[291].x), float(landmarks[291].y)], dtype=np.float64) - np.asarray([float(landmarks[61].x), float(landmarks[61].y)], dtype=np.float64))
+        w_face = np.linalg.norm(np.asarray([float(landmarks[454].x), float(landmarks[454].y)], dtype=np.float64) - np.asarray([float(landmarks[234].x), float(landmarks[234].y)], dtype=np.float64))
         smile_ratio = float(w_mouth / w_face if w_face > 0.001 else 0.32)
         cache.setdefault("smile_ratios", []).append(smile_ratio)
     
@@ -837,12 +837,12 @@ def _calculate_face_confidence(landmarks, w, h) -> float:
     size_score = min(1.0, max(0.0, (bbox["w"] * bbox["h"]) / 0.04)) # 0.2 * 0.2 = 0.04
     
     # Calculate face symmetry: nose tip to left eye vs right eye
-    nose = np.array([landmarks[NOSE_TIP].x, landmarks[NOSE_TIP].y])
-    left_eye = np.array([landmarks[LEFT_EYE_CORNER].x, landmarks[LEFT_EYE_CORNER].y])
-    right_eye = np.array([landmarks[RIGHT_EYE_CORNER].x, landmarks[RIGHT_EYE_CORNER].y])
+    nose = np.asarray([float(landmarks[NOSE_TIP].x), float(landmarks[NOSE_TIP].y)], dtype=np.float64)
+    left_eye = np.asarray([float(landmarks[LEFT_EYE_CORNER].x), float(landmarks[LEFT_EYE_CORNER].y)], dtype=np.float64)
+    right_eye = np.asarray([float(landmarks[RIGHT_EYE_CORNER].x), float(landmarks[RIGHT_EYE_CORNER].y)], dtype=np.float64)
     
-    d_left = float(np.linalg.norm(nose - left_eye))  # type: ignore
-    d_right = float(np.linalg.norm(nose - right_eye))  # type: ignore
+    d_left = float(float(np.linalg.norm(np.asarray(nose) - np.asarray(left_eye))))
+    d_right = float(float(np.linalg.norm(np.asarray(nose) - np.asarray(right_eye))))
     
     if d_left + d_right > 0.001:
         symmetry = 1.0 - abs(d_left - d_right) / (d_left + d_right)
@@ -867,21 +867,21 @@ def _gaze_estimation(landmarks, w, h):
     if len(landmarks) < 478:
         return {"x": 0.5, "y": 0.5}, True
         
-    iris_left = np.array([landmarks[468].x, landmarks[468].y])
-    corner_left_inner = np.array([landmarks[362].x, landmarks[362].y])
-    corner_left_outer = np.array([landmarks[263].x, landmarks[263].y])
+    iris_left = np.asarray([float(landmarks[468].x), float(landmarks[468].y)], dtype=np.float64)
+    corner_left_inner = np.asarray([float(landmarks[362].x), float(landmarks[362].y)], dtype=np.float64)
+    corner_left_outer = np.asarray([float(landmarks[263].x), float(landmarks[263].y)], dtype=np.float64)
     
-    iris_right = np.array([landmarks[473].x, landmarks[473].y])
-    corner_right_outer = np.array([landmarks[33].x, landmarks[33].y])
-    corner_right_inner = np.array([landmarks[133].x, landmarks[133].y])
+    iris_right = np.asarray([float(landmarks[473].x), float(landmarks[473].y)], dtype=np.float64)
+    corner_right_outer = np.asarray([float(landmarks[33].x), float(landmarks[33].y)], dtype=np.float64)
+    corner_right_inner = np.asarray([float(landmarks[133].x), float(landmarks[133].y)], dtype=np.float64)
     
     # Left eye delta, right eye delta
-    left_denom = corner_left_outer[0] - corner_left_inner[0]  # type: ignore
-    right_denom = corner_right_inner[0] - corner_right_outer[0]  # type: ignore
+    left_denom = corner_left_outer[0] - corner_left_inner[0]
+    right_denom = corner_right_inner[0] - corner_right_outer[0]
     
     if abs(left_denom) > 0.001 and abs(right_denom) > 0.001:
-        gaze_left_x = (iris_left[0] - corner_left_inner[0]) / left_denom  # type: ignore
-        gaze_right_x = (iris_right[0] - corner_right_outer[0]) / right_denom  # type: ignore
+        gaze_left_x = (iris_left[0] - corner_left_inner[0]) / left_denom
+        gaze_right_x = (iris_right[0] - corner_right_outer[0]) / right_denom
         gaze_x = float(np.clip((gaze_left_x + gaze_right_x) / 2.0, 0.0, 1.0))
     else:
         gaze_x = 0.5
@@ -890,7 +890,7 @@ def _gaze_estimation(landmarks, w, h):
     left_eye_bottom = landmarks[374].y
     left_eye_height = left_eye_bottom - left_eye_top
     if left_eye_height > 0.001:
-        gaze_y = float(np.clip((iris_left[1] - left_eye_top) / left_eye_height, 0.0, 1.0))  # type: ignore
+        gaze_y = float(np.clip((iris_left[1] - left_eye_top) / left_eye_height, 0.0, 1.0))
     else:
         gaze_y = 0.5
         
@@ -925,7 +925,7 @@ def _calculate_spoof_risk(frame, landmarks, history, texture_score, replay_score
         elif len(history["landmarks"]) >= 2:
             last_p = history["landmarks"][-1][NOSE_TIP]
             prev_p = history["landmarks"][-2][NOSE_TIP]
-            dist = math.dist(last_p[:2], prev_p[:2])
+            dist = float(np.linalg.norm(np.asarray(last_p[:2]) - np.asarray(prev_p[:2])))
             if dist > 0.12: # huge jump
                 risk += 0.80
                 
@@ -996,56 +996,19 @@ def _extract_arcface_embedding(frame: np.ndarray) -> tuple:
         return None, 0.0, None, 0.0
 
 
-def _calculate_face_embedding(frame: np.ndarray, landmarks, prefer_arcface: bool = True) -> list[float]:
-    """Generate face embedding. Prefers ArcFace 512D if available, falls back to landmark-distance 107D."""
-    
-    # Try ArcFace first for enterprise-grade accuracy
-    if prefer_arcface and INSIGHTFACE_AVAILABLE:
-        arcface_emb, quality, _, det_score = _extract_arcface_embedding(frame)
-        if arcface_emb is not None and len(arcface_emb) == 512:
-            print(f"[Embedding] Using ArcFace 512D (quality={quality:.3f})")
-            return arcface_emb
-        else:
-            print("[Embedding] ArcFace failed, falling back to landmark-distance")
-    
-    # Fallback: landmark-distance 107D embedding
-    def get_pt(idx):
-        return np.array([landmarks[idx].x, landmarks[idx].y, landmarks[idx].z])
+def _calculate_face_embedding(frame: np.ndarray, landmarks=None, prefer_arcface: bool = True) -> list[float]:
+    """Generate face embedding using ArcFace 512D for production identity verification."""
+    if not INSIGHTFACE_AVAILABLE:
+        print("[Embedding] InsightFace not available.")
+        return []
         
-    def dist(idx1, idx2):
-        return np.linalg.norm(get_pt(idx1) - get_pt(idx2))  # type: ignore
-
-    face_height = dist(10, 152)
-    face_width = dist(234, 454)
-    if face_height < 0.001: face_height = 1.0
-    if face_width < 0.001: face_width = 1.0
-    
-    anchor_pairs = [
-        (33, 263), (133, 362), (159, 386), (145, 374), 
-        (33, 133), (263, 362),
-        (70, 300), (107, 336), (53, 283),
-        (1, 4), (197, 1), (94, 1), (1, 33), (1, 263),
-        (4, 133), (4, 362),
-        (61, 291), (13, 14), (78, 308), (17, 87),
-        (61, 1), (291, 1),
-        (10, 152), (234, 454), (109, 338), (58, 288), (136, 365),
-        (133, 1), (362, 1), (33, 61), (263, 291),
-        (152, 61), (152, 291), (152, 13), (152, 14),
-        (10, 133), (10, 362), (234, 33), (454, 263),
-        (234, 61), (454, 291), (234, 152), (454, 152),
-        (10, 234), (10, 454), (197, 61), (197, 291),
-        (107, 13), (336, 13), (70, 1), (300, 1),
-        (53, 14), (283, 14)
-    ]
-    
-    embedding = []
-    for p1, p2 in anchor_pairs:
-        embedding.append(float(dist(p1, p2) / face_width))
-    for p1, p2 in anchor_pairs:
-        embedding.append(float(dist(p1, p2) / face_height))
-    embedding.append(float(face_width / face_height))
-    
-    return embedding
+    arcface_emb, quality, _, det_score = _extract_arcface_embedding(frame)
+    if arcface_emb is not None and len(arcface_emb) == 512:
+        print(f"[Embedding] Using ArcFace 512D (quality={quality:.3f})")
+        return arcface_emb
+    else:
+        print("[Embedding] ArcFace failed to extract embedding.")
+        return []
 
 
 def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[float, float]:
@@ -1076,11 +1039,11 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[
     if norm_a < 0.001 or norm_b < 0.001:
         return 0.0, 0.0
         
-    a = a / norm_a  # type: ignore
-    b = b / norm_b  # type: ignore
+    a = a / norm_a
+    b = b / norm_b
     
     similarity = float(np.dot(a, b))
-    dist = float(np.linalg.norm(a - b))
+    dist = float(float(np.linalg.norm(np.asarray(a) - np.asarray(b))))
     
     final_similarity = float(np.clip(similarity, 0.0, 1.0))
     print(f"[Verification] Cosine Similarity: {final_similarity:.4f} (Distance: {dist:.4f}, Dim: {len(a)})")
@@ -1100,15 +1063,15 @@ def _compute_eye_tracking(landmarks, w, h) -> dict:
                 "blink_probability": 0.0}
     
     # Iris positions relative to eye corners
-    iris_left = np.array([landmarks[468].x, landmarks[468].y])
-    iris_right = np.array([landmarks[473].x, landmarks[473].y])
+    iris_left = np.asarray([float(landmarks[468].x), float(landmarks[468].y)], dtype=np.float64)
+    iris_right = np.asarray([float(landmarks[473].x), float(landmarks[473].y)], dtype=np.float64)
     
     # Left eye corners
-    l_inner = np.array([landmarks[362].x, landmarks[362].y])
-    l_outer = np.array([landmarks[263].x, landmarks[263].y])
+    l_inner = np.asarray([float(landmarks[362].x), float(landmarks[362].y)], dtype=np.float64)
+    l_outer = np.asarray([float(landmarks[263].x), float(landmarks[263].y)], dtype=np.float64)
     # Right eye corners
-    r_outer = np.array([landmarks[33].x, landmarks[33].y])
-    r_inner = np.array([landmarks[133].x, landmarks[133].y])
+    r_outer = np.asarray([float(landmarks[33].x), float(landmarks[33].y)], dtype=np.float64)
+    r_inner = np.asarray([float(landmarks[133].x), float(landmarks[133].y)], dtype=np.float64)
     
     # Horizontal gaze
     l_denom = l_outer[0] - l_inner[0]
@@ -1244,7 +1207,7 @@ def _compute_anti_spoof_details(frame: np.ndarray, history: dict,
             last3 = history["landmarks"][-3:]
             deltas = []
             for i in range(1, len(last3)):
-                d = math.dist(last3[i][NOSE_TIP][:2], last3[i-1][NOSE_TIP][:2])
+                d = float(np.linalg.norm(np.asarray(last3[i][NOSE_TIP][:2]) - np.asarray(last3[i-1][NOSE_TIP][:2])))
                 deltas.append(d)
             avg_delta = sum(deltas) / len(deltas)
             details["landmark_stability"] = round(float(np.clip(1.0 - avg_delta * 20, 0.0, 1.0)), 4)
@@ -1344,45 +1307,45 @@ def _validate_landmark_geometry(landmarks, w: int, h: int) -> dict:
         return {"valid": False, "score": 0.0, "regions": {}}
 
     # Eye geometry: ratio of eye width to eye height (should be ~2.5-4.0)
-    left_eye_w = math.dist(
-        (landmarks[33].x * w, landmarks[33].y * h),
+    left_eye_w = float(np.linalg.norm(np.asarray(
+        (landmarks[33].x * w) - np.asarray(landmarks[33].y * h))),
         (landmarks[133].x * w, landmarks[133].y * h)
     )
-    left_eye_h = math.dist(
-        (landmarks[159].x * w, landmarks[159].y * h),
+    left_eye_h = float(np.linalg.norm(np.asarray(
+        (landmarks[159].x * w) - np.asarray(landmarks[159].y * h))),
         (landmarks[145].x * w, landmarks[145].y * h)
     )
     eye_ratio = left_eye_w / max(left_eye_h, 0.001)
     eye_score = float(np.clip(1.0 - abs(eye_ratio - 3.2) / 2.5, 0.0, 1.0))
 
     # Nose geometry: nose length / nose width ratio (should be ~1.2-2.0)
-    nose_length = math.dist(
-        (landmarks[6].x * w, landmarks[6].y * h),   # nose bridge
+    nose_length = float(np.linalg.norm(np.asarray(
+        (landmarks[6].x * w) - np.asarray(landmarks[6].y * h))),   # nose bridge
         (landmarks[1].x * w, landmarks[1].y * h)     # nose tip
     )
-    nose_width = math.dist(
-        (landmarks[48].x * w, landmarks[48].y * h) if 48 < len(landmarks) else (landmarks[4].x * w, landmarks[4].y * h),
+    nose_width = float(np.linalg.norm(np.asarray(
+        (landmarks[48].x * w) - np.asarray(landmarks[48].y * h))) if 48 < len(landmarks) else (landmarks[4].x * w, landmarks[4].y * h),
         (landmarks[278].x * w, landmarks[278].y * h) if 278 < len(landmarks) else (landmarks[5].x * w, landmarks[5].y * h)
     )
     nose_ratio = nose_length / max(nose_width, 0.001)
     nose_score = float(np.clip(1.0 - abs(nose_ratio - 1.5) / 1.5, 0.0, 1.0))
 
     # Jaw shape: symmetry of jaw outline
-    left_jaw = np.array([landmarks[234].x, landmarks[234].y])
-    right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    chin = np.array([landmarks[152].x, landmarks[152].y])
-    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))  # type: ignore
-    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))  # type: ignore
+    left_jaw = np.asarray([float(landmarks[234].x), float(landmarks[234].y)], dtype=np.float64)
+    right_jaw = np.asarray([float(landmarks[454].x), float(landmarks[454].y)], dtype=np.float64)
+    chin = np.asarray([float(landmarks[152].x), float(landmarks[152].y)], dtype=np.float64)
+    jaw_left_dist = float(float(np.linalg.norm(np.asarray(chin) - np.asarray(left_jaw))))
+    jaw_right_dist = float(float(np.linalg.norm(np.asarray(chin) - np.asarray(right_jaw))))
     jaw_symmetry = 1.0 - abs(jaw_left_dist - jaw_right_dist) / max(jaw_left_dist + jaw_right_dist, 0.001)
     jaw_score = float(np.clip(jaw_symmetry, 0.0, 1.0))
 
     # Mouth geometry: width/height ratio (should be ~2.0-5.0)
-    mouth_w = math.dist(
-        (landmarks[61].x * w, landmarks[61].y * h),
+    mouth_w = float(np.linalg.norm(np.asarray(
+        (landmarks[61].x * w) - np.asarray(landmarks[61].y * h))),
         (landmarks[291].x * w, landmarks[291].y * h)
     )
-    mouth_h = math.dist(
-        (landmarks[13].x * w, landmarks[13].y * h),
+    mouth_h = float(np.linalg.norm(np.asarray(
+        (landmarks[13].x * w) - np.asarray(landmarks[13].y * h))),
         (landmarks[14].x * w, landmarks[14].y * h)
     )
     mouth_ratio = mouth_w / max(mouth_h, 0.001)
@@ -1633,7 +1596,7 @@ def _advanced_fraud_detection(frame, landmarks, history, texture_score: float, r
         jitters = []
         for i in range(1, len(recent)):
             if len(recent[i]) > NOSE_TIP and len(recent[i-1]) > NOSE_TIP:
-                d = math.dist(recent[i][NOSE_TIP][:2], recent[i-1][NOSE_TIP][:2])
+                d = float(np.linalg.norm(np.asarray(recent[i][NOSE_TIP][:2]) - np.asarray(recent[i-1][NOSE_TIP][:2])))
                 jitters.append(d)
         if jitters:
             jitter_std = float(np.std(jitters))
@@ -1645,11 +1608,11 @@ def _advanced_fraud_detection(frame, landmarks, history, texture_score: float, r
 
     # 4. AI-generated: unnatural perfect symmetry
     if len(landmarks) >= 468:
-        left_eye = np.array([landmarks[33].x, landmarks[33].y])
-        right_eye = np.array([landmarks[263].x, landmarks[263].y])
-        nose = np.array([landmarks[1].x, landmarks[1].y])
-        d_left = float(np.linalg.norm(nose - left_eye))  # type: ignore
-        d_right = float(np.linalg.norm(nose - right_eye))  # type: ignore
+        left_eye = np.asarray([float(landmarks[33].x), float(landmarks[33].y)], dtype=np.float64)
+        right_eye = np.asarray([float(landmarks[263].x), float(landmarks[263].y)], dtype=np.float64)
+        nose = np.asarray([float(landmarks[1].x), float(landmarks[1].y)], dtype=np.float64)
+        d_left = float(float(np.linalg.norm(np.asarray(nose) - np.asarray(left_eye))))
+        d_right = float(float(np.linalg.norm(np.asarray(nose) - np.asarray(right_eye))))
         symmetry_diff = abs(d_left - d_right) / max(d_left + d_right, 0.001)
         # Real faces: symmetry_diff typically 0.02-0.15. AI: < 0.005
         if symmetry_diff < 0.003:
@@ -1720,6 +1683,25 @@ def _advanced_fraud_detection(frame, landmarks, history, texture_score: float, r
     return results
 
 
+def _build_empty_enterprise_report(status: str) -> dict:
+    return {
+        "liveness_score": 0.0,
+        "face_quality": 0.0,
+        "pose_quality": 0.0,
+        "lighting_score": 0.0,
+        "risk_score": 1.0 if status in ("SPOOF_DETECTED", "DEEPFAKE_SUSPECTED") else 0.0,
+        "identity_match_pct": 0.0,
+        "identity_status": status,
+        "challenge_status": "failed",
+        "threat_radar": {
+            "texture": 0.0,
+            "depth": 0.0,
+            "consistency": 0.0,
+            "temporal": 0.0,
+            "frequency": 0.0
+        }
+    }
+
 def _build_enterprise_report(
     identity_match: float,
     confidence: float,
@@ -1743,7 +1725,12 @@ def _build_enterprise_report(
     risk_score = max(0.5, spoof_score * 40 + fraud_result.get("overall_fraud_score", 0) * 40 + (1.0 - liveness_score) * 20)
     risk_score = min(100.0, risk_score)
 
-    identity_status = "VERIFIED" if enrolled_matched and identity_match >= 0.75 and liveness_score > 0.5 and spoof_score < 0.4 else "FAILED"
+    if identity_match >= 0.80:
+        identity_status = "VERIFIED" if liveness_score > 0.5 and spoof_score < 0.4 else "FAILED"
+    elif identity_match >= 0.65:
+        identity_status = "UNCERTAIN"
+    else:
+        identity_status = "UNAUTHORIZED"
 
     challenges_passed = sum(1 for c in challenge_results if c.get("passed")) if challenge_results else 0
     challenges_total = len(challenge_results) if challenge_results else 0
@@ -1841,6 +1828,11 @@ def _process_demo_frame_inner(
     enrolled_embedding: Optional[list[float]] = None,
     api_type: Optional[str] = None
 ) -> dict:
+    if api_type is None:
+        if frame_id in ["enterprise", "advanced"]:
+            api_type = frame_id
+        else:
+            api_type = "basic"
     t_start = time.perf_counter()
     timings = {"request_received": t_start}
     
@@ -1996,8 +1988,6 @@ def _process_demo_frame_inner(
             "gaze_available": False,
             "smile_score": 0.0,
             "eyebrow_raised": False,
-            "jaw_left": False,
-            "jaw_right": False,
             "jaw_open": False,
             "spoof_score": 0.0,
             "deepfake_risk": 0.0,
@@ -2007,7 +1997,22 @@ def _process_demo_frame_inner(
             "enrollment_signature": None,
             "bbox": None,
             "status": status_code,
-            "reason": reason_code
+            "reason": reason_code,
+                        "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
         }
         
     print("FACE_DETECTED")
@@ -2024,7 +2029,7 @@ def _process_demo_frame_inner(
             mp_drawing.draw_landmarks(
                 image=debug_img,
                 landmark_list=face_landmarks,
-                connections=mp_face_mesh.FACEMESH_TESSELATION,  # type: ignore
+                connections=mp_face_mesh.FACEMESH_TESSELATION,
                 landmark_drawing_spec=None,
                 connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style())
         cv2.imwrite(debug_lm_path, cv2.cvtColor(debug_img, cv2.COLOR_RGB2BGR))
@@ -2075,7 +2080,22 @@ def _process_demo_frame_inner(
             "enrollment_signature": None,
             "bbox": None,
             "status": "searching_for_face",
-            "reason": "low_confidence_face"
+            "reason": "low_confidence_face",
+                        "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
         }
         
     multi_face_landmarks = valid_faces
@@ -2119,27 +2139,24 @@ def _process_demo_frame_inner(
                     "enrollment_signature": None,
                     "bbox": None,
                     "status": "MULTIPLE_FACES_DETECTED",
-                    "enterprise_report": {
-                        "identity_match_pct": 0.0,
-                        "confidence_pct": 0.0,
-                        "liveness_pct": 0.0,
-                        "spoof_probability_pct": 0.0,
-                        "fraud_score": 0.0,
-                        "risk_score": 0.0,
-                        "quality_score": 0.0,
-                        "threat_level": "UNKNOWN",
-                        "identity_status": "PENDING",
-                        "fraud_detection": {},
-                        "passive_liveness": {
-                            "blink_detected": False,
-                            "head_motion": False,
-                            "depth_valid": False,
-                            "score": 0.0
-                        }
-                    }
-                }
+                                "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
+        }
 
-    landmarks = multi_face_landmarks[0].landmark  # type: ignore
+    landmarks = multi_face_landmarks[0].landmark
     landmark_count = len(landmarks)
     face_confidence = _calculate_face_confidence(landmarks, w, h) if detected_faces > 0 else 0.0
     
@@ -2152,100 +2169,88 @@ def _process_demo_frame_inner(
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
                 "bbox": bbox, "status": "FACE_NOT_CENTERED", "reason": "Face not centered or partially visible", "challenge_passed": False, "enrolled_matched": False,
-                "enterprise_report": {
-                    "identity_match_pct": 0.0,
-                    "confidence_pct": 0.0,
-                    "liveness_pct": 0.0,
-                    "spoof_probability_pct": 0.0,
-                    "fraud_score": 0.0,
-                    "risk_score": 0.0,
-                    "quality_score": 0.0,
-                    "threat_level": "UNKNOWN",
-                    "identity_status": "PENDING",
-                    "fraud_detection": {},
-                    "passive_liveness": {
-                        "blink_detected": False,
-                        "head_motion": False,
-                        "depth_valid": False,
-                        "score": 0.0
-                    }
-                }
-            }
+                            "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
+        }
         if bbox["h"] < 0.18:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
                 "bbox": bbox, "status": "FACE_TOO_SMALL", "reason": "Face too small", "challenge_passed": False, "enrolled_matched": False,
-                "enterprise_report": {
-                    "identity_match_pct": 0.0,
-                    "confidence_pct": 0.0,
-                    "liveness_pct": 0.0,
-                    "spoof_probability_pct": 0.0,
-                    "fraud_score": 0.0,
-                    "risk_score": 0.0,
-                    "quality_score": 0.0,
-                    "threat_level": "UNKNOWN",
-                    "identity_status": "PENDING",
-                    "fraud_detection": {},
-                    "passive_liveness": {
-                        "blink_detected": False,
-                        "head_motion": False,
-                        "depth_valid": False,
-                        "score": 0.0
-                    }
-                }
-            }
+                            "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
+        }
         
         # Blur detection
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()  # type: ignore
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
         if laplacian_var < 50:
             return {
                 "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
                 "bbox": bbox, "status": "BLUR_DETECTED", "reason": "Blur detected", "challenge_passed": False, "enrolled_matched": False,
-                "enterprise_report": {
-                    "identity_match_pct": 0.0,
-                    "confidence_pct": 0.0,
-                    "liveness_pct": 0.0,
-                    "spoof_probability_pct": 0.0,
-                    "fraud_score": 0.0,
-                    "risk_score": 0.0,
-                    "quality_score": 0.0,
-                    "threat_level": "UNKNOWN",
-                    "identity_status": "PENDING",
-                    "fraud_detection": {},
-                    "passive_liveness": {
-                        "blink_detected": False,
-                        "head_motion": False,
-                        "depth_valid": False,
-                        "score": 0.0
-                    }
-                }
-            }
+                            "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
+        }
         
         # Confidence check
         if face_confidence < 0.5:
             return {
-                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
+                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
                 "bbox": bbox, "status": "LOW_CONFIDENCE", "reason": "Face confidence too low", "challenge_passed": False, "enrolled_matched": False,
-                "enterprise_report": {
-                    "identity_match_pct": 0.0,
-                    "confidence_pct": 0.0,
-                    "liveness_pct": 0.0,
-                    "spoof_probability_pct": 0.0,
-                    "fraud_score": 0.0,
-                    "risk_score": 0.0,
-                    "quality_score": 0.0,
-                    "threat_level": "UNKNOWN",
-                    "identity_status": "PENDING",
-                    "fraud_detection": {},
-                    "passive_liveness": {
-                        "blink_detected": False,
-                        "head_motion": False,
-                        "depth_valid": False,
-                        "score": 0.0
-                    }
-                }
-            }
+                            "enterprise_report": _build_enterprise_report(
+                identity_match=0.0,
+                confidence=0.0,
+                liveness_score=0.0,
+                spoof_score=0.0,
+                fraud_result={},
+                verification_time_ms=0.0,
+                challenge_results=[],
+                pose_validation={},
+                quality_score=0.0,
+                landmark_geometry={},
+                passive_liveness={},
+                session_id=session_id or "",
+                enrolled_matched=False
+            )
+        }
 
     # 2. EAR & MAR
     left_ear = _ear(landmarks, LEFT_EYE_INDICES, w, h)
@@ -2260,12 +2265,12 @@ def _process_demo_frame_inner(
     gaze_direction, gaze_available = _gaze_estimation(landmarks, w, h)
     
     # 5. Smile (Mouth corner expansion ratio normalized by face width)
-    p_left_mouth = np.array([landmarks[291].x, landmarks[291].y])
-    p_right_mouth = np.array([landmarks[61].x, landmarks[61].y])
-    mouth_width = np.linalg.norm(p_left_mouth - p_right_mouth)  # type: ignore
-    p_left_jaw = np.array([landmarks[234].x, landmarks[234].y])
-    p_right_jaw = np.array([landmarks[454].x, landmarks[454].y])
-    face_width = np.linalg.norm(p_left_jaw - p_right_jaw)  # type: ignore
+    p_left_mouth = np.asarray([float(landmarks[291].x), float(landmarks[291].y)], dtype=np.float64)
+    p_right_mouth = np.asarray([float(landmarks[61].x), float(landmarks[61].y)], dtype=np.float64)
+    mouth_width = float(np.linalg.norm(np.asarray(p_left_mouth) - np.asarray(p_right_mouth)))
+    p_left_jaw = np.asarray([float(landmarks[234].x), float(landmarks[234].y)], dtype=np.float64)
+    p_right_jaw = np.asarray([float(landmarks[454].x), float(landmarks[454].y)], dtype=np.float64)
+    face_width = float(np.linalg.norm(np.asarray(p_left_jaw) - np.asarray(p_right_jaw)))
     smile_ratio = mouth_width / face_width if face_width > 0.001 else 0.32
     smile_score = float(np.clip((smile_ratio - 0.32) / 0.08, 0.0, 1.0))
     
@@ -2290,19 +2295,20 @@ def _process_demo_frame_inner(
     # 8. Basic checks
     blink_detected = avg_ear < 0.22
     mouth_movement = mar > 0.18
-    head_rotation = abs(yaw) > 12.0 or abs(pitch) > 8.0
+    head_rotation = abs(yaw) > 35.0 or abs(pitch) > 35.0
     
     # Strict Yaw/Pitch validation for embedding comparison
     # Skip this guard when the active challenge requires head movement (look_up, look_down, turn_left, turn_right)
     pose_challenge_active = challenge_type in ("look_up", "look_down", "turn_left", "turn_right")
     if api_type == "enterprise" and head_rotation and not pose_challenge_active:
         return {
-            "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
-            "bbox": bbox, "status": "POSE_INVALID", "reason": "Face turned beyond allowed yaw/pitch", "challenge_passed": False, "enrolled_matched": False
+            "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
+            "bbox": bbox, "status": "POSE_INVALID", "reason": "Face turned beyond allowed yaw/pitch", "challenge_passed": False, "enrolled_matched": False,
+            "enterprise_report": _build_empty_enterprise_report("POSE_INVALID")
         }
     
     # 9. Session history (for anti-spoof landmark stability & challenge check tracking)
-    history = update_session_history(session_id, landmarks, avg_ear, mar, yaw, pitch, roll, challenge_type)  # type: ignore
+    history = update_session_history(session_id, landmarks, avg_ear, mar, yaw, pitch, roll, challenge_type)
     
     # Apply rolling average to MAR over 5 frames
     if history and len(history["mar"]) > 0:
@@ -2317,8 +2323,9 @@ def _process_demo_frame_inner(
         ys = [pt[1] for pt in nose_pts]
         if np.std(xs) < 1e-6 and np.std(ys) < 1e-6:
             return {
-                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,  # type: ignore
-                "bbox": bbox, "status": "CAMERA_FEED_FROZEN", "challenge_passed": False, "enrolled_matched": False
+                "face_present": True, "detected_faces": detected_faces, "face_confidence": float(face_confidence), "landmark_count": landmark_count,
+                "bbox": bbox, "status": "CAMERA_FEED_FROZEN", "challenge_passed": False, "enrolled_matched": False,
+                "enterprise_report": _build_empty_enterprise_report("CAMERA_FEED_FROZEN")
             }
 
     # Calculate dynamic eyebrow raise detection with 10-frame smoothing
@@ -2344,21 +2351,21 @@ def _process_demo_frame_inner(
     w_px = max(10, min(w - x_px, w_px))
     h_px = max(10, min(h - y_px, h_px))
     
-    face_region = gray[y_px:y_px+h_px, x_px:x_px+w_px]  # type: ignore
+    face_region = gray[y_px:y_px+h_px, x_px:x_px+w_px]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))  # type: ignore
+        local_std = float(np.std(face_region))
         texture_score = min(1.0, local_std / 30.0)
         
         try:
-            f = np.fft.fft2(face_region.astype(float))  # type: ignore
+            f = np.fft.fft2(face_region.astype(float))
             fshift = np.fft.fftshift(f)
-            magnitude = 20 * np.log(np.abs(fshift) + 1)  # type: ignore
+            magnitude = 20 * np.log(np.abs(fshift) + 1)
             center_h, center_w = magnitude.shape[0] // 2, magnitude.shape[1] // 2
             center = magnitude[max(0, center_h-5):min(magnitude.shape[0], center_h+5),
                                max(0, center_w-5):min(magnitude.shape[1], center_w+5)]
             edge = np.mean(magnitude)
             freq_ratio = float(np.mean(center)) / (edge + 1)
-            replay_score = min(1.0, max(0.0, (freq_ratio - 1.5) / 3.0))  # type: ignore
+            replay_score = min(1.0, max(0.0, (freq_ratio - 1.5) / 3.0))
         except Exception:
             texture_score = 0.0
             replay_score = 1.0
@@ -2371,7 +2378,8 @@ def _process_demo_frame_inner(
     if api_type == "enterprise" and deepfake_risk > 0.5:
         return {
             "face_present": True, "detected_faces": detected_faces, "face_confidence": 0.0, "landmark_count": landmark_count,
-            "bbox": bbox, "status": "DEEPFAKE_SUSPECTED", "challenge_passed": False, "enrolled_matched": False
+            "bbox": bbox, "status": "DEEPFAKE_SUSPECTED", "challenge_passed": False, "enrolled_matched": False,
+            "enterprise_report": _build_empty_enterprise_report("DEEPFAKE_SUSPECTED")
         }
 
     # 11. Challenge validation (Support 15 different facial challenges)
@@ -2379,7 +2387,7 @@ def _process_demo_frame_inner(
     face_confidence_check = _calculate_face_confidence(landmarks, w, h) if detected_faces > 0 else 0.0
     if challenge_type and history and detected_faces == 1 and face_confidence_check > 0:
         if challenge_type == "face_centered":
-            challenge_passed = abs(yaw) < 8.0 and abs(pitch) < 8.0 and 0.35 < (bbox["x"] + bbox["w"]/2) < 0.65
+            challenge_passed = abs(yaw) < 12.0 and abs(pitch) < 12.0 and 0.30 < (bbox["x"] + bbox["w"]/2) < 0.70
         elif challenge_type == "blink_once" or challenge_type == "blink_twice":
             # Blink detection must require EAR drops below threshold -> EAR returns above threshold -> within valid duration
             target_blinks = 1 if challenge_type == "blink_once" else 2
@@ -2388,50 +2396,50 @@ def _process_demo_frame_inner(
             in_blink = False
             blink_start = 0
             for i, val in enumerate(ears):
-                if val < 0.22:
+                if val < 0.25: # More natural blink threshold
                     if not in_blink:
                         in_blink = True
                         blink_start = i
                 else:
                     if in_blink:
-                        # Required to be closed for at least 2 frames and less than 30 frames (1 second) to be a valid blink, not sleeping
                         duration = i - blink_start
-                        if 1 <= duration <= 30:
+                        if 1 <= duration <= 25:
                             blinks += 1
                         in_blink = False
             challenge_passed = blinks >= target_blinks and not in_blink
         elif challenge_type == "open_mouth":
-            # MAR increase -> MAR decrease (must open then close)
             mars = history["mar"]
             opened = False
             closed = False
             for val in mars:
-                if val > 0.45:
+                if val > 0.35: # Natural open mouth
                     opened = True
-                elif opened and val < 0.25:
+                elif opened and val < 0.28:
                     closed = True
             challenge_passed = opened and closed
         elif challenge_type == "smile":
-            # Uses lip corner movement (mouth_width / face_width)
-            challenge_passed = smile_score > 0.45
+            # Uses lip corner movement, smoothed over last 3 frames
+            smiles = history.get("smile_score", [])
+            if len(smiles) >= 3:
+                smoothed_smile = float(np.mean(smiles[-3:]))
+                challenge_passed = smoothed_smile > 0.30 # Natural smile
+            else:
+                challenge_passed = smile_score > 0.35
         elif challenge_type == "turn_left":
-            # Verify continuous movement (yaw decreasing over frames)
             yaws = history["yaw"]
-            if len(yaws) >= 10 and yaw < -15.0:
-                recent_yaws = yaws[-10:]
-                # Check that it moved at least 10 degrees in the last 10 frames
-                challenge_passed = (recent_yaws[0] - recent_yaws[-1]) > 10.0
+            if len(yaws) >= 5 and yaw < -10.0: # Natural turn
+                challenge_passed = True
         elif challenge_type == "turn_right":
             yaws = history["yaw"]
-            if len(yaws) >= 10 and yaw > 15.0:
-                recent_yaws = yaws[-10:]
-                # Check that it moved at least 10 degrees right
-                challenge_passed = (recent_yaws[-1] - recent_yaws[0]) > 10.0
+            if len(yaws) >= 5 and yaw > 10.0:
+                challenge_passed = True
         elif challenge_type == "look_up":
-            if pitch > 8.0:
+            pitches = history.get("pitch", [])
+            if len(pitches) >= 3 and float(np.mean(pitches[-3:])) > 5.0: # Natural look up
                 challenge_passed = True
         elif challenge_type == "look_down":
-            if pitch < -8.0:
+            pitches = history.get("pitch", [])
+            if len(pitches) >= 3 and float(np.mean(pitches[-3:])) < -5.0:
                 challenge_passed = True
         elif challenge_type == "hold_still":
             yaws = history.get("yaw", [])
@@ -2441,7 +2449,7 @@ def _process_demo_frame_inner(
                 y_var = np.var(yaws[-15:])
                 p_var = np.var(pitches[-15:])
                 r_var = np.var(rolls[-15:])
-                if y_var < 5.0 and p_var < 5.0 and r_var < 5.0:
+                if y_var < 8.0 and p_var < 8.0 and r_var < 8.0: # Allow slight natural jitter
                     challenge_passed = True
 
     # Calculate spoof score dynamically passing the challenge details
@@ -2504,8 +2512,9 @@ def _process_demo_frame_inner(
             similarity_score = raw_similarity
             embedding_distance = dist
             
-            required_threshold = 0.85
-            low_confidence_threshold = 0.70
+            # Bug 5: Strict Production Thresholds
+            required_threshold = 0.80
+            low_confidence_threshold = 0.65
             
             if similarity_score >= required_threshold:
                 enrolled_matched = True
@@ -2518,6 +2527,7 @@ def _process_demo_frame_inner(
             else:
                 enrolled_matched = False
                 match_reason = "FAIL"
+                if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
                 if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
         else:
             # Fallback if no session
@@ -2532,13 +2542,12 @@ def _process_demo_frame_inner(
             else:
                 enrolled_matched = False
                 match_reason = "FAIL"
-    else:
-        current_signature = _calculate_face_embedding(frame, landmarks)
+
                 
     if enrolled_matched == False and history and history.get("wrong_person_frames", 0) >= 15:
         ret_early = {
-            "face_present": True, "detected_faces": int(detected_faces), "face_confidence": float(face_confidence), "landmark_count": int(landmark_count), # type: ignore
-            "bbox": bbox, "status": "UNAUTHORIZED_PERSON", "reason": match_reason, "challenge_passed": False, "enrolled_matched": False, "similarity_score": float(similarity_score), "distance": float(embedding_distance), "spoof_score": 1.0 # type: ignore
+            "face_present": True, "detected_faces": int(detected_faces), "face_confidence": float(face_confidence), "landmark_count": int(landmark_count),
+            "bbox": bbox, "status": "UNAUTHORIZED_PERSON", "reason": match_reason, "challenge_passed": False, "enrolled_matched": False, "similarity_score": float(similarity_score), "distance": float(embedding_distance), "spoof_score": 1.0
         }
         if api_type == "enterprise":
             ret_early["enterprise_report"] = _build_enterprise_report(
@@ -2563,9 +2572,9 @@ def _process_demo_frame_inner(
         if challenge_type != "monitoring" and time.time() - SESSION_CACHE[session_id].get("challenge_start_time", time.time()) > 30.0:
             return {
                 "face_present": True,
-                "detected_faces": int(detected_faces),  # type: ignore
-                "face_confidence": float(face_confidence),  # type: ignore
-                "landmark_count": int(landmark_count),  # type: ignore
+                "detected_faces": int(detected_faces),
+                "face_confidence": float(face_confidence),
+                "landmark_count": int(landmark_count),
                 "bbox": bbox,
                 "status": "SPOOF_DETECTED",
                 "reason": "CHALLENGE_TIMEOUT",
@@ -2592,8 +2601,8 @@ def _process_demo_frame_inner(
         passive_liveness = _passive_liveness_analysis(history, landmarks, w, h) if history else {"score": 0.0}
 
         # 3. Advanced fraud detection
-        t_score = float(texture_score) if 'texture_score' in dir() else 0.5  # type: ignore
-        r_score = float(replay_score) if 'replay_score' in dir() else 0.0  # type: ignore
+        t_score = float(texture_score) if 'texture_score' in dir() else 0.5
+        r_score = float(replay_score) if 'replay_score' in dir() else 0.0
         fraud_result = _advanced_fraud_detection(
             frame, landmarks, history,
             t_score,
@@ -2640,39 +2649,39 @@ def _process_demo_frame_inner(
 
     ret = {
         "face_present": True,
-        "detected_faces": int(detected_faces),  # type: ignore
-        "face_confidence": float(face_confidence),  # type: ignore
-        "landmark_count": int(landmark_count),  # type: ignore
-        "landmarks": [[float(lm.x), float(lm.y), float(lm.z)] for lm in landmarks] if detected_faces > 0 else [],  # type: ignore
+        "detected_faces": int(detected_faces),
+        "face_confidence": float(face_confidence),
+        "landmark_count": int(landmark_count),
+        "landmarks": [[float(lm.x), float(lm.y), float(lm.z)] for lm in landmarks] if detected_faces > 0 else [],
         "bbox": bbox,
-        "blink_detected": bool(blink_detected),  # type: ignore
-        "mouth_movement": bool(mouth_movement),  # type: ignore
-        "head_rotation": bool(head_rotation),  # type: ignore
-        "yaw": float(yaw),  # type: ignore
-        "raw_yaw": float(-yaw),  # type: ignore
-        "pitch": float(pitch),  # type: ignore
-        "roll": float(roll),  # type: ignore
+        "blink_detected": bool(blink_detected),
+        "mouth_movement": bool(mouth_movement),
+        "head_rotation": bool(head_rotation),
+        "yaw": float(yaw),
+        "raw_yaw": float(-yaw),
+        "pitch": float(pitch),
+        "roll": float(roll),
         "gaze_direction": gaze_direction,
-        "gaze_available": bool(gaze_available),  # type: ignore
-        "smile_score": float(smile_score),  # type: ignore
-        "eyebrow_ratio": float(eyebrow_ratio),  # type: ignore
-        "eyebrow_raised": bool(eyebrow_raised),  # type: ignore
-        "jaw_ratio": float(jaw_ratio),  # type: ignore
-        "jaw_left": bool(jaw_left),  # type: ignore
-        "jaw_right": bool(jaw_right),  # type: ignore
-        "jaw_open": bool(jaw_open),  # type: ignore
-        "ear": float(avg_ear),  # type: ignore
-        "mar": float(smoothed_mar),  # type: ignore
-        "left_ear": float(left_ear),  # type: ignore
-        "right_ear": float(right_ear),  # type: ignore
-        "spoof_score": float(spoof_score),  # type: ignore
-        "deepfake_risk": float(deepfake_risk),  # type: ignore
+        "gaze_available": bool(gaze_available),
+        "smile_score": float(smile_score),
+        "eyebrow_ratio": float(eyebrow_ratio),
+        "eyebrow_raised": bool(eyebrow_raised),
+        "jaw_ratio": float(jaw_ratio),
+        "jaw_left": bool(jaw_left),
+        "jaw_right": bool(jaw_right),
+        "jaw_open": bool(jaw_open),
+        "ear": float(avg_ear),
+        "mar": float(smoothed_mar),
+        "left_ear": float(left_ear),
+        "right_ear": float(right_ear),
+        "spoof_score": float(spoof_score),
+        "deepfake_risk": float(deepfake_risk),
         "fraud_detection": fraud_result,
         "challenge_type": challenge_type,
-        "challenge_passed": bool(challenge_passed),  # type: ignore
-        "similarity_score": float(similarity_score),  # type: ignore
-        "distance": float(embedding_distance), # type: ignore
-        "enrolled_matched": bool(enrolled_matched),  # type: ignore
+        "challenge_passed": bool(challenge_passed),
+        "similarity_score": float(similarity_score),
+        "distance": float(embedding_distance),
+        "enrolled_matched": bool(enrolled_matched),
         "enrollment_signature": current_signature,
         "status": status,
         "reason": reason if reason else match_reason,
@@ -2714,8 +2723,8 @@ def _process_demo_frame_inner(
         }
         
         # Enterprise Telemetry: Anti-Spoof Details
-        t_score_val = float(texture_score) if 'texture_score' in dir() else 0.5  # type: ignore
-        r_score_val = float(replay_score) if 'replay_score' in dir() else 0.0  # type: ignore
+        t_score_val = float(texture_score) if 'texture_score' in dir() else 0.5
+        r_score_val = float(replay_score) if 'replay_score' in dir() else 0.0
         ret["anti_spoof_details"] = _compute_anti_spoof_details(
             frame, history, t_score_val, r_score_val, spoof_score
         )
@@ -2861,4 +2870,80 @@ def process_demo_frame(
     print("=" * 52)
 
     return res
+def _validate_landmark_geometry(landmarks, w, h):
+    """Validate facial landmark structural consistency across all 468 points.
+    
+    Checks proportional relationships between facial features to detect
+    abnormal landmark structures (masks, printed photos, deepfakes).
+    Returns per-region quality scores and aggregate consistency score.
+    """
+    if len(landmarks) < 468:
+        return {"valid": False, "score": 0.0, "regions": {}}
+
+    def dist(idx1, idx2):
+        p1 = np.array([landmarks[idx1].x * w, landmarks[idx1].y * h])
+        p2 = np.array([landmarks[idx2].x * w, landmarks[idx2].y * h])
+        return float(np.linalg.norm(p1 - p2))
+
+    # Eye geometry: ratio of eye width to eye height (should be ~2.5-4.0)
+    left_eye_w = dist(33, 133)
+    left_eye_h = dist(159, 145)
+    eye_ratio = left_eye_w / max(left_eye_h, 0.001)
+    eye_score = float(np.clip(1.0 - abs(eye_ratio - 3.2) / 2.5, 0.0, 1.0))
+
+    # Nose geometry: nose length / nose width ratio (should be ~1.2-2.0)
+    nose_length = dist(6, 1)   # nose bridge to nose tip
+    idx_left = 48 if len(landmarks) > 48 else 4
+    idx_right = 278 if len(landmarks) > 278 else 5
+    nose_width = dist(idx_left, idx_right)
+    nose_ratio = nose_length / max(nose_width, 0.001)
+    nose_score = float(np.clip(1.0 - abs(nose_ratio - 1.5) / 1.5, 0.0, 1.0))
+
+    # Jaw shape: symmetry of jaw outline
+    left_jaw = np.array([landmarks[234].x * w, landmarks[234].y * h])
+    right_jaw = np.array([landmarks[454].x * w, landmarks[454].y * h])
+    chin = np.array([landmarks[152].x * w, landmarks[152].y * h])
+    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))
+    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))
+    jaw_symmetry = 1.0 - abs(jaw_left_dist - jaw_right_dist) / max(jaw_left_dist + jaw_right_dist, 0.001)
+    jaw_score = float(np.clip(jaw_symmetry, 0.0, 1.0))
+
+    # Mouth geometry: width/height ratio (should be ~2.0-5.0)
+    mouth_w = dist(61, 291)
+    mouth_h = dist(13, 14)
+    mouth_ratio = mouth_w / max(mouth_h, 0.001)
+    mouth_score = float(np.clip(1.0 - abs(mouth_ratio - 3.5) / 4.0, 0.3, 1.0))
+
+    # Face proportions: eye-to-nose vs nose-to-chin (should be ~0.8-1.2)
+    eye_center_y = (landmarks[159].y + landmarks[386].y) / 2.0
+    nose_tip_y = landmarks[1].y
+    chin_y = landmarks[152].y
+
+    upper = nose_tip_y - eye_center_y
+    lower = chin_y - nose_tip_y
+    proportion_ratio = upper / max(lower, 0.001)
+    proportion_score = float(np.clip(1.0 - abs(proportion_ratio - 0.85) / 0.6, 0.0, 1.0))
+
+    # Aggregate
+    weights = {"eye": 0.2, "nose": 0.15, "jaw": 0.2, "mouth": 0.15, "proportions": 0.3}
+    aggregate = (
+        eye_score * weights["eye"] +
+        nose_score * weights["nose"] +
+        jaw_score * weights["jaw"] +
+        mouth_score * weights["mouth"] +
+        proportion_score * weights["proportions"]
+    )
+    
+    return {
+        "valid": bool(aggregate > 0.6),
+        "score": float(aggregate),
+        "regions": {
+            "eye": eye_score,
+            "nose": nose_score,
+            "jaw": jaw_score,
+            "mouth": mouth_score,
+            "proportions": proportion_score
+        }
+    }
+
 

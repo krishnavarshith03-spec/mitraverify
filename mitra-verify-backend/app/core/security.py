@@ -36,7 +36,7 @@ def create_refresh_token(data: dict) -> str:
 
 def decode_token(token: str) -> Optional[dict]:
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])  # type: ignore
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError:
         return None
 
@@ -55,7 +55,7 @@ def decode_supabase_token(token: str) -> Optional[dict]:
             return jwt.get_unverified_claims(token)
 
         # Supabase JWTs use HS256 (Legacy) or ES256/RS256 (New Asymmetric Keys)
-        return jwt.decode(  # type: ignore
+        return jwt.decode(
             token, 
             secret, 
             algorithms=["HS256", "ES256", "RS256"],
