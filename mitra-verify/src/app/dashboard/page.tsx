@@ -100,17 +100,31 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
+      console.log(`[DASHBOARD POLLING] ${new Date().toISOString()} - Starting poll`);
       const [overviewRes, eventsRes] = await Promise.all([
-        analyticsAPI.overview().catch(() => ({ data: null })),
-        analyticsAPI.events(100).catch(() => ({ data: [] }))
+        analyticsAPI.overview().catch((err) => {
+          console.error('[DASHBOARD API ERROR] overview', err);
+          return { data: null };
+        }),
+        analyticsAPI.events(100).catch((err) => {
+          console.error('[DASHBOARD API ERROR] events', err);
+          return { data: [] };
+        })
       ]);
       
       const rawOverview = overviewRes.data;
       const rawEvents = eventsRes.data || [];
+      console.log(`[DASHBOARD POLLING] Overview Status: ${overviewRes.status || 'Fallback'}`, rawOverview);
+      console.log(`[DASHBOARD POLLING] Events count: ${rawEvents.length}`);
       
       const transformedData = transformAnalyticsData(rawOverview, rawEvents, timeframe);
       
-      setTelemetry(transformedData as any);
+      setTelemetry((prev) => {
+        console.log('[FRONTEND RENDER] previous React state telemetry:', prev);
+        console.log('[FRONTEND RENDER] new React state telemetry:', transformedData);
+        console.log('[FRONTEND RENDER] render triggered: true');
+        return transformedData as any;
+      });
       
       // Update events for the search/table below
       const mappedEvents = rawEvents.map((ev: any) => ({
