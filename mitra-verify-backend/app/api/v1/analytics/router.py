@@ -6,7 +6,17 @@ from sqlalchemy import select, func, and_
 from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.models.models import VerificationLog, ApiKey, ApiUsage
-from app.schemas.schemas import AnalyticsOverview
+from app.schemas.schemas import (
+    AnalyticsOverview, 
+    DashboardAnalyticsResponse,
+    DashboardExecutiveOverview,
+    DashboardVerificationSummary,
+    DashboardApiStat,
+    DashboardApiStatistics,
+    DashboardTimelineNode,
+    DashboardThreatStatistics,
+    DashboardLiveActivity
+)
 from app.api.v1.auth.router import get_current_user
 from app.models.models import User
 
@@ -200,7 +210,242 @@ class EventPayload(BaseModel):
     user: Optional[str] = None
     device: Optional[str] = None
 
+@router.get("/dashboard", response_model=DashboardAnalyticsResponse)
+async def get_dashboard(
+    timeframe: str = "24h", 
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
+):
+    # Get user's API key IDs
+    keys_result = await db.execute(select(ApiKey.id).where(ApiKey.user_id == current_user.id))
+    key_ids = [r[0] for r in keys_result.fetchall()]
+
+    if not key_ids:
+        empty_api = DashboardApiStat(total_requests=0, passed=0, failed=0, spoof=0, face_lost=0, identity_mismatch=0, avg_latency=0, success_rate=0)
+        return DashboardAnalyticsResponse(
+            executive_overview=DashboardExecutiveOverview(total_requests=0, successful_requests=0, failed_requests=0, spoof_attempts=0, face_lost=0, identity_mismatch=0, active_sessions=0, avg_latency=0, avg_identity_score=0, avg_liveness_score=0, success_rate=0, failure_rate=0),
+            verification_summary=DashboardVerificationSummary(passed=0, failed=0, spoof=0, face_lost=0, multiple_faces=0, identity_mismatch=0, timeout=0, cancelled=0, total=0),
+            api_statistics=DashboardApiStatistics(Basic=empty_api, Advanced=empty_api, Enterprise=empty_api),
+            timeline=[],
+            threat_statistics=DashboardThreatStatistics(spoof_attempts=0, photo_attack=0, replay_attack=0, face_lost=0, multiple_faces=0, identity_change=0, timeout=0, liveness_failure=0, identity_failure=0, threat_score=0, threat_trend="stable"),
+            live_activity=[]
+        )
+        
+    now = datetime.now(timezone.utc)
+    if timeframe == "24h":
+        since = now - timedelta(days=1)
+    elif timeframe == "7d":
+        since = now - timedelta(days=7)
+    elif timeframe == "30d":
+        since = now - timedelta(days=30)
+    elif timeframe == "90d":
+        since = now - timedelta(days=90)
+    else:
+        since = now - timedelta(days=1)
+
+    stmt = (
+        select(VerificationLog)
+        .where(and_(VerificationLog.api_key_id.in_(key_ids), VerificationLog.created_at >= since))
+        .order_by(VerificationLog.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    logs = res.scalars().all()
+
+    # Data structures for aggregation
+    summary = {"passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "multiple_faces": 0, "identity_mismatch": 0, "timeout": 0, "cancelled": 0}
+    api_stats = {
+        "Basic": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0},
+        "Advanced": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0},
+        "Enterprise": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0}
+    }
+    
+    threats = {"spoof_attempts": 0, "photo_attack": 0, "replay_attack": 0, "face_lost": 0, "multiple_faces": 0, "identity_change": 0, "timeout": 0, "liveness_failure": 0, "identity_failure": 0}
+    timeline_map = {} 
+    
+    total_latency = 0
+    total_confidence = 0
+    total_spoof_score = 0
+    active_sessions = set()
+    
+    live_activity = []
+
+    for log in logs:
+        total_latency += log.processing_time
+        total_confidence += log.confidence
+        total_spoof_score += log.spoof_score
+        
+        if log.session_id:
+            active_sessions.add(log.session_id)
+            
+        norm_result = (log.result or "").upper()
+        api_type_map = {"basic": "Basic", "advanced": "Advanced", "enterprise": "Enterprise"}
+        api_key = api_type_map.get((log.api_type or "").lower(), "Basic")
+        
+        is_pass = norm_result in ("PASS", "SUCCESS", "IDENTITY_MATCH_SUCCESS")
+        is_spoof = norm_result in ("SPOOF", "SPOOF_DETECTED") or log.spoof_score > 0.5
+        is_face_lost = norm_result in ("NO_FACE_DETECTED", "CAMERA_LOST")
+        is_multiple = norm_result == "MULTIPLE_FACE"
+        is_id_mismatch = norm_result == "IDENTITY_MISMATCH"
+        is_timeout = norm_result == "SESSION_TERMINATED"
+        
+        if is_pass:
+            summary["passed"] += 1
+            api_stats[api_key]["passed"] += 1
+        else:
+            api_stats[api_key]["failed"] += 1
+            if is_spoof:
+                summary["spoof"] += 1
+                api_stats[api_key]["spoof"] += 1
+                threats["spoof_attempts"] += 1
+                threats["liveness_failure"] += 1
+                if log.deepfake_risk > 0.5:
+                    threats["photo_attack"] += 1
+            elif is_face_lost:
+                summary["face_lost"] += 1
+                api_stats[api_key]["face_lost"] += 1
+                threats["face_lost"] += 1
+            elif is_multiple:
+                summary["multiple_faces"] += 1
+                threats["multiple_faces"] += 1
+            elif is_id_mismatch:
+                summary["identity_mismatch"] += 1
+                api_stats[api_key]["identity_mismatch"] += 1
+                threats["identity_failure"] += 1
+            elif is_timeout:
+                summary["timeout"] += 1
+                threats["timeout"] += 1
+            else:
+                summary["failed"] += 1
+                
+        api_stats[api_key]["requests"] += 1
+        api_stats[api_key]["latency_sum"] += log.processing_time
+        api_stats[api_key]["confidence_sum"] += log.confidence
+        
+        if timeframe == "24h":
+            t_key = log.created_at.strftime("%H:00")
+        else:
+            t_key = log.created_at.strftime("%Y-%m-%d")
+            
+        if t_key not in timeline_map:
+            timeline_map[t_key] = {"total": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "multiple_faces": 0}
+            
+        timeline_map[t_key]["total"] += 1
+        if is_pass:
+            timeline_map[t_key]["passed"] += 1
+        else:
+            timeline_map[t_key]["failed"] += 1
+            if is_spoof: timeline_map[t_key]["spoof"] += 1
+            if is_face_lost: timeline_map[t_key]["face_lost"] += 1
+            if is_id_mismatch: timeline_map[t_key]["identity_mismatch"] += 1
+            if is_multiple: timeline_map[t_key]["multiple_faces"] += 1
+
+        if len(live_activity) < 50:
+            live_status = "VERIFIED" if is_pass else ("SPOOF ATTEMPT" if is_spoof else ("NO FACE DETECTED" if is_face_lost else "FAILED"))
+            live_activity.append(DashboardLiveActivity(
+                id=log.id,
+                timestamp=log.created_at,
+                api=api_key,
+                user=log.ip_address or "Unknown",
+                status=live_status,
+                latency=log.processing_time,
+                identity_pct=log.confidence * 100,
+                liveness_pct=max(0, (1.0 - log.spoof_score) * 100),
+                threat=log.spoof_score * 100,
+                ip=log.ip_address or "0.0.0.0",
+                device="Desktop"
+            ))
+
+    total = len(logs)
+    
+    total_summary = sum(summary.values())
+    if total_summary != total:
+        print(f"[WARNING] Summary mismatch! Calculated: {total_summary}, Actual Total: {total}. Reconciling...")
+        diff = total - total_summary
+        summary["failed"] += diff 
+
+    executive_overview = DashboardExecutiveOverview(
+        total_requests=total,
+        successful_requests=summary["passed"],
+        failed_requests=total - summary["passed"],
+        spoof_attempts=summary["spoof"],
+        face_lost=summary["face_lost"],
+        identity_mismatch=summary["identity_mismatch"],
+        active_sessions=len(active_sessions),
+        avg_latency=round((total_latency / total), 2) if total > 0 else 0,
+        avg_identity_score=round((total_confidence / total), 2) if total > 0 else 0,
+        avg_liveness_score=round(max(0, 1.0 - (total_spoof_score / total)), 2) if total > 0 else 0,
+        success_rate=round((summary["passed"] / total * 100), 2) if total > 0 else 0,
+        failure_rate=round(((total - summary["passed"]) / total * 100), 2) if total > 0 else 0
+    )
+
+    verification_summary = DashboardVerificationSummary(
+        passed=summary["passed"],
+        failed=summary["failed"],
+        spoof=summary["spoof"],
+        face_lost=summary["face_lost"],
+        multiple_faces=summary["multiple_faces"],
+        identity_mismatch=summary["identity_mismatch"],
+        timeout=summary["timeout"],
+        cancelled=summary["cancelled"],
+        total=total
+    )
+
+    api_response = {}
+    for key, stats in api_stats.items():
+        reqs = stats["requests"]
+        api_response[key] = DashboardApiStat(
+            total_requests=reqs,
+            passed=stats["passed"],
+            failed=stats["failed"],
+            spoof=stats["spoof"],
+            face_lost=stats["face_lost"],
+            identity_mismatch=stats["identity_mismatch"],
+            avg_latency=round((stats["latency_sum"] / reqs), 2) if reqs > 0 else 0,
+            success_rate=round((stats["passed"] / reqs * 100), 2) if reqs > 0 else 0,
+            avg_identity_match=round((stats["confidence_sum"] / reqs), 2) if reqs > 0 else 0,
+            avg_confidence=round((stats["confidence_sum"] / reqs), 2) if reqs > 0 else 0
+        )
+
+    timeline = []
+    for t_key in sorted(timeline_map.keys()):
+        node = timeline_map[t_key]
+        timeline.append(DashboardTimelineNode(
+            time=t_key,
+            total=node["total"],
+            passed=node["passed"],
+            failed=node["failed"],
+            spoof=node["spoof"],
+            face_lost=node["face_lost"],
+            identity_mismatch=node["identity_mismatch"],
+            multiple_faces=node["multiple_faces"]
+        ))
+
+    threat_score = (threats["spoof_attempts"] * 2 + threats["identity_change"]) / max(1, total) * 100
+    threat_stats = DashboardThreatStatistics(
+        spoof_attempts=threats["spoof_attempts"],
+        photo_attack=threats["photo_attack"],
+        replay_attack=threats["replay_attack"],
+        face_lost=threats["face_lost"],
+        multiple_faces=threats["multiple_faces"],
+        identity_change=threats["identity_change"],
+        timeout=threats["timeout"],
+        liveness_failure=threats["liveness_failure"],
+        identity_failure=threats["identity_failure"],
+        threat_score=round(min(100.0, threat_score), 2),
+        threat_trend="up" if threat_score > 5 else "stable"
+    )
+
+    return DashboardAnalyticsResponse(
+        executive_overview=executive_overview,
+        verification_summary=verification_summary,
+        api_statistics=DashboardApiStatistics(Basic=api_response["Basic"], Advanced=api_response["Advanced"], Enterprise=api_response["Enterprise"]),
+        timeline=timeline,
+        threat_statistics=threat_stats,
+        live_activity=live_activity
+    )
+
 @router.post("/events")
+
 async def log_event(data: EventPayload, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     # Simply return success, the actual logging is handled in the liveness process endpoints
     # This endpoint can be used for custom analytics events from the frontend

@@ -120,3 +120,89 @@ class AnalyticsOverview(BaseModel):
     success_rate: float
     avg_processing_time: float
     active_api_keys: int
+
+class DashboardExecutiveOverview(BaseModel):
+    total_requests: int
+    successful_requests: int
+    failed_requests: int
+    spoof_attempts: int
+    face_lost: int
+    identity_mismatch: int
+    active_sessions: int
+    avg_latency: float
+    avg_identity_score: float
+    avg_liveness_score: float
+    success_rate: float
+    failure_rate: float
+
+class DashboardVerificationSummary(BaseModel):
+    passed: int
+    failed: int
+    spoof: int
+    face_lost: int
+    multiple_faces: int
+    identity_mismatch: int
+    timeout: int
+    cancelled: int
+    total: int
+
+class DashboardApiStat(BaseModel):
+    total_requests: int
+    passed: int
+    failed: int
+    spoof: Optional[int] = 0
+    face_lost: Optional[int] = 0
+    identity_mismatch: Optional[int] = 0
+    avg_latency: float
+    success_rate: float
+    avg_identity_match: Optional[float] = 0.0
+    avg_confidence: Optional[float] = 0.0
+
+class DashboardApiStatistics(BaseModel):
+    Basic: DashboardApiStat
+    Advanced: DashboardApiStat
+    Enterprise: DashboardApiStat
+
+class DashboardTimelineNode(BaseModel):
+    time: str
+    total: int
+    passed: int
+    failed: int
+    spoof: int
+    face_lost: int
+    identity_mismatch: int
+    multiple_faces: int
+
+class DashboardThreatStatistics(BaseModel):
+    spoof_attempts: int
+    photo_attack: int
+    replay_attack: int
+    face_lost: int
+    multiple_faces: int
+    identity_change: int
+    timeout: int
+    liveness_failure: int
+    identity_failure: int
+    threat_score: float
+    threat_trend: str
+
+class DashboardLiveActivity(BaseModel):
+    id: str
+    timestamp: datetime
+    api: str
+    user: str
+    status: str
+    latency: float
+    identity_pct: float
+    liveness_pct: float
+    threat: float
+    ip: str
+    device: str
+
+class DashboardAnalyticsResponse(BaseModel):
+    executive_overview: DashboardExecutiveOverview
+    verification_summary: DashboardVerificationSummary
+    api_statistics: DashboardApiStatistics
+    timeline: list[DashboardTimelineNode]
+    threat_statistics: DashboardThreatStatistics
+    live_activity: list[DashboardLiveActivity]

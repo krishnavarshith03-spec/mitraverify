@@ -16,46 +16,50 @@ import {
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { analyticsAPI } from '@/lib/api';
-import { transformAnalyticsData } from '@/lib/analyticsTransformer';
-
 // --- Types ---
 interface ApiPerf {
-  requests: number;
-  pass: number;
-  fail: number;
+  total_requests: number;
+  passed: number;
+  failed: number;
   spoof: number;
-  faceLost: number;
-  errors: number;
-  totalLatency: number;
-  lastRequest: string | null;
+  face_lost: number;
+  identity_mismatch: number;
+  avg_latency: number;
+  success_rate: number;
+  avg_identity_match?: number;
+  avg_confidence?: number;
 }
 
-interface TelemetryData {
+interface DashboardData {
   executive_overview: {
-    total_verifications: number;
-    successful_verifications: number;
-    failed_verifications: number;
-    spoof_attempts_blocked: number;
-    face_lost_events: number;
-    avg_processing_time_ms: number;
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    spoof_attempts: number;
+    face_lost: number;
+    identity_mismatch: number;
+    active_sessions: number;
+    avg_latency: number;
+    avg_identity_score: number;
+    avg_liveness_score: number;
+    success_rate: number;
+    failure_rate: number;
   };
-  api_performance: Record<string, ApiPerf>;
-  analytics_chart: any[];
-}
-
-interface VerificationEvent {
-  id: string;
-  timestamp: string;
-  apiType: string;
-  status: string;
-  confidence: number;
-  processingTimeMs: number;
-  spoofFlag: boolean;
-  faceDetectedFlag?: boolean;
-  user?: string;
-  failureReason?: string;
-  device?: string;
-  ip?: string;
+  verification_summary: {
+    passed: number;
+    failed: number;
+    spoof: number;
+    face_lost: number;
+    multiple_faces: number;
+    identity_mismatch: number;
+    timeout: number;
+    cancelled: number;
+    total: number;
+  };
+  api_statistics: Record<string, ApiPerf>;
+  timeline: any[];
+  threat_statistics: any;
+  live_activity: any[];
 }
 
 // --- Colors ---
@@ -90,8 +94,8 @@ const hoverGlow = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
-  const [events, setEvents] = useState<VerificationEvent[]>([]);
+  const [telemetry, setTelemetry] = useState<DashboardData | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,52 +104,18 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      console.log(`[DASHBOARD POLLING] ${new Date().toISOString()} - Starting poll`);
-      const [overviewRes, eventsRes] = await Promise.all([
-        analyticsAPI.overview().catch((err) => {
-          console.error('[DASHBOARD API ERROR] overview', err);
-          return { data: null };
-        }),
-        analyticsAPI.events(100).catch((err) => {
-          console.error('[DASHBOARD API ERROR] events', err);
-          return { data: [] };
-        })
-      ]);
-      
-      const rawOverview = overviewRes.data;
-      const rawEvents = eventsRes.data || [];
-      console.log(`[DASHBOARD POLLING] Overview Status: ${'status' in overviewRes ? overviewRes.status : 'Fallback'}`, rawOverview);
-      console.log(`[DASHBOARD POLLING] Events count: ${rawEvents.length}`);
-      
-      const transformedData = transformAnalyticsData(rawOverview, rawEvents, timeframe);
-      
-      setTelemetry((prev) => {
-        console.log('[FRONTEND RENDER] previous React state telemetry:', prev);
-        console.log('[FRONTEND RENDER] new React state telemetry:', transformedData);
-        console.log('[FRONTEND RENDER] render triggered: true');
-        return transformedData as any;
+      console.log(`[DASHBOARD POLLING] ${new Date().toISOString()} - Fetching dashboard data`);
+      const res = await analyticsAPI.dashboard(timeframe).catch((err) => {
+        console.error('[DASHBOARD API ERROR] dashboard', err);
+        return { data: null };
       });
       
-      // Update events for the search/table below
-      const mappedEvents = rawEvents.map((ev: any) => ({
-        id: ev.id?.toString() || 'Unknown',
-        timestamp: ev.timestamp,
-        apiType: (ev.apiType || 'basic').charAt(0).toUpperCase() + (ev.apiType || 'basic').slice(1).toLowerCase(),
-        status: ev.status === 'PASS' ? 'VERIFIED' : 
-                ev.status === 'IDENTITY_MATCHED' ? 'IDENTITY MATCHED' :
-                ev.status === 'NO_FACE_DETECTED' ? 'NO FACE DETECTED' :
-                ev.spoofFlag ? 'SPOOF ATTEMPT' : 'FAILED',
-        confidence: ev.confidence || 0,
-        processingTimeMs: ev.processingTimeMs || 0,
-        spoofFlag: !!ev.spoofFlag,
-        faceDetectedFlag: !!ev.faceDetectedFlag,
-        identityMatchedFlag: ev.status === 'IDENTITY_MATCHED',
-        user: ev.user || 'Unknown',
-        device: 'Desktop',
-        ip: ev.ip || 'Unknown'
-      }));
-      setEvents(mappedEvents);
+      if (!res.data) return;
+
+      const dashboardData = res.data as DashboardData;
       
+      setTelemetry(dashboardData);
+      setEvents(dashboardData.live_activity || []);
       setLastUpdate('Just now');
       
     } catch (err) {
@@ -181,27 +151,29 @@ export default function DashboardPage() {
 
   const { 
     executive_overview, 
-    api_performance, 
-    analytics_chart = [], 
+    api_statistics, 
+    timeline = [], 
   } = telemetry || {
-    executive_overview: { total_verifications: 0, successful_verifications: 0, failed_verifications: 0, spoof_attempts_blocked: 0, face_lost_events: 0, avg_processing_time_ms: 0 },
-    api_performance: {
-      Basic: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null },
-      Advanced: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null },
-      Enterprise: { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null }
+    executive_overview: { total_requests: 0, successful_requests: 0, failed_requests: 0, spoof_attempts: 0, face_lost: 0, identity_mismatch: 0, active_sessions: 0, avg_latency: 0, avg_identity_score: 0, avg_liveness_score: 0, success_rate: 0, failure_rate: 0 },
+    verification_summary: { passed: 0, failed: 0, spoof: 0, face_lost: 0, multiple_faces: 0, identity_mismatch: 0, timeout: 0, cancelled: 0, total: 0 },
+    api_statistics: {
+      Basic: { total_requests: 0, passed: 0, failed: 0, spoof: 0, face_lost: 0, identity_mismatch: 0, avg_latency: 0, success_rate: 0 },
+      Advanced: { total_requests: 0, passed: 0, failed: 0, spoof: 0, face_lost: 0, identity_mismatch: 0, avg_latency: 0, success_rate: 0 },
+      Enterprise: { total_requests: 0, passed: 0, failed: 0, spoof: 0, face_lost: 0, identity_mismatch: 0, avg_latency: 0, success_rate: 0 }
     },
-    analytics_chart: []
+    timeline: [],
+    threat_statistics: {},
+    live_activity: []
   };
 
-  const trueFailed = executive_overview.failed_verifications - executive_overview.spoof_attempts_blocked - executive_overview.face_lost_events;
-  const sparklineData = analytics_chart.slice(-15);
+  const sparklineData = timeline.slice(-15);
 
-  const getPct = (val: number) => executive_overview.total_verifications > 0 ? ((val / executive_overview.total_verifications) * 100).toFixed(1) : '0.0';
+  const getPct = (val: number) => executive_overview.total_requests > 0 ? ((val / executive_overview.total_requests) * 100).toFixed(1) : '0.0';
 
-  const passPct = getPct(executive_overview.successful_verifications);
-  const failPct = getPct(trueFailed > 0 ? trueFailed : 0);
-  const spoofPct = getPct(executive_overview.spoof_attempts_blocked);
-  const faceLostPct = getPct(executive_overview.face_lost_events);
+  const passPct = getPct(executive_overview.successful_requests);
+  const failPct = getPct(executive_overview.failed_requests);
+  const spoofPct = getPct(executive_overview.spoof_attempts);
+  const faceLostPct = getPct(executive_overview.face_lost);
 
   return (
     <ProtectedRoute>
@@ -235,12 +207,12 @@ export default function DashboardPage() {
            {/* TOP KPI CARDS */}
            {/* ========================================================= */}
            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-5">
-             <KpiCard title="Total Requests" value={executive_overview.total_verifications.toLocaleString()} trend="▲ 8.2%" trendUp icon={Activity} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="count" color={COLORS.accent} />
-             <KpiCard title="Passed" value={executive_overview.successful_verifications.toLocaleString()} trend="▲ 12.4%" trendUp icon={CheckCircle2} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="pass" color={COLORS.success} />
-             <KpiCard title="Failed" value={(trueFailed > 0 ? trueFailed : 0).toLocaleString()} trend="▼ 2.1%" trendUp={false} icon={ShieldAlert} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="failed" color={COLORS.failed} />
-             <KpiCard title="Spoof Attempts" value={executive_overview.spoof_attempts_blocked.toLocaleString()} trend="▲ 4.3%" trendUp icon={ShieldAlert} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="spoof" color={COLORS.spoof} />
-             <KpiCard title="Face Lost" value={executive_overview.face_lost_events.toLocaleString()} trend="▼ 1.6%" trendUp={false} icon={EyeOff} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="faceLost" color={COLORS.warning} />
-             <KpiCard title="Average Response Time" value={`${executive_overview.avg_processing_time_ms}ms`} trend="▼ 5.6%" trendUp={false} icon={Clock} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="latency" color={COLORS.accent} />
+             <KpiCard title="Total Requests" value={executive_overview.total_requests.toLocaleString()} trend="▲ 8.2%" trendUp icon={Activity} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="total" color={COLORS.accent} />
+             <KpiCard title="Passed" value={executive_overview.successful_requests.toLocaleString()} trend="▲ 12.4%" trendUp icon={CheckCircle2} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="passed" color={COLORS.success} />
+             <KpiCard title="Failed" value={executive_overview.failed_requests.toLocaleString()} trend="▼ 2.1%" trendUp={false} icon={ShieldAlert} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="failed" color={COLORS.failed} />
+             <KpiCard title="Spoof Attempts" value={executive_overview.spoof_attempts.toLocaleString()} trend="▲ 4.3%" trendUp icon={ShieldAlert} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="spoof" color={COLORS.spoof} />
+             <KpiCard title="Face Lost" value={executive_overview.face_lost.toLocaleString()} trend="▼ 1.6%" trendUp={false} icon={EyeOff} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="face_lost" color={COLORS.warning} />
+             <KpiCard title="Average Response Time" value={`${executive_overview.avg_latency}ms`} trend="▼ 5.6%" trendUp={false} icon={Clock} lastUpdate={lastUpdate} sparklineData={sparklineData} dataKey="latency" color={COLORS.accent} />
            </div>
 
            {/* ========================================================= */}
@@ -268,7 +240,7 @@ export default function DashboardPage() {
                </div>
                <div className="h-[220px] sm:h-[250px] md:h-[280px] w-full mt-2">
                  <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={analytics_chart}>
+                   <AreaChart data={timeline}>
                      <defs>
                        <linearGradient id="gSuccess" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={COLORS.success} stopOpacity={0.15}/><stop offset="95%" stopColor={COLORS.success} stopOpacity={0}/></linearGradient>
                        <linearGradient id="gFailed" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={COLORS.failed} stopOpacity={0.15}/><stop offset="95%" stopColor={COLORS.failed} stopOpacity={0}/></linearGradient>
@@ -282,11 +254,11 @@ export default function DashboardPage() {
                         animationDuration={200}
                      />
                      <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10, color: '#94a3b8' }} />
-                     <Area type="monotone" dataKey="pass" name="Passed" stroke={COLORS.success} fill="url(#gSuccess)" strokeWidth={2} isAnimationActive={true} animationDuration={800} />
+                     <Area type="monotone" dataKey="passed" name="Passed" stroke={COLORS.success} fill="url(#gSuccess)" strokeWidth={2} isAnimationActive={true} animationDuration={800} />
                      <Area type="monotone" dataKey="failed" name="Failed" stroke={COLORS.failed} fill="url(#gFailed)" strokeWidth={2} isAnimationActive={true} animationDuration={800} />
                      <Area type="monotone" dataKey="spoof" name="Spoof" stroke={COLORS.spoof} fill="transparent" strokeWidth={2} isAnimationActive={true} animationDuration={800} />
-                     <Area type="monotone" dataKey="faceLost" name="Face Lost" stroke={COLORS.warning} fill="transparent" strokeWidth={2} isAnimationActive={true} />
-                     <Area type="monotone" dataKey="multipleFaces" name="Multiple Faces" stroke={COLORS.accent} fill="transparent" strokeWidth={2} isAnimationActive={true} />
+                     <Area type="monotone" dataKey="face_lost" name="Face Lost" stroke={COLORS.warning} fill="transparent" strokeWidth={2} isAnimationActive={true} />
+                     <Area type="monotone" dataKey="multiple_faces" name="Multiple Faces" stroke={COLORS.accent} fill="transparent" strokeWidth={2} isAnimationActive={true} />
                    </AreaChart>
                  </ResponsiveContainer>
                </div>
@@ -343,7 +315,7 @@ export default function DashboardPage() {
                  
                  <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                     <span className="text-[13px] text-slate-400">Total Requests</span>
-                    <span className="text-[14px] font-mono text-white font-medium">{executive_overview.total_verifications.toLocaleString()}</span>
+                    <span className="text-[14px] font-mono text-white font-medium">{executive_overview.total_requests.toLocaleString()}</span>
                  </div>
                </div>
              </motion.div>
@@ -354,11 +326,11 @@ export default function DashboardPage() {
            {/* ========================================================= */}
            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
               {['Basic', 'Advanced', 'Enterprise'].map((key, idx) => {
-                 const perf = api_performance[key] || { requests: 0, pass: 0, fail: 0, spoof: 0, faceLost: 0, errors: 0, totalLatency: 0, lastRequest: null };
+                 const perf = api_statistics[key] || { total_requests: 0, passed: 0, failed: 0, spoof: 0, face_lost: 0, identity_mismatch: 0, avg_latency: 0, success_rate: 0 };
                  const label = key === 'Basic' ? 'API 1 — Fast' : key === 'Advanced' ? 'API 2 — Secure' : 'API 3 — Enterprise';
                  const color = idx === 0 ? COLORS.accent : idx === 1 ? COLORS.spoof : COLORS.success;
-                 const avgTime = perf.requests > 0 ? Math.round(perf.totalLatency / perf.requests) : 0;
-                 const sr = perf.requests > 0 ? ((perf.pass / perf.requests) * 100).toFixed(1) : "0.0";
+                 const avgTime = perf.avg_latency;
+                 const sr = perf.success_rate;
                  const trendVal = Math.floor(Math.random() * 8) + 2;
                  
                  return (
@@ -388,7 +360,7 @@ export default function DashboardPage() {
                           <div className="flex flex-col gap-3">
                              <div className="flex items-center gap-3">
                                 <span className="text-[11px] text-slate-400 font-medium w-16">Requests</span>
-                                <span className="text-[14px] text-white font-mono font-medium">{perf.requests.toLocaleString()}</span>
+                                <span className="text-[14px] text-white font-mono font-medium">{perf.total_requests.toLocaleString()}</span>
                              </div>
                              <div className="flex items-center gap-3">
                                 <span className="text-[11px] text-slate-400 font-medium w-16">Success</span>
@@ -403,7 +375,7 @@ export default function DashboardPage() {
                           <div className="w-16 h-8">
                             <ResponsiveContainer width="100%" height="100%">
                               <LineChart data={sparklineData.slice(-10)}>
-                                <Line type="monotone" dataKey="pass" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                <Line type="monotone" dataKey="passed" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
                               </LineChart>
                             </ResponsiveContainer>
                           </div>

@@ -144,6 +144,7 @@ export const livenessAPI = {
 
 // ── Analytics (Single Source of Truth) ────────────────────────────────────────
 export const analyticsAPI = {
+  dashboard: (timeframe?: string) => api.get(`/analytics/dashboard${timeframe ? `?timeframe=${timeframe}` : ''}`),
   overview: () => api.get('/analytics/overview'),
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   usage: (_days?: number) => api.get('/analytics/usage'),
