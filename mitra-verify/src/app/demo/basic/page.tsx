@@ -7,9 +7,10 @@ import Navbar from '@/components/Navbar';
 import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { processHeadPose } from '@/lib/headPose';
 import PageTransition from '@/components/cyber/PageTransition';
+import dynamic from 'next/dynamic';
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import TiltCard from '@/components/cyber/TiltCard';
-import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
+const TiltCard = dynamic(() => import('@/components/cyber/TiltCard'), { ssr: false });
+const BiometricScannerOverlay = dynamic(() => import('@/components/cyber/BiometricScannerOverlay'), { ssr: false });
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { useDiagnosticLogger } from '@/components/developer/useDiagnosticLogger';

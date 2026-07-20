@@ -14,11 +14,19 @@ import PageTransition from '@/components/cyber/PageTransition';
 import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useDiagnosticLogger } from '@/components/developer/useDiagnosticLogger';
-import { AdvancedDebugPanel } from '@/components/developer/AdvancedDebugPanel';
-import { CameraCanvasOverlay } from '@/components/developer/CameraCanvasOverlay';
-import { TestModeMatrix } from '@/components/developer/TestModeMatrix';
-import { TelemetryPanel, FaceTrackingPanel, EyeTrackingPanel, IdentityPanel, AntiSpoofPanel, SecurityEventsLog, HexThreatRadar, FaceQualityPanel, AuthTimeline, HeadMovementPanel } from '@/components/enterprise/panels';
-
+const AdvancedDebugPanel = dynamic(() => import('@/components/developer/AdvancedDebugPanel').then(mod => mod.AdvancedDebugPanel), { ssr: false });
+const CameraCanvasOverlay = dynamic(() => import('@/components/developer/CameraCanvasOverlay').then(mod => mod.CameraCanvasOverlay), { ssr: false });
+const TestModeMatrix = dynamic(() => import('@/components/developer/TestModeMatrix').then(mod => mod.TestModeMatrix), { ssr: false });
+const TelemetryPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.TelemetryPanel), { ssr: false });
+const FaceTrackingPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.FaceTrackingPanel), { ssr: false });
+const EyeTrackingPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.EyeTrackingPanel), { ssr: false });
+const IdentityPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.IdentityPanel), { ssr: false });
+const AntiSpoofPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.AntiSpoofPanel), { ssr: false });
+const SecurityEventsLog = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.SecurityEventsLog), { ssr: false });
+const HexThreatRadar = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.HexThreatRadar), { ssr: false });
+const FaceQualityPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.FaceQualityPanel), { ssr: false });
+const AuthTimeline = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.AuthTimeline), { ssr: false });
+const HeadMovementPanel = dynamic(() => import('@/components/enterprise/panels').then(mod => mod.HeadMovementPanel), { ssr: false });
 const Biometric3DOverlay = dynamic(() => import('@/components/Biometric3DOverlay'), { ssr: false });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const HeadPose3DWidget = dynamic(() => import('@/components/HeadPose3DWidget'), { ssr: false });

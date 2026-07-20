@@ -2,16 +2,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, Camera, Shield, RotateCcw, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { livenessAPI, checkHealth, API_BASE, parseNetworkError } from '@/lib/api';
 import { processHeadPose } from '@/lib/headPose';
+const BiometricScannerOverlay = dynamic(() => import('@/components/cyber/BiometricScannerOverlay'), { ssr: false });
+const AdvLiveMetrics = dynamic(() => import('@/components/advanced/panels').then(mod => mod.AdvLiveMetrics), { ssr: false });
+const AdvFaceAnalysis = dynamic(() => import('@/components/advanced/panels').then(mod => mod.AdvFaceAnalysis), { ssr: false });
+const AdvLivenessAnalysis = dynamic(() => import('@/components/advanced/panels').then(mod => mod.AdvLivenessAnalysis), { ssr: false });
+const AdvSecurityChecklist = dynamic(() => import('@/components/advanced/panels').then(mod => mod.AdvSecurityChecklist), { ssr: false });
+const AdvChallengePanel = dynamic(() => import('@/components/advanced/panels').then(mod => mod.AdvChallengePanel), { ssr: false });
+const GaugeRow = dynamic(() => import('@/components/advanced/panels').then(mod => mod.GaugeRow), { ssr: false });
+
 import PageTransition from '@/components/cyber/PageTransition';
-import BiometricScannerOverlay from '@/components/cyber/BiometricScannerOverlay';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { useDiagnosticLogger } from '@/components/developer/useDiagnosticLogger';
-import { AdvLiveMetrics, AdvFaceAnalysis, AdvLivenessAnalysis, AdvSecurityChecklist, AdvChallengePanel, GaugeRow } from '@/components/advanced/panels';
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CHALLENGE_POOL = [
   { id: 'face_centered', label: 'Face Centered', instruction: 'Center your face inside the guides', icon: '👤' },

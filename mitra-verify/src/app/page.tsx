@@ -6,18 +6,14 @@ import Link from 'next/link';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import dynamic from 'next/dynamic';
-import StatisticsStrip from '@/components/StatisticsStrip';
-
-const BiometricCore3D = dynamic(() => import('@/components/BiometricCore3D'), { 
-  ssr: false, 
-  loading: () => <div className="w-full h-[600px] bg-transparent" /> 
-});
-import EnterpriseTrust from '@/components/EnterpriseTrust';
-import VerificationPipeline from '@/components/VerificationPipeline';
-import ApiProducts from '@/components/ApiProducts';
-import SecurityArchitecture from '@/components/SecurityArchitecture';
-import ComplianceSection from '@/components/ComplianceSection';
-import DeveloperExperience from '@/components/DeveloperExperience';
+const StatisticsStrip = dynamic(() => import('@/components/StatisticsStrip'), { ssr: false, loading: () => <div className="w-full h-32 bg-[#020A1F]" /> });
+const BiometricCore3D = dynamic(() => import('@/components/BiometricCore3D'), { ssr: false, loading: () => <div className="w-full h-[600px] bg-transparent" /> });
+const EnterpriseTrust = dynamic(() => import('@/components/EnterpriseTrust'), { ssr: false, loading: () => <div className="w-full h-64 bg-[#01081A]" /> });
+const VerificationPipeline = dynamic(() => import('@/components/VerificationPipeline'), { ssr: false, loading: () => <div className="w-full h-96 bg-[#01081A]" /> });
+const ApiProducts = dynamic(() => import('@/components/ApiProducts'), { ssr: false, loading: () => <div className="w-full h-96 bg-[#01081A]" /> });
+const SecurityArchitecture = dynamic(() => import('@/components/SecurityArchitecture'), { ssr: false, loading: () => <div className="w-full h-96 bg-[#01081A]" /> });
+const ComplianceSection = dynamic(() => import('@/components/ComplianceSection'), { ssr: false, loading: () => <div className="w-full h-64 bg-[#01081A]" /> });
+const DeveloperExperience = dynamic(() => import('@/components/DeveloperExperience'), { ssr: false, loading: () => <div className="w-full h-96 bg-[#01081A]" /> });
 
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';

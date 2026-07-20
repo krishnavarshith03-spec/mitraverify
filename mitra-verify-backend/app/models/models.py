@@ -82,7 +82,7 @@ class ApiKey(Base):
 class ApiUsage(Base):
     __tablename__ = "api_usage"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    api_key_id: Mapped[str] = mapped_column(String, ForeignKey("api_keys.id"))
+    api_key_id: Mapped[str] = mapped_column(String, ForeignKey("api_keys.id"), index=True)
     endpoint: Mapped[str] = mapped_column(String(255))
     method: Mapped[str] = mapped_column(String(10))
     status_code: Mapped[int] = mapped_column(Integer)
@@ -97,8 +97,8 @@ class ApiUsage(Base):
 class VerificationLog(Base):
     __tablename__ = "verification_logs"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    api_key_id: Mapped[str] = mapped_column(String, ForeignKey("api_keys.id"))
-    session_id: Mapped[str] = mapped_column(String(255))
+    api_key_id: Mapped[str] = mapped_column(String, ForeignKey("api_keys.id"), index=True)
+    session_id: Mapped[str] = mapped_column(String(255), index=True)
     api_type: Mapped[str] = mapped_column(String)
     result: Mapped[str] = mapped_column(String)
     confidence: Mapped[float] = mapped_column(Float)
@@ -114,7 +114,7 @@ class VerificationLog(Base):
 class LivenessLog(Base):
     __tablename__ = "liveness_logs"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    verification_id: Mapped[str] = mapped_column(String, ForeignKey("verification_logs.id"))
+    verification_id: Mapped[str] = mapped_column(String, ForeignKey("verification_logs.id"), index=True)
     check_type: Mapped[str] = mapped_column(String(50))
     passed: Mapped[bool] = mapped_column(Boolean)
     confidence: Mapped[float] = mapped_column(Float)
@@ -126,7 +126,7 @@ class LivenessLog(Base):
 class Session(Base):
     __tablename__ = "sessions"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), index=True)
     access_token: Mapped[str] = mapped_column(String(512))
     refresh_token: Mapped[str] = mapped_column(String(512))
     ip_address: Mapped[str] = mapped_column(String(45))
@@ -139,7 +139,7 @@ class Session(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), index=True)
     action: Mapped[str] = mapped_column(String(255))
     resource_type: Mapped[str] = mapped_column(String(100))
     resource_id: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -151,7 +151,7 @@ class AuditLog(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=gen_uuid)
-    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), index=True)
     type: Mapped[str] = mapped_column(String(100))
     title: Mapped[str] = mapped_column(String(255))
     message: Mapped[str] = mapped_column(Text)
