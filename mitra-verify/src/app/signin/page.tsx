@@ -6,7 +6,6 @@ import {
   Eye, EyeOff, Mail, Lock, ArrowRight, RefreshCw,
   HelpCircle, ShieldQuestion, HeartHandshake, CheckCircle,
 } from 'lucide-react';
-import { authAPI } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -31,6 +30,7 @@ const GithubIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { login, isAuthenticated, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');

@@ -2,7 +2,7 @@
 
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Torus, Points, PointMaterial, Ring, Html } from '@react-three/drei';
+import { Points, PointMaterial, Ring, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { Shield, Activity } from 'lucide-react';

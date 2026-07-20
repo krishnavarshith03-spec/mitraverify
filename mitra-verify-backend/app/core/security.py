@@ -34,15 +34,16 @@ def create_refresh_token(data: dict) -> str:
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> Optional[dict[str, Any]]:
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return cast(dict[str, Any], jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]))
     except JWTError:
         return None
 
 import json
+from typing import cast, Any
 
-def decode_supabase_token(token: str) -> Optional[dict]:
+def decode_supabase_token(token: str) -> Optional[dict[str, Any]]:
     try:
         secret = settings.SUPABASE_JWT_SECRET
         if secret.strip().startswith("{"):
@@ -52,15 +53,15 @@ def decode_supabase_token(token: str) -> Optional[dict]:
                 pass
 
         if "your-supabase-jwt" in secret or not secret:
-            return jwt.get_unverified_claims(token)
+            return cast(dict[str, Any], jwt.get_unverified_claims(token))
 
         # Supabase JWTs use HS256 (Legacy) or ES256/RS256 (New Asymmetric Keys)
-        return jwt.decode(
+        return cast(dict[str, Any], jwt.decode(
             token, 
             secret, 
             algorithms=["HS256", "ES256", "RS256"],
             options={"verify_aud": False}
-        )
+        ))
     except JWTError:
         return None
 

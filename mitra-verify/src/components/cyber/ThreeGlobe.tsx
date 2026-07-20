@@ -2,7 +2,7 @@
 
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Line, Billboard, Text } from '@react-three/drei';
+import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
 const GLOBE_RADIUS = 2;
@@ -74,7 +74,9 @@ function OrbitingSatellites() {
   const groupRef = useRef<THREE.Group>(null!);
   
   const satellites = useMemo(() => {
-    return Array.from({ length: 5 }).map((_, i) => {
+   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return Array.from({ length: 5 }).map((__, _i) => {
       const radius = GLOBE_RADIUS + 0.5 + Math.random() * 1.5;
       const speed = 0.2 + Math.random() * 0.5;
       const angleOffset = Math.random() * Math.PI * 2;

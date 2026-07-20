@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Server, Database, Shield, Key } from 'lucide-react';
+import { Server, Database, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function SecurityArchitecture() {

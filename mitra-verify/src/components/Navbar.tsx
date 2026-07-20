@@ -128,6 +128,7 @@ export default function Navbar() {
               <div className="relative group/profile ml-2">
                 <button className="flex items-center gap-2 md:gap-3 pl-1.5 pr-3 md:pr-4 py-1.5 rounded-full bg-[#020A1F] border border-white/[0.08] hover:bg-white/[0.05] hover:border-[#00E5FF]/30 transition-all duration-300 shadow-[0_0_15px_rgba(0,229,255,0.05)] hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]">
                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-full overflow-hidden border border-[#00E5FF]/30 p-[2px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
                   </div>
                   <div className="hidden sm:flex flex-col items-start text-left">
@@ -304,6 +305,7 @@ export default function Navbar() {
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 px-3 py-2">
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-[#00E5FF]/30 p-[2px] shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
                     </div>
                     <div className="flex flex-col min-w-0">

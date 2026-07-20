@@ -58,6 +58,7 @@ function FaceLandmarks({ phase }: { phase: ScanPhase }) {
   const meshRef = useRef<THREE.Points>(null!);
   const COUNT = 478;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { positions, colors, sizes } = useMemo(() => {
     const pos = new Float32Array(COUNT * 3);
     const col = new Float32Array(COUNT * 3);
@@ -461,6 +462,7 @@ export function PhaseLabel({ phase }: { phase: ScanPhase }) {
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export default function HeroScene({ phase: controlledPhase }: { phase?: ScanPhase }) {
   const [internalPhase, setInternalPhase] = useState<ScanPhase>('searching');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 

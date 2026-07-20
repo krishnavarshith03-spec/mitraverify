@@ -51,6 +51,7 @@ export default function AnimatedCounter({ value, duration = 1.2 }: AnimatedCount
 
   // Use useMemo to avoid re-running cleanup on every tick
   function useMemo<T>(factory: () => T, deps: any[]): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
     return React.useMemo(factory, deps);
   }
 

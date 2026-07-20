@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function AIInsightsPanel({ overview }: { overview: any }) {
   const [insightIndex, setInsightIndex] = useState(0);
 

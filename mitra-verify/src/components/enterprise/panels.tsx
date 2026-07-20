@@ -1,9 +1,8 @@
 'use client';
 import { motion } from 'framer-motion';
 import { 
-  Eye, Shield, Activity, Target, Radio, Cpu, Lock, 
-  AlertTriangle, CheckCircle, XCircle, Clock, Zap,
-  Scan, Brain, ShieldCheck, ShieldAlert
+  Eye, Shield, Activity, Target, Radio, Cpu, CheckCircle, Clock, Zap,
+  Scan, Brain
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────

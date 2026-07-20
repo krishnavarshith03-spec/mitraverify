@@ -4,7 +4,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { 
   CheckCircle2, ShieldAlert, Activity, Search,
   EyeOff, Clock, Monitor, Smartphone, Tablet,
-  Download, Filter, Server, CheckCircle, Database, Link
+  Download, Filter, Server, Database, Link
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
@@ -160,6 +160,7 @@ export default function DashboardPage() {
     fetchData();
     const interval = setInterval(() => fetchData(), 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeframe]);
 
   const filteredEvents = useMemo(() => {

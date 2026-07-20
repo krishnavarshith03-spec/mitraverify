@@ -256,7 +256,7 @@ async def identity_enroll(
         user_id = str(data.subject_id or current_user.id)
         await db.execute(delete(FaceProfile).where(FaceProfile.user_id == user_id))
         
-        embedding_list = embedding_vector.tolist() if hasattr(embedding_vector, "tolist") else embedding_vector
+        embedding_list = list(embedding_vector)
         
         new_embedding = FaceProfile(
             id=str(uuid.uuid4()),

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Fingerprint, AlertTriangle, Eye } from 'lucide-react';
+import { Shield, AlertTriangle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface FeedItem {
@@ -14,6 +14,7 @@ interface FeedItem {
 
 import { analyticsAPI } from '@/lib/api';
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function LiveActivityFeed({ isDemoMode }: { isDemoMode?: boolean }) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
 

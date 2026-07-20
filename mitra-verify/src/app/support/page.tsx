@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Shield, ChevronRight, AlertCircle, FileText } from 'lucide-react';
+import { ChevronRight, AlertCircle, FileText } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 

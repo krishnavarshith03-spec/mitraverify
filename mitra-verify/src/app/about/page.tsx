@@ -7,8 +7,8 @@ import Global3DBackground from '@/components/cyber/Global3DBackground';
 import EnterpriseArchitecture from '@/components/home/EnterpriseArchitecture';
 import EnterpriseBenefits from '@/components/home/EnterpriseBenefits';
 import { 
-  Shield, Eye, Lock, Cpu, Globe, Database, Fingerprint, Activity,
-  AlertTriangle, Server, Network, Code2, Users, CheckCircle, Zap
+  Shield, Eye, Lock, Cpu, Globe, Fingerprint, Activity,
+  AlertTriangle, Code2, Users, Zap
 } from 'lucide-react';
 
 const FEATURES = [

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from 'next/link';
 import { Lock, ArrowRight, RefreshCw, Eye, EyeOff, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';

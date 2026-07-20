@@ -485,3 +485,7 @@ Traceback (most recent call last):
   File "/Users/krishnavarshithkamanaboina/Desktop/mitra-vrify/mitra-verify-backend/venv/lib/python3.14/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
     hash = _bcrypt.hashpw(secret, config)
 ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33075]

@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Activity, Shield, Zap, Eye, CheckCircle, Clock, Target } from 'lucide-react';
+import { Activity, Shield, Zap, Eye, CheckCircle, Target } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
 // SHARED HELPERS

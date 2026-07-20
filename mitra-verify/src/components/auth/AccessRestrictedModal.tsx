@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Lock, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Lock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface AccessRestrictedModalProps {

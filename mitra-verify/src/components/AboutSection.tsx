@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { 
   Zap, Shield, Building2, CheckCircle2, GraduationCap, HeartPulse, 
-  Landmark, Briefcase, Server, Database, Code, Globe, Play, ScanFace, 
+  Landmark, Briefcase, Server, Database, Code, Globe, ScanFace, 
   Lock, Eye, Activity
 } from 'lucide-react';
 
@@ -70,7 +70,8 @@ export default function AboutSection() {
               { title: 'Fast Liveness API', icon: Zap, color: '#00d4ff', features: ['Lightweight verification', 'Face presence detection', 'Blink detection', 'Mouth movement verification', 'Ultra-fast response time'] },
               { title: 'Advanced Anti-Spoof API', icon: Shield, color: '#7c3aed', features: ['Challenge-response verification', 'Texture analysis', 'Replay attack detection', 'Risk scoring', 'Enhanced fraud prevention'] },
               { title: 'Enterprise Identity API', icon: Building2, color: '#ffb800', features: ['Face enrollment', 'Identity matching', 'Continuous session monitoring', 'Gaze tracking', 'Multi-face detection', 'Enterprise-grade authentication'] }
-            ].map((level, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            ].map((level, _i) => (
               <motion.div key={level.title} variants={itemVariants} className="glass card-hover flex flex-col p-8 rounded-2xl relative overflow-hidden group">
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 4, background: `linear-gradient(90deg, transparent, ${level.color}, transparent)`, opacity: 0.5 }} className="group-hover:opacity-100 transition-opacity" />
                 <div className="w-12 h-12 rounded-xl mb-6 flex items-center justify-center" style={{ background: `${level.color}15`, border: `1px solid ${level.color}30` }}>
@@ -101,7 +102,8 @@ export default function AboutSection() {
               'Real-Time Face Detection', 'Face Landmark Tracking', 'Blink Detection', 'Mouth Movement Analysis',
               'Head Rotation Verification', 'Anti-Spoof Protection', 'Deepfake Risk Analysis', 'Identity Matching',
               'Continuous Authentication', 'Multiple Face Detection', 'Enterprise Security'
-            ].map((feat, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            ].map((feat, _i) => (
               <motion.div key={feat} variants={itemVariants} className="glass card-hover flex items-center gap-3 p-4 rounded-xl border border-slate-800/60 bg-slate-900/40">
                 <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
                   <CheckCircle2 size={16} className="text-cyan-400" />
@@ -126,7 +128,8 @@ export default function AboutSection() {
               { title: 'Healthcare', desc: 'Verify patient identity for secure healthcare services.', icon: HeartPulse },
               { title: 'E-Learning Platforms', desc: 'Ensure authentic student participation.', icon: Globe },
               { title: 'Government Services', desc: 'Secure digital identity verification workflows.', icon: Shield },
-            ].map((uc, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            ].map((uc, _i) => (
               <motion.div key={uc.title} variants={itemVariants} className="glass card-hover p-6 rounded-2xl flex flex-col gap-4 border border-slate-800/50 bg-slate-900/20">
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                   <uc.icon size={20} className="text-blue-400" />
@@ -145,7 +148,8 @@ export default function AboutSection() {
           {[
             { v: '99%', l: 'Accuracy' }, { v: '<1s', l: 'Verification' }, { v: '3', l: 'APIs' },
             { v: 'Real-Time', l: 'Monitoring' }, { v: 'Enterprise', l: 'Security' }, { v: 'Open', l: 'Source' }
-          ].map((s, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          ].map((s, _i) => (
             <motion.div key={s.l} variants={itemVariants} className="flex flex-col items-center justify-center text-center p-4">
               <span className="text-2xl lg:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 to-blue-600 mb-1">{s.v}</span>
               <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">{s.l}</span>
@@ -214,7 +218,8 @@ export default function AboutSection() {
               { category: 'AI & Vision', icon: ScanFace, items: ['MediaPipe', 'Face Landmark Detection', 'Liveness Analysis'] },
               { category: 'Database', icon: Database, items: ['PostgreSQL'] },
               { category: 'Deployment', icon: Globe, items: ['Vercel', 'Railway'] },
-            ].map((stack, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            ].map((stack, _i) => (
               <motion.div key={stack.category} variants={itemVariants} className="glass card-hover p-6 rounded-2xl border border-slate-800/50 bg-slate-900/30 flex flex-col items-center text-center">
                 <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mb-4 border border-slate-700">
                   <stack.icon size={18} className="text-slate-300" />

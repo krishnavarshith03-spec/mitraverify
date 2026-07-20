@@ -120,6 +120,7 @@ class FaceEngine:
             try:
                 # Use buffalo_sc (16MB) instead of buffalo_l (300MB) to fit in 512MB RAM limit
                 # Only load detection and recognition to save memory
+                assert insightface is not None, "InsightFace is required."
                 cls._analyzer = insightface.app.FaceAnalysis(
                     name='buffalo_sc', 
                     allowed_modules=['detection', 'recognition'],
@@ -180,9 +181,9 @@ def b64_to_numpy(image_b64: str) -> Optional[np.ndarray]:
 def _ear(landmarks, eye_indices, w, h):
     """Eye Aspect Ratio — measures how open the eye is."""
     pts = [(landmarks[i].x * w, landmarks[i].y * h) for i in eye_indices]
-    A = float(np.linalg.norm(np.asarray(pts[1]) - np.asarray(pts[5])))
-    B = float(np.linalg.norm(np.asarray(pts[2]) - np.asarray(pts[4])))
-    C = float(np.linalg.norm(np.asarray(pts[0]) - np.asarray(pts[3])))
+    A = math.dist(pts[1], pts[5])
+    B = math.dist(pts[2], pts[4])
+    C = math.dist(pts[0], pts[3])
     return (A + B) / (2.0 * C) if C > 0 else 0.0
 
 
@@ -192,8 +193,8 @@ def _mar(landmarks, w, h):
     lower = (landmarks[14].x * w, landmarks[14].y * h)
     left  = (landmarks[78].x * w, landmarks[78].y * h)
     right = (landmarks[308].x * w, landmarks[308].y * h)
-    vertical = float(np.linalg.norm(np.asarray(upper) - np.asarray(lower)))
-    horizontal = float(np.linalg.norm(np.asarray(left) - np.asarray(right)))
+    vertical = math.dist(upper, lower)
+    horizontal = math.dist(left, right)
     return vertical / horizontal if horizontal > 0 else 0.0
 
 
@@ -281,7 +282,7 @@ def run_basic_liveness(image_b64: str) -> dict:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(np.asarray(face_region, dtype=np.float64)))
         texture_score = min(1.0, local_std / 30.0)
         try:
             f = np.fft.fft2(face_region.astype(float))
@@ -301,7 +302,7 @@ def run_basic_liveness(image_b64: str) -> dict:
 
     spoof_score = _calculate_spoof_risk(frame, lm, None, texture_score, replay_score)
     liveness_score = max(0.0, 1.0 - spoof_score)
-    result = "pass" if confidence >= 0.65 and spoof_score < 0.45 else "fail"
+    result = "pass" if confidence >= 0.75 and spoof_score < 0.35 else "fail"
 
     elapsed = (time.time() - start) * 1000
     return {
@@ -362,7 +363,7 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     face_region = gray[int(h*0.1):int(h*0.9), int(w*0.1):int(w*0.9)]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(np.asarray(face_region, dtype=np.float64)))
         texture_score = min(1.0, local_std / 30.0)
     else:
         texture_score = 0.5
@@ -394,7 +395,7 @@ def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) 
     if challenge_result and not challenge_result.get("passed"):
         result = "fail"
     else:
-        result = "pass" if confidence >= 0.65 and spoof_score < 0.45 else ("spoof" if spoof_score > 0.7 else "fail")
+        result = "pass" if confidence >= 0.75 and spoof_score < 0.35 else ("spoof" if spoof_score > 0.7 else "fail")
 
     elapsed = (time.time() - start) * 1000
     return {
@@ -1306,48 +1307,37 @@ def _validate_landmark_geometry(landmarks, w: int, h: int) -> dict:
     if len(landmarks) < 468:
         return {"valid": False, "score": 0.0, "regions": {}}
 
+    def dist(idx1, idx2):
+        p1 = np.array([landmarks[idx1].x * w, landmarks[idx1].y * h])
+        p2 = np.array([landmarks[idx2].x * w, landmarks[idx2].y * h])
+        return float(np.linalg.norm(p1 - p2))
+
     # Eye geometry: ratio of eye width to eye height (should be ~2.5-4.0)
-    left_eye_w = float(np.linalg.norm(np.asarray(
-        (landmarks[33].x * w) - np.asarray(landmarks[33].y * h))),
-        (landmarks[133].x * w, landmarks[133].y * h)
-    )
-    left_eye_h = float(np.linalg.norm(np.asarray(
-        (landmarks[159].x * w) - np.asarray(landmarks[159].y * h))),
-        (landmarks[145].x * w, landmarks[145].y * h)
-    )
+    left_eye_w = dist(33, 133)
+    left_eye_h = dist(159, 145)
     eye_ratio = left_eye_w / max(left_eye_h, 0.001)
     eye_score = float(np.clip(1.0 - abs(eye_ratio - 3.2) / 2.5, 0.0, 1.0))
 
     # Nose geometry: nose length / nose width ratio (should be ~1.2-2.0)
-    nose_length = float(np.linalg.norm(np.asarray(
-        (landmarks[6].x * w) - np.asarray(landmarks[6].y * h))),   # nose bridge
-        (landmarks[1].x * w, landmarks[1].y * h)     # nose tip
-    )
-    nose_width = float(np.linalg.norm(np.asarray(
-        (landmarks[48].x * w) - np.asarray(landmarks[48].y * h))) if 48 < len(landmarks) else (landmarks[4].x * w, landmarks[4].y * h),
-        (landmarks[278].x * w, landmarks[278].y * h) if 278 < len(landmarks) else (landmarks[5].x * w, landmarks[5].y * h)
-    )
+    nose_length = dist(6, 1)   # nose bridge to nose tip
+    idx_left = 48 if len(landmarks) > 48 else 4
+    idx_right = 278 if len(landmarks) > 278 else 5
+    nose_width = dist(idx_left, idx_right)
     nose_ratio = nose_length / max(nose_width, 0.001)
     nose_score = float(np.clip(1.0 - abs(nose_ratio - 1.5) / 1.5, 0.0, 1.0))
 
     # Jaw shape: symmetry of jaw outline
-    left_jaw = np.asarray([float(landmarks[234].x), float(landmarks[234].y)], dtype=np.float64)
-    right_jaw = np.asarray([float(landmarks[454].x), float(landmarks[454].y)], dtype=np.float64)
-    chin = np.asarray([float(landmarks[152].x), float(landmarks[152].y)], dtype=np.float64)
-    jaw_left_dist = float(float(np.linalg.norm(np.asarray(chin) - np.asarray(left_jaw))))
-    jaw_right_dist = float(float(np.linalg.norm(np.asarray(chin) - np.asarray(right_jaw))))
+    left_jaw = np.array([landmarks[234].x * w, landmarks[234].y * h])
+    right_jaw = np.array([landmarks[454].x * w, landmarks[454].y * h])
+    chin = np.array([landmarks[152].x * w, landmarks[152].y * h])
+    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))
+    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))
     jaw_symmetry = 1.0 - abs(jaw_left_dist - jaw_right_dist) / max(jaw_left_dist + jaw_right_dist, 0.001)
     jaw_score = float(np.clip(jaw_symmetry, 0.0, 1.0))
 
     # Mouth geometry: width/height ratio (should be ~2.0-5.0)
-    mouth_w = float(np.linalg.norm(np.asarray(
-        (landmarks[61].x * w) - np.asarray(landmarks[61].y * h))),
-        (landmarks[291].x * w, landmarks[291].y * h)
-    )
-    mouth_h = float(np.linalg.norm(np.asarray(
-        (landmarks[13].x * w) - np.asarray(landmarks[13].y * h))),
-        (landmarks[14].x * w, landmarks[14].y * h)
-    )
+    mouth_w = dist(61, 291)
+    mouth_h = dist(13, 14)
     mouth_ratio = mouth_w / max(mouth_h, 0.001)
     mouth_score = float(np.clip(1.0 - abs(mouth_ratio - 3.5) / 4.0, 0.3, 1.0))
 
@@ -1370,16 +1360,16 @@ def _validate_landmark_geometry(landmarks, w: int, h: int) -> dict:
         mouth_score * weights["mouth"] +
         proportion_score * weights["proportions"]
     )
-
+    
     return {
-        "valid": aggregate > 0.45,
-        "score": round(aggregate, 4),
+        "valid": bool(aggregate > 0.6),
+        "score": float(aggregate),
         "regions": {
-            "eye_geometry": round(eye_score, 4),
-            "nose_geometry": round(nose_score, 4),
-            "jaw_shape": round(jaw_score, 4),
-            "mouth_geometry": round(mouth_score, 4),
-            "face_proportions": round(proportion_score, 4)
+            "eye": eye_score,
+            "nose": nose_score,
+            "jaw": jaw_score,
+            "mouth": mouth_score,
+            "proportions": proportion_score
         }
     }
 
@@ -2026,6 +2016,7 @@ def _process_demo_frame_inner(
         mp_drawing = mp.solutions.drawing_utils
         mp_drawing_styles = mp.solutions.drawing_styles
         for face_landmarks in multi_face_landmarks:
+            assert mp_face_mesh is not None
             mp_drawing.draw_landmarks(
                 image=debug_img,
                 landmark_list=face_landmarks,
@@ -2353,7 +2344,7 @@ def _process_demo_frame_inner(
     
     face_region = gray[y_px:y_px+h_px, x_px:x_px+w_px]
     if face_region.size > 0:
-        local_std = float(np.std(face_region))
+        local_std = float(np.std(np.asarray(face_region, dtype=np.float64)))
         texture_score = min(1.0, local_std / 30.0)
         
         try:
@@ -2512,9 +2503,9 @@ def _process_demo_frame_inner(
             similarity_score = raw_similarity
             embedding_distance = dist
             
-            # Bug 5: Strict Production Thresholds
-            required_threshold = 0.80
-            low_confidence_threshold = 0.65
+            # Enterprise Production Thresholds
+            required_threshold = 0.88
+            low_confidence_threshold = 0.75
             
             if similarity_score >= required_threshold:
                 enrolled_matched = True
@@ -2715,7 +2706,7 @@ def _process_demo_frame_inner(
         # Enterprise Telemetry: Face Tracking
         ret["face_tracking"] = _compute_face_tracking(
             face_present=True, face_confidence=face_confidence,
-            bbox=bbox, landmarks=landmarks, history=history, w=w, h=h
+            bbox=bbox, landmarks=landmarks, history=history or {}, w=w, h=h
         ) if detected_faces > 0 else {
             "state": "LOST", "face_present": False, "face_locked": False,
             "tracking_stable": False, "tracking_confidence": 0.0,
@@ -2726,7 +2717,7 @@ def _process_demo_frame_inner(
         t_score_val = float(texture_score) if 'texture_score' in dir() else 0.5
         r_score_val = float(replay_score) if 'replay_score' in dir() else 0.0
         ret["anti_spoof_details"] = _compute_anti_spoof_details(
-            frame, history, t_score_val, r_score_val, spoof_score
+            frame, history or {}, t_score_val, r_score_val, spoof_score
         )
         
         # Enterprise Telemetry: Processing Metrics
@@ -2870,80 +2861,6 @@ def process_demo_frame(
     print("=" * 52)
 
     return res
-def _validate_landmark_geometry(landmarks, w, h):
-    """Validate facial landmark structural consistency across all 468 points.
-    
-    Checks proportional relationships between facial features to detect
-    abnormal landmark structures (masks, printed photos, deepfakes).
-    Returns per-region quality scores and aggregate consistency score.
-    """
-    if len(landmarks) < 468:
-        return {"valid": False, "score": 0.0, "regions": {}}
 
-    def dist(idx1, idx2):
-        p1 = np.array([landmarks[idx1].x * w, landmarks[idx1].y * h])
-        p2 = np.array([landmarks[idx2].x * w, landmarks[idx2].y * h])
-        return float(np.linalg.norm(p1 - p2))
-
-    # Eye geometry: ratio of eye width to eye height (should be ~2.5-4.0)
-    left_eye_w = dist(33, 133)
-    left_eye_h = dist(159, 145)
-    eye_ratio = left_eye_w / max(left_eye_h, 0.001)
-    eye_score = float(np.clip(1.0 - abs(eye_ratio - 3.2) / 2.5, 0.0, 1.0))
-
-    # Nose geometry: nose length / nose width ratio (should be ~1.2-2.0)
-    nose_length = dist(6, 1)   # nose bridge to nose tip
-    idx_left = 48 if len(landmarks) > 48 else 4
-    idx_right = 278 if len(landmarks) > 278 else 5
-    nose_width = dist(idx_left, idx_right)
-    nose_ratio = nose_length / max(nose_width, 0.001)
-    nose_score = float(np.clip(1.0 - abs(nose_ratio - 1.5) / 1.5, 0.0, 1.0))
-
-    # Jaw shape: symmetry of jaw outline
-    left_jaw = np.array([landmarks[234].x * w, landmarks[234].y * h])
-    right_jaw = np.array([landmarks[454].x * w, landmarks[454].y * h])
-    chin = np.array([landmarks[152].x * w, landmarks[152].y * h])
-    jaw_left_dist = float(np.linalg.norm(chin - left_jaw))
-    jaw_right_dist = float(np.linalg.norm(chin - right_jaw))
-    jaw_symmetry = 1.0 - abs(jaw_left_dist - jaw_right_dist) / max(jaw_left_dist + jaw_right_dist, 0.001)
-    jaw_score = float(np.clip(jaw_symmetry, 0.0, 1.0))
-
-    # Mouth geometry: width/height ratio (should be ~2.0-5.0)
-    mouth_w = dist(61, 291)
-    mouth_h = dist(13, 14)
-    mouth_ratio = mouth_w / max(mouth_h, 0.001)
-    mouth_score = float(np.clip(1.0 - abs(mouth_ratio - 3.5) / 4.0, 0.3, 1.0))
-
-    # Face proportions: eye-to-nose vs nose-to-chin (should be ~0.8-1.2)
-    eye_center_y = (landmarks[159].y + landmarks[386].y) / 2.0
-    nose_tip_y = landmarks[1].y
-    chin_y = landmarks[152].y
-
-    upper = nose_tip_y - eye_center_y
-    lower = chin_y - nose_tip_y
-    proportion_ratio = upper / max(lower, 0.001)
-    proportion_score = float(np.clip(1.0 - abs(proportion_ratio - 0.85) / 0.6, 0.0, 1.0))
-
-    # Aggregate
-    weights = {"eye": 0.2, "nose": 0.15, "jaw": 0.2, "mouth": 0.15, "proportions": 0.3}
-    aggregate = (
-        eye_score * weights["eye"] +
-        nose_score * weights["nose"] +
-        jaw_score * weights["jaw"] +
-        mouth_score * weights["mouth"] +
-        proportion_score * weights["proportions"]
-    )
-    
-    return {
-        "valid": bool(aggregate > 0.6),
-        "score": float(aggregate),
-        "regions": {
-            "eye": eye_score,
-            "nose": nose_score,
-            "jaw": jaw_score,
-            "mouth": mouth_score,
-            "proportions": proportion_score
-        }
-    }
 
 

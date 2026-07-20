@@ -161,7 +161,8 @@ async def lifespan(app: FastAPI):
             # Create a small test image (blank) just to confirm process() doesn't crash
             test_img = np.zeros((100, 100, 3), dtype=np.uint8)
             test_result = global_face_mesh.process(test_img)
-            print(f"  FaceMesh smoke test: process() returned {type(test_result).__name__} (faces: {len(test_result.multi_face_landmarks) if test_result.multi_face_landmarks else 0})")
+            test_mfl = getattr(test_result, "multi_face_landmarks", None)
+            print(f"  FaceMesh smoke test: process() returned {type(test_result).__name__} (faces: {len(test_mfl) if test_mfl else 0})")
             print("[STARTUP] ✓ CV Engine is READY")
         else:
             print("[STARTUP] ✗ CV Engine is NOT AVAILABLE — see errors above")
@@ -199,11 +200,31 @@ app.include_router(identity_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
+from app.core.logging import logger
+from fastapi.responses import JSONResponse
+import time
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    # Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    return response
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     tb = traceback.format_exc()
-    print(f"[UNHANDLED ERROR] {request.method} {request.url}\n{tb}")
-    return JSONResponse(status_code=500, content={"detail": str(exc), "traceback": tb})
+    logger.error(f"Unhandled Error: {request.method} {request.url}", exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error", "error_code": "server_error"})
 
 @app.get("/telemetry")
 @app.get("/api/v1/telemetry")

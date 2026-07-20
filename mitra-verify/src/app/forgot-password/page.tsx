@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Mail, ArrowRight, RefreshCw, CheckCircle2, Shield } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
-
 const CinematicBackground = ({ mousePos, windowSize }: any) => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#050814]">
     <motion.div 

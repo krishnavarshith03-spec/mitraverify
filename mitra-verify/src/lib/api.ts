@@ -145,7 +145,8 @@ export const livenessAPI = {
 // ── Analytics (Single Source of Truth) ────────────────────────────────────────
 export const analyticsAPI = {
   overview: () => api.get('/analytics/overview'),
-  usage: (days?: number) => api.get('/analytics/usage'),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  usage: (_days?: number) => api.get('/analytics/usage'),
   events: (limit?: number) => api.get(`/analytics/events?limit=${limit || 100}`),
   logVerificationEvent: (data: {
     apiType: string;

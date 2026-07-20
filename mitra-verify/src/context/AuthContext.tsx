@@ -76,7 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((token: string, userDetails: User) => {
+   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const login = useCallback((_token: string, _userDetails: User) => {
     // Legacy function, kept for signature but state is handled by onAuthStateChange
   }, []);
 

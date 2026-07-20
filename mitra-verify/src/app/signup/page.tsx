@@ -48,7 +48,7 @@ export default function SignupPage() {
       const redirectPath = params.get("redirect") || "/dashboard";
       try {
         router.replace(redirectPath);
-      } catch (err) {
+      } catch {
         window.location.href = redirectPath;
       }
     }

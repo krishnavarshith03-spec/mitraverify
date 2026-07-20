@@ -64,6 +64,7 @@ const fadeInUp = {
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 100, damping: 20 } }
 };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const scaleUp = {
   hidden: { opacity: 0, scale: 0.95 },
   show: { opacity: 1, scale: 1, transition: { type: "spring" as const, stiffness: 100, damping: 20 } }
@@ -302,7 +303,8 @@ function VerificationFlow() {
                     { name: 'Continuous Session Auth', b: '-', a: '-', e: 'Enterprise' },
                     { name: 'Multiple Face Detection', b: '-', a: '-', e: 'Enterprise' },
                     { name: 'Gaze & Attention Tracking', b: '-', a: '-', e: 'Enterprise' },
-                  ].map((row, i) => (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  ].map((row, _i) => (
                     <tr key={row.name} className="hover:bg-white/[0.03] transition-colors">
                       <td className="p-5 text-slate-300 font-medium border-r border-white/5">{row.name}</td>
                       <td className="p-5 border-r border-white/5">

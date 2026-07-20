@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Network, Server, ShieldCheck, Database, Cpu, Lock } from 'lucide-react';
+import { Network, Server, Database, Cpu } from 'lucide-react';
 
 export default function EnterpriseArchitecture() {
   const steps = [
