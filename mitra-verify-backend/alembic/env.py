@@ -64,8 +64,7 @@ def run_migrations_online():
             compare_type=True,
             render_as_batch=True,
         )
-        with context.begin_transaction():
-            context.run_migrations()
+        context.run_migrations()
 
 
 if context.is_offline_mode():
