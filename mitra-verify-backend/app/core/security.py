@@ -1,28 +1,24 @@
 import hashlib
 import secrets
 import string
+import base64
+import json
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import cast, Any, Optional
 from jose import JWTError, jwt
 import bcrypt
 from app.core.config import settings
 
-import base64
-
-def _prehash(password: str) -> str:
-    """SHA-256 pre-hash so bcrypt never sees more than 64 bytes. Encoded in Base64 for compactness."""
-    digest = hashlib.sha256(password.encode("utf-8")).digest()
-    return base64.b64encode(digest).decode("ascii")
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return bcrypt.checkpw(_prehash(plain_password).encode('utf-8'), hashed_password.encode('utf-8'))
+        # bcrypt can only hash strings up to 72 bytes. We just truncate or rely on frontend.
+        return bcrypt.checkpw(plain_password.encode('utf-8')[:72], hashed_password.encode('utf-8'))
     except Exception:
         return False
 
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
-    return bcrypt.hashpw(_prehash(password).encode('utf-8'), salt).decode('utf-8')
+    return bcrypt.hashpw(password.encode('utf-8')[:72], salt).decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -41,9 +37,6 @@ def decode_token(token: str) -> Optional[dict[str, Any]]:
         return cast(dict[str, Any], jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]))
     except JWTError:
         return None
-
-import json
-from typing import cast, Any
 
 def decode_supabase_token(token: str) -> Optional[dict[str, Any]]:
     try:
