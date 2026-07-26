@@ -41,11 +41,18 @@ async def init_db():
     alembic_exists = False
     
     async with engine.begin() as conn:
-        result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'"))
-        users_exists = result.scalar() is not None
-        
-        result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"))
-        alembic_exists = result.scalar() is not None
+        if engine.dialect.name == "sqlite":
+            result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'"))
+            users_exists = result.scalar() is not None
+            
+            result = await conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"))
+            alembic_exists = result.scalar() is not None
+        else:
+            result = await conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_name='users'"))
+            users_exists = result.scalar() is not None
+            
+            result = await conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_name='alembic_version'"))
+            alembic_exists = result.scalar() is not None
         
     def run_migrations():
         from alembic.config import Config
