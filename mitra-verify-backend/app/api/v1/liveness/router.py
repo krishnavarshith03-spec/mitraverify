@@ -215,7 +215,13 @@ CHALLENGES_METADATA = {
     "shake_head": { "label": "Shake Head", "instruction": "Shake your head left and right", "icon": "👎" },
     "look_left": { "label": "Look Left", "instruction": "Look left with your eyes", "icon": "👀" },
     "look_right": { "label": "Look Right", "instruction": "Look right with your eyes", "icon": "👀" },
-    "hold_still": { "label": "Hold Still", "instruction": "Hold still for 2 seconds", "icon": "⏱️" }
+    "hold_still": { "label": "Hold Still", "instruction": "Hold still for 2 seconds", "icon": "⏱️" },
+    "turn_left_45": { "label": "Turn Head Left 45°", "instruction": "Turn your head slightly to the left", "icon": "👈" },
+    "turn_right_45": { "label": "Turn Head Right 45°", "instruction": "Turn your head slightly to the right", "icon": "👉" },
+    "turn_left_90": { "label": "Turn Head Left 90°", "instruction": "Turn your head completely to the left", "icon": "👈" },
+    "turn_right_90": { "label": "Turn Head Right 90°", "instruction": "Turn your head completely to the right", "icon": "👉" },
+    "raise_eyebrows": { "label": "Raise Eyebrows", "instruction": "Raise your eyebrows", "icon": "🤨" },
+    "follow_target": { "label": "Follow Target", "instruction": "Follow the target", "icon": "🎯" }
 }
 
 class SessionStartRequest(BaseModel):
@@ -311,10 +317,10 @@ async def start_session(data: SessionStartRequest):
     session_id = str(uuid.uuid4())
     
     advanced_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'hold_still']
-    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'hold_still']
+    enterprise_pool = ['blink_once', 'blink_twice', 'open_mouth', 'smile', 'look_up', 'look_down', 'turn_left', 'turn_right', 'turn_left_45', 'turn_right_45', 'turn_left_90', 'turn_right_90', 'raise_eyebrows', 'nod_head', 'shake_head', 'look_left', 'look_right', 'hold_still', 'follow_target']
     
     if data.api_type == "enterprise":
-        selected = secrets.SystemRandom().sample(enterprise_pool, len(enterprise_pool))
+        selected = secrets.SystemRandom().sample(enterprise_pool, min(4, len(enterprise_pool)))
     elif data.api_type == "advanced":
         requested_count = secrets.choice([3, 4, 5])
         num_challenges = min(len(advanced_pool), requested_count)

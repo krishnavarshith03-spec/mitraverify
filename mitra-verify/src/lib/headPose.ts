@@ -7,6 +7,7 @@ export interface HeadPoseData {
   rawYaw: number;
   correctedYaw: number;
   direction: 'LEFT' | 'RIGHT' | 'CENTER';
+  magnitude: 'SMALL' | 'MEDIUM' | 'LARGE';
 }
 
 export function processHeadPose(yaw: number, rawYawInput?: number): HeadPoseData {
@@ -15,15 +16,25 @@ export function processHeadPose(yaw: number, rawYawInput?: number): HeadPoseData
   const rawYaw = rawYawInput !== undefined ? rawYawInput : -yaw;
   
   let direction: 'LEFT' | 'RIGHT' | 'CENTER' = 'CENTER';
+  let magnitude: 'SMALL' | 'MEDIUM' | 'LARGE' = 'SMALL';
+  
   if (correctedYaw > 12) {
     direction = 'RIGHT';
   } else if (correctedYaw < -12) {
     direction = 'LEFT';
   }
   
+  const absYaw = Math.abs(correctedYaw);
+  if (absYaw > 60) {
+    magnitude = 'LARGE';
+  } else if (absYaw > 30) {
+    magnitude = 'MEDIUM';
+  }
+  
   return {
     rawYaw,
     correctedYaw,
     direction,
+    magnitude,
   };
 }

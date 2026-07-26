@@ -496,14 +496,12 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
         yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
         if history:
             yaws = history["yaw"]
-            # Look for progressive motion: must cross -15, and not jump instantly from 0 to -20 in 1 frame
             passed = False
-            if len(yaws) >= 5:
-                min_yaw = min(yaws)
-                if min_yaw < -20.0:
-                    # check if we returned to neutral
-                    if yaws[-1] > -10.0:
-                        passed = True
+            if len(yaws) >= 3:
+                # 3-frame smoothed yaw
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if min(yaws) < -15.0 and smooth_yaw > -10.0:
+                    passed = True
             detected = f"Yaw={yaw:.1f}°"
         else:
             passed = False
@@ -513,11 +511,62 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
         if history:
             yaws = history["yaw"]
             passed = False
-            if len(yaws) >= 5:
-                max_yaw = max(yaws)
-                if max_yaw > 20.0:
-                    if yaws[-1] < 10.0:
-                        passed = True
+            if len(yaws) >= 3:
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if max(yaws) > 15.0 and smooth_yaw < 10.0:
+                    passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
+    elif challenge_type == "turn_left_45":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 3:
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if min(yaws) < -40.0 and smooth_yaw > -15.0:
+                    passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
+    elif challenge_type == "turn_right_45":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 3:
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if max(yaws) > 40.0 and smooth_yaw < 15.0:
+                    passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
+    elif challenge_type == "turn_left_90":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 3:
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if min(yaws) < -75.0 and smooth_yaw > -20.0:
+                    passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
+    elif challenge_type == "turn_right_90":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 3:
+                smooth_yaw = sum(yaws[-3:]) / 3.0
+                if max(yaws) > 75.0 and smooth_yaw < 20.0:
+                    passed = True
             detected = f"Yaw={yaw:.1f}°"
         else:
             passed = False
@@ -527,11 +576,10 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
         if history:
             pitches = history["pitch"]
             passed = False
-            if len(pitches) >= 5:
-                max_pitch = max(pitches)
-                if max_pitch > 15.0:
-                    if pitches[-1] < 5.0:
-                        passed = True
+            if len(pitches) >= 3:
+                smooth_pitch = sum(pitches[-3:]) / 3.0
+                if max(pitches) > 15.0 and smooth_pitch < 5.0:
+                    passed = True
             detected = f"Pitch={pitch:.1f}°"
         else:
             passed = False
@@ -541,20 +589,62 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
         if history:
             pitches = history["pitch"]
             passed = False
-            if len(pitches) >= 5:
-                min_pitch = min(pitches)
-                if min_pitch < -15.0:
-                    if pitches[-1] > -5.0:
-                        passed = True
+            if len(pitches) >= 3:
+                smooth_pitch = sum(pitches[-3:]) / 3.0
+                if min(pitches) < -15.0 and smooth_pitch > -5.0:
+                    passed = True
             detected = f"Pitch={pitch:.1f}°"
         else:
             passed = False
             detected = f"Pitch={pitch:.1f}°"
+    elif challenge_type == "nod_head":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            pitches = history["pitch"]
+            passed = False
+            if len(pitches) >= 10:
+                max_pitch = max(pitches)
+                min_pitch = min(pitches)
+                if max_pitch > 10.0 and min_pitch < -10.0:
+                    passed = True
+            detected = f"Pitch={pitch:.1f}°"
+        else:
+            passed = False
+            detected = f"Pitch={pitch:.1f}°"
+    elif challenge_type == "shake_head":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            passed = False
+            if len(yaws) >= 10:
+                max_yaw = max(yaws)
+                min_yaw = min(yaws)
+                if max_yaw > 15.0 and min_yaw < -15.0:
+                    passed = True
+            detected = f"Yaw={yaw:.1f}°"
+        else:
+            passed = False
+            detected = f"Yaw={yaw:.1f}°"
+    elif challenge_type == "raise_eyebrows":
+        if history:
+            baseline = history.get("baseline_eyebrow_ratio")
+            if baseline:
+                raised = False
+                for r in history["eyebrow_ratios"]:
+                    if r > baseline * 1.20:
+                        raised = True
+                passed = raised
+                detected = f"Eyebrows raised={raised}"
+            else:
+                passed = False
+                detected = "Calibrating..."
+        else:
+            passed = False
+            detected = "Waiting..."
     elif challenge_type == "smile":
         if history:
             baseline = history.get("baseline_smile_ratio")
             if baseline:
-                # Require 15% increase over baseline for a smile
                 smiled = False
                 for r in history["smile_ratios"]:
                     if r > baseline * 1.15:
@@ -568,13 +658,28 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
             passed = False
             detected = f"Smile={smile_score:.2f}"
     elif challenge_type == "look_left":
+        # Simplified gaze proxy: large yaw implies looking left
         yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
-        passed = yaw < -15.0
+        passed = yaw < -20.0
         detected = f"Yaw={yaw:.1f}"
     elif challenge_type == "look_right":
         yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
-        passed = yaw > 15.0
+        passed = yaw > 20.0
         detected = f"Yaw={yaw:.1f}"
+    elif challenge_type == "follow_target":
+        yaw, pitch, roll = _head_pose_3d(landmarks, w, h)
+        if history:
+            yaws = history["yaw"]
+            pitches = history["pitch"]
+            passed = False
+            if len(yaws) >= 15:
+                # Target moves in a circle or large pattern, check variance
+                if np.var(yaws[-15:]) > 10.0 and np.var(pitches[-15:]) > 10.0:
+                    passed = True
+            detected = f"Following..."
+        else:
+            passed = False
+            detected = f"Following..."
     elif challenge_type == "hold_still":
         if history:
             yaws = history.get("yaw", [])
@@ -638,41 +743,69 @@ def _error_response(session_id, msg, start):
 
 
 def _head_pose_3d(landmarks, w, h):
-    # Get 2D coordinates of nose tip, eyes, and chin
-    nose = np.asarray([float(landmarks[NOSE_TIP].x) * w, float(landmarks[NOSE_TIP].y) * h], dtype=np.float64)
-    left_eye = np.asarray([float(landmarks[LEFT_EYE_CORNER].x) * w, float(landmarks[LEFT_EYE_CORNER].y) * h], dtype=np.float64)
-    right_eye = np.asarray([float(landmarks[RIGHT_EYE_CORNER].x) * w, float(landmarks[RIGHT_EYE_CORNER].y) * h], dtype=np.float64)
-    chin = np.asarray([float(landmarks[CHIN].x) * w, float(landmarks[CHIN].y) * h], dtype=np.float64)
-    
-    # Roll: eye slope angle in degrees
-    # Corrected subtraction direction: left_eye - right_eye so upright face is close to 0
-    dx = float(left_eye[0]) - float(right_eye[0])
-    dy = float(left_eye[1]) - float(right_eye[1])
-    roll = math.atan2(dy, dx) * 180.0 / math.pi
-    
-    # Yaw: horizontal ratio of nose deviation from eye center
-    eye_center = (left_eye + right_eye) / 2.0
-    left_dist = float(np.linalg.norm(np.asarray(nose) - np.asarray(left_eye)))
-    right_dist = float(np.linalg.norm(np.asarray(nose) - np.asarray(right_eye)))
-    if left_dist > 0.001:
-        ratio = right_dist / left_dist
-        yaw = -(ratio - 1.0) * 45.0  # corrected degrees: right = positive, left = negative
-    else:
-        yaw = 0.0
+    if not CV2_AVAILABLE:
+        return 0.0, 0.0, 0.0
         
-    # Pitch: vertical eye-nose vs nose-chin ratio
-    eye_nose_y = nose[1] - eye_center[1]
-    nose_chin_y = chin[1] - nose[1]
-    if nose_chin_y > 0.001:
-        ratio_pitch = eye_nose_y / nose_chin_y
-        pitch = (0.6 - ratio_pitch) * 50.0  # scale around standard front ratio 0.6
+    image_points = np.array([
+        (float(landmarks[1].x) * w, float(landmarks[1].y) * h),       # Nose tip
+        (float(landmarks[199].x) * w, float(landmarks[199].y) * h),     # Chin
+        (float(landmarks[263].x) * w, float(landmarks[263].y) * h),     # Left eye corner
+        (float(landmarks[33].x) * w, float(landmarks[33].y) * h),       # Right eye corner
+        (float(landmarks[291].x) * w, float(landmarks[291].y) * h),      # Left Mouth corner
+        (float(landmarks[61].x) * w, float(landmarks[61].y) * h)       # Right mouth corner
+    ], dtype="double")
+
+    model_points = np.array([
+        (0.0, 0.0, 0.0),             # Nose tip
+        (0.0, -330.0, -65.0),        # Chin
+        (-225.0, 170.0, -135.0),     # Left eye corner
+        (225.0, 170.0, -135.0),      # Right eye corner
+        (-150.0, -150.0, -125.0),    # Left Mouth corner
+        (150.0, -150.0, -125.0)      # Right mouth corner
+    ])
+
+    focal_length = w
+    center = (w / 2, h / 2)
+    camera_matrix = np.array(
+        [[focal_length, 0, center[0]],
+         [0, focal_length, center[1]],
+         [0, 0, 1]], dtype="double"
+    )
+
+    dist_coeffs = np.zeros((4, 1))
+    success, rotation_vector, translation_vector = cv2.solvePnP(
+        model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
+    )
+
+    if not success:
+        return 0.0, 0.0, 0.0
+
+    rmat, _ = cv2.Rodrigues(rotation_vector)
+    
+    sy = math.sqrt(rmat[0,0] * rmat[0,0] + rmat[1,0] * rmat[1,0])
+    singular = sy < 1e-6
+
+    if not singular:
+        x = math.atan2(rmat[2,1], rmat[2,2])
+        y = math.atan2(-rmat[2,0], sy)
+        z = math.atan2(rmat[1,0], rmat[0,0])
     else:
-        pitch = 0.0
-        
-    # Clamp results to safe bounds to reject impossible values
-    yaw = max(-45.0, min(45.0, yaw))
-    pitch = max(-35.0, min(35.0, pitch))
-    roll = max(-35.0, min(35.0, roll))
+        x = math.atan2(-rmat[1,2], rmat[1,1])
+        y = math.atan2(-rmat[2,0], sy)
+        z = 0
+
+    pitch = x * 180.0 / math.pi
+    yaw = y * 180.0 / math.pi
+    roll = z * 180.0 / math.pi
+    
+    # Adjust axes
+    pitch = -pitch
+    yaw = -yaw
+    
+    if pitch > 180: pitch -= 360
+    elif pitch < -180: pitch += 360
+    if yaw > 180: yaw -= 360
+    elif yaw < -180: yaw += 360
     
     return yaw, pitch, roll
 
@@ -722,14 +855,6 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     
     if "current_challenge" not in cache or cache["current_challenge"] != challenge_type:
         cache["current_challenge"] = challenge_type
-        cache["landmarks"] = []
-        cache["ear"] = []
-        cache["mar"] = []
-        cache["yaw"] = []
-        cache["pitch"] = []
-        cache["roll"] = []
-        cache["eyebrow_ratios"] = []
-        cache["smile_ratios"] = []
         cache["blink_state"] = "WAITING"
         cache["blink_drop_frames"] = 0
         cache["challenge_start_time"] = time.time()
@@ -789,7 +914,7 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
         smile_ratio = float(w_mouth / w_face if w_face > 0.001 else 0.32)
         cache.setdefault("smile_ratios", []).append(smile_ratio)
     
-    if len(cache.get("landmarks", [])) > 30:
+    if len(cache.get("landmarks", [])) > 60:
         if cache.get("landmarks"): cache["landmarks"].pop(0)
         if cache.get("ear"): cache["ear"].pop(0)
         if cache.get("mar"): cache["mar"].pop(0)
