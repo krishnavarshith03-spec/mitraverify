@@ -54,15 +54,15 @@ async def init_db():
             result = await conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_name='alembic_version'"))
             alembic_exists = result.scalar() is not None
         
-    def run_migrations():
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config("alembic.ini")
-        
-        if users_exists and not alembic_exists:
-            # DB was created by create_all before Alembic was introduced
-            command.stamp(alembic_cfg, "0455c6e66a99")
+        def run_migrations(connection):
+            from alembic.config import Config
+            from alembic import command
+            alembic_cfg = Config("alembic.ini")
+            alembic_cfg.attributes["connection"] = connection
             
-        command.upgrade(alembic_cfg, "head")
-        
-    await asyncio.to_thread(run_migrations)
+            if users_exists and not alembic_exists:
+                command.stamp(alembic_cfg, "0455c6e66a99")
+                
+            command.upgrade(alembic_cfg, "head")
+            
+        await conn.run_sync(run_migrations)
