@@ -8,6 +8,22 @@ import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import settings
+from cryptography.fernet import Fernet
+import os
+
+# Enterprise Template Encryption Key
+TEMPLATE_ENCRYPTION_KEY = os.environ.get("TEMPLATE_ENCRYPTION_KEY", "oyJDmYHRxu3ewbUgpfFMnu4eTyV51U-_eBmqJtmB0dc=").encode()
+fernet = Fernet(TEMPLATE_ENCRYPTION_KEY)
+
+def encrypt_template(template_data: list | dict) -> str:
+    """Encrypts a biometric template for secure DB storage."""
+    json_data = json.dumps(template_data).encode("utf-8")
+    return fernet.encrypt(json_data).decode("utf-8")
+
+def decrypt_template(encrypted_data: str) -> list | dict:
+    """Decrypts a biometric template from DB storage."""
+    json_data = fernet.decrypt(encrypted_data.encode("utf-8")).decode("utf-8")
+    return json.loads(json_data)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

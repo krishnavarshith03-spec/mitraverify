@@ -36,8 +36,10 @@ async def identity_verify(
     res = await db.execute(stmt)
     enrolled = res.scalar_one_or_none()
     
+    from app.core.security import decrypt_template
     enrolled_vector = getattr(enrolled, "embedding_vector", None)
-    
+    if enrolled and getattr(enrolled, "is_encrypted", False) and isinstance(enrolled_vector, dict) and "encrypted_data" in enrolled_vector:
+        enrolled_vector = decrypt_template(enrolled_vector["encrypted_data"])    
     cv_result = run_identity_verify(data.image, subject_id, enrolled_vector)
 
     stmt = select(ApiKey).where(ApiKey.user_id == current_user.id)
@@ -78,7 +80,62 @@ async def identity_verify(
         created_at=datetime.now(timezone.utc)
     )
     db.add(log)
+    
+    # Continuous Template Learning
+    import hashlib, json
+    identity_match_flag = cv_result.get("identity", {}).get("identity_match", False)
+    similarity = cv_result.get("identity", {}).get("similarity", 0.0)
+    current_signature = cv_result.get("enrollment_signature")
+    
+    if enrolled and identity_match_flag and similarity > 0.92 and current_signature:
+        if isinstance(enrolled_vector, list) and isinstance(enrolled_vector[0], list):
+            # It's a multi-template, we can inject
+            if len(enrolled_vector) < 30:
+                enrolled_vector.append(current_signature)
+            else:
+                # Replace the oldest/weakest (FIFO approximation)
+                enrolled_vector.pop(0)
+                enrolled_vector.append(current_signature)
+            
+            from app.core.security import encrypt_template
+            enrolled.template_version = enrolled.template_version + 1
+            enrolled.embedding_hash = hashlib.sha256(json.dumps(enrolled_vector).encode()).hexdigest()
+            
+            if getattr(enrolled, "is_encrypted", False):
+                enrolled.embedding_vector = {"encrypted_data": encrypt_template(enrolled_vector)}
+            else:
+                enrolled.embedding_vector = enrolled_vector
+            
+            # Drift Detection against Original
+            original_vector = getattr(enrolled, "original_embedding", None)
+            if original_vector and isinstance(original_vector, list) and isinstance(original_vector[0], list):
+                from app.services.cv.mediapipe_engine import _compute_cosine_similarity
+                drift_sims = []
+                for orig_emb in original_vector:
+                    s, _ = _compute_cosine_similarity(current_signature, orig_emb)
+                    drift_sims.append(s)
+                avg_orig_sim = sum(drift_sims) / len(drift_sims)
+                
+                # Update metadata if drifted
+                meta = dict(enrolled.template_metadata) if enrolled.template_metadata else {}
+                meta["drift_score"] = float(avg_orig_sim)
+                if avg_orig_sim < 0.85:
+                    meta["drift_status"] = "DRIFT_DETECTED"
+                else:
+                    meta["drift_status"] = "STABLE"
+                enrolled.template_metadata = meta
+
+            db.add(enrolled)
+
     await db.commit()
+
+    
+    # Inject template version and drift to response
+    template_meta = enrolled.template_metadata if enrolled and hasattr(enrolled, "template_metadata") else {}
+    if template_meta:
+        if "identity" in cv_result:
+            cv_result["identity"]["template_version"] = getattr(enrolled, "template_version", 1)
+            cv_result["identity"]["drift_status"] = template_meta.get("drift_status", "STABLE")
 
     return IdentityVerifyResponse(
         session_id=cv_result.get("session_id", str(uuid.uuid4())),
@@ -206,27 +263,41 @@ async def identity_enroll(
     print("[Enrollment] Stage 8: Embedding generation")
     print("=== EMBEDDING GENERATED ===")
     try:
-        class LM:
-            def __init__(self, x, y, z):
-                self.x = x; self.y = y; self.z = z
-                
         if data.session_id != "test_session_123" and data.session_id in SESSION_CACHE:
-            history_landmarks = SESSION_CACHE[data.session_id].get("landmarks", [])
-            if len(history_landmarks) >= 5:
-                # Use averaged embedding from multiple frames for best quality
-                embeddings = []
-                for frame_lms in history_landmarks[-20:]:  # Use last 20 frames max
-                    mapped_lms = [LM(pt[0], pt[1], pt[2]) for pt in frame_lms]
-                    emb = _calculate_face_embedding(frame, mapped_lms)
-                    embeddings.append(emb)
-                    
-                avg_embedding = np.mean(embeddings, axis=0)
-                embedding_vector = avg_embedding
-                print(f"[Enrollment] Used {len(embeddings)} frames for averaged embedding")
-            else:
-                # Fallback: use current frame landmarks directly
-                print(f"[Enrollment] History frames={len(history_landmarks)}, falling back to single-frame embedding")
-                embedding_vector = _calculate_face_embedding(frame, landmarks)
+            session_data = SESSION_CACHE[data.session_id]
+            cached_embeddings = session_data.get("enrollment_embeddings", [])
+            pose_coverage = session_data.get("pose_coverage", set())
+            expr_coverage = session_data.get("expression_coverage", set())
+            
+            # Enterprise strict coverage requirements
+            required_poses = {"Front", "Left 15", "Right 15", "Up", "Down"}
+            missing_poses = required_poses - pose_coverage
+            
+            required_exprs = {"Neutral", "Smile"}
+            missing_exprs = required_exprs - expr_coverage
+            
+            if len(cached_embeddings) < 15:
+                print(f"[Enrollment] Insufficient high-quality frames ({len(cached_embeddings)} < 15)")
+                raise HTTPException(status_code=400, detail=f"Insufficient high-quality frames. Captured {len(cached_embeddings)}/15 minimum.")
+                
+            if missing_poses:
+                print(f"[Enrollment] Missing pose coverage: {missing_poses}")
+                raise HTTPException(status_code=400, detail=f"Insufficient pose coverage. Missing: {', '.join(missing_poses)}")
+                
+            if missing_exprs:
+                print(f"[Enrollment] Missing expression coverage: {missing_exprs}")
+                raise HTTPException(status_code=400, detail=f"Insufficient expression coverage. Missing: {', '.join(missing_exprs)}")
+                
+            # Use robust multi-sample enterprise template
+            embedding_vector = cached_embeddings
+            
+            # Calculate Enterprise Quality Score
+            quality_score = min(100.0, (len(cached_embeddings) / 30.0) * 40.0 + (len(pose_coverage) / 7.0) * 40.0 + (len(expr_coverage) / 4.0) * 20.0)
+            session_data["template_quality_score"] = quality_score
+            session_data["pose_coverage_list"] = list(pose_coverage)
+            session_data["expression_coverage_list"] = list(expr_coverage)
+            
+            print(f"[Enrollment] Stored robust multi-sample template with {len(cached_embeddings)} high-quality frames. Quality Score: {quality_score:.2f}")
         else:
             # Fallback for tests or missing session
             print("[Enrollment] No session cache, using single-frame embedding")
@@ -239,9 +310,12 @@ async def identity_enroll(
             raise ValueError("Empty embedding returned")
             
         # Logging baseline similarity to itself
-        emb_arr = np.array(embedding_vector)
-        dist = np.linalg.norm(emb_arr - emb_arr)
-        print(f"[Enrollment] Baseline Similarity: 1.0000 (Distance: {dist:.4f})")
+        if isinstance(embedding_vector[0], list):
+            print(f"[Enrollment] Baseline Similarity: 1.0000 (Multi-Template Size: {len(embedding_vector)})")
+        else:
+            emb_arr = np.array(embedding_vector)
+            dist = np.linalg.norm(emb_arr - emb_arr)
+            print(f"[Enrollment] Baseline Similarity: 1.0000 (Distance: {dist:.4f})")
     except HTTPException:
         raise
     except Exception as e:
@@ -251,9 +325,20 @@ async def identity_enroll(
     # --- Stage 9: Embedding normalization ---
     print("[Enrollment] Stage 9: Embedding normalization")
     try:
-        norm = sum(x*x for x in embedding_vector) ** 0.5
-        if abs(norm - 1.0) > 0.05:
-            embedding_vector = np.array(embedding_vector) / norm
+        if isinstance(embedding_vector[0], list):
+            # Normalize all embeddings in the multi-template
+            normalized_list = []
+            for emb in embedding_vector:
+                norm = sum(x*x for x in emb) ** 0.5 # pyright: ignore
+                if abs(norm - 1.0) > 0.05:
+                    normalized_list.append((np.array(emb) / norm).tolist())
+                else:
+                    normalized_list.append(emb)
+            embedding_vector = normalized_list
+        else:
+            norm = sum(x*x for x in embedding_vector) ** 0.5
+            if abs(norm - 1.0) > 0.05:
+                embedding_vector = (np.array(embedding_vector) / norm).tolist()
     except Exception as e:
         print(f"RAISE: HTTPException(500, Embedding Normalization Error - {e!s})")
         raise HTTPException(status_code=500, detail=f"Stage 9 Failed: Embedding Normalization Error - {e!s}")
@@ -267,11 +352,29 @@ async def identity_enroll(
         await db.execute(delete(FaceProfile).where(FaceProfile.user_id == user_id))
         
         embedding_list = list(embedding_vector)
+        import hashlib
+        import json
+        emb_hash = hashlib.sha256(json.dumps(embedding_list).encode()).hexdigest()
+        
+        session_data = SESSION_CACHE.get(data.session_id, {}) if data.session_id != "test_session_123" else {}
+        template_meta = {
+            "quality_score": session_data.get("template_quality_score", 100.0),
+            "pose_coverage": session_data.get("pose_coverage_list", ["Front"]),
+            "expression_coverage": session_data.get("expression_coverage_list", ["Neutral"])
+        }
+        
+        from app.core.security import encrypt_template
+        encrypted_embedding_list = {"encrypted_data": encrypt_template(embedding_list)}
         
         new_embedding = FaceProfile(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            embedding_vector=embedding_list,
+            embedding_vector=encrypted_embedding_list,
+            original_embedding=embedding_list,
+            embedding_hash=emb_hash,
+            template_version=1,
+            template_metadata=template_meta,
+            is_encrypted=True,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
@@ -284,9 +387,12 @@ async def identity_enroll(
 
     # --- Stage 11: Enrollment successful ---
     print("[Enrollment] Stage 11: Enrollment successful")
+    
+    final_q = quality_score if 'quality_score' in locals() else quality.get('quality_score', 0)
+    
     response = IdentityEnrollResponse(
         status="success",
-        message=f"Enrollment successful. Quality: {quality.get('quality_score', 0):.0%}",
+        message=f"Enrollment successful. Quality: {final_q:.0f}/100",
         user_id=user_id,
         embedding_vector=embedding_list,
         created_at=datetime.now(timezone.utc)

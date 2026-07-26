@@ -1,6 +1,11 @@
 # pyright: reportAttributeAccessIssue=false
 # pyright: reportMissingImports=false
 # pyright: reportPossiblyUnboundVariable=false
+# pyright: reportIndexIssue=false
+# pyright: reportCallIssue=false
+# pyright: reportArgumentType=false
+# pyright: reportOperatorIssue=false
+# pyright: reportGeneralTypeIssues=false
 """
 MediaPipe-based computer vision engine for MITRA VERIFY.
 Implements face liveness detection, anti-spoof, and identity verification.
@@ -1278,6 +1283,50 @@ def _compute_cosine_similarity(emb_a: list[float], emb_b: list[float]) -> tuple[
     return final_similarity, dist
 
 
+def _compute_robust_similarity(current_signature: list[float], active_enrollment: list[float] | list[list[float]]) -> tuple[float, float, dict]:
+    """Compute robust similarity against a single or multi-sample template."""
+    import json
+    if isinstance(active_enrollment, str):
+        try:
+            active_enrollment = json.loads(active_enrollment)
+        except Exception:
+            pass
+
+    if isinstance(active_enrollment, list) and len(active_enrollment) > 0 and isinstance(active_enrollment[0], list):
+        # We have a multi-sample robust template
+        sims = []
+        dists = []
+        for emb in active_enrollment:
+            s, d = _compute_cosine_similarity(current_signature, emb) # pyright: ignore
+            sims.append(s)
+            dists.append(d)
+        
+        # Sort similarities in descending order
+        sims_sorted = sorted(sims, reverse=True)
+        dists_sorted = sorted(dists)
+        
+        # Take the top N best matches to average out (avoids single outlier rejection)
+        top_k = min(3, len(sims_sorted))
+        best_sims = sims_sorted[:top_k]
+        best_dists = dists_sorted[:top_k]
+        
+        avg_sim = sum(best_sims) / top_k
+        min_dist = sum(best_dists) / top_k
+        
+        metrics = {
+            "max_similarity": sims_sorted[0],
+            "average_similarity": sum(sims) / len(sims),
+            "median_similarity": sims_sorted[len(sims_sorted)//2],
+            "min_distance": dists_sorted[0],
+            "template_size": len(sims_sorted)
+        }
+        
+        return avg_sim, min_dist, metrics
+    else:
+        # Fallback to single template comparison
+        s, d = _compute_cosine_similarity(current_signature, active_enrollment) # pyright: ignore
+        return s, d, {"max_similarity": s, "average_similarity": s, "median_similarity": s, "min_distance": d, "template_size": 1}
+
 # ─────────────────────────────────────────────────────────────
 # ENTERPRISE TELEMETRY: Eye Tracking, Face Tracking, Anti-Spoof
 # ─────────────────────────────────────────────────────────────
@@ -1989,7 +2038,8 @@ def _build_enterprise_report(
     enrolled_matched: bool,
     enterprise_confidence: dict | None = None,
     client_data: dict | None = None,
-    eye_tracking: dict | None = None
+    eye_tracking: dict | None = None,
+    id_metrics: dict | None = None
 ) -> dict:
     import hashlib
     import uuid
@@ -2028,7 +2078,12 @@ def _build_enterprise_report(
             "face_match": {
                 "status": identity_status,
                 "percentage": round(identity_match * 100, 2),
-                "enrolled_matched": enrolled_matched
+                "enrolled_matched": enrolled_matched,
+                "max_similarity": round(id_metrics.get("max_similarity", identity_match) * 100, 2) if id_metrics else round(identity_match * 100, 2),
+                "average_similarity": round(id_metrics.get("average_similarity", identity_match) * 100, 2) if id_metrics else round(identity_match * 100, 2),
+                "median_similarity": round(id_metrics.get("median_similarity", identity_match) * 100, 2) if id_metrics else round(identity_match * 100, 2),
+                "min_distance": round(id_metrics.get("min_distance", 0.0), 4) if id_metrics else 0.0,
+                "template_size": id_metrics.get("template_size", 1) if id_metrics else 1
             },
             "liveness": {
                 "passive_score": round(passive_liveness.get("score", 0) * 100, 2),
@@ -2775,6 +2830,76 @@ def _process_demo_frame_inner(
             else:
                 history["spoof_frames"] = 0
 
+    # Enterprise Continuous Enrollment Quality Gate
+    is_high_quality = True
+    enrollment_failure_reason = ""
+    
+    # 1. Single Face & Base Confidence
+    if detected_faces != 1: 
+        is_high_quality = False
+        enrollment_failure_reason = "Multiple faces or no face"
+    elif float(face_confidence) < 0.85: 
+        is_high_quality = False
+        enrollment_failure_reason = "Low face confidence"
+        
+    # 2. Bounding Box constraints
+    if bbox:
+        if bbox["h"] < 0.25: 
+            is_high_quality = False
+            enrollment_failure_reason = "Face too small"
+        if bbox["x"] < 0.05 or bbox["y"] < 0.05 or (bbox["x"] + bbox["w"]) > 0.95 or (bbox["y"] + bbox["h"]) > 0.95:
+            is_high_quality = False
+            enrollment_failure_reason = "Face not centered"
+
+    # 3. Blur & Illumination (via laplacian & brightness approximating from cv2 if available, or rely on texture_score)
+    if texture_score < 0.6:
+        is_high_quality = False
+        enrollment_failure_reason = "Poor texture/sharpness"
+        
+    # 4. Pose Bounds
+    if abs(yaw) > 45.0 or abs(pitch) > 20.0 or abs(roll) > 20.0: 
+        is_high_quality = False
+        enrollment_failure_reason = "Extreme pose"
+        
+    # Track Pose Coverage
+    pose_category = "Front"
+    if yaw < -35: pose_category = "Right 45"
+    elif yaw < -20: pose_category = "Right 30"
+    elif yaw < -8: pose_category = "Right 15"
+    elif yaw > 35: pose_category = "Left 45"
+    elif yaw > 20: pose_category = "Left 30"
+    elif yaw > 8: pose_category = "Left 15"
+    
+    if pitch > 10: pose_category = "Down"
+    elif pitch < -10: pose_category = "Up"
+    
+    # Track Expression Coverage
+    expr_category = "Neutral"
+    if smile_score > 0.35: expr_category = "Smile"
+    elif mar > 0.35: expr_category = "Talking/Open Mouth"
+    elif ear < 0.22: expr_category = "Blink"
+    
+    if history is not None:
+        if "enrollment_embeddings" not in history:
+            history["enrollment_embeddings"] = []
+            history["enrollment_last_capture"] = 0
+            history["pose_coverage"] = set()
+            history["expression_coverage"] = set()
+            
+        # Add to coverage even if frame isn't captured (to show user feedback)
+        history["pose_coverage"].add(pose_category)
+        history["expression_coverage"].add(expr_category)
+            
+        frame_count = history.get("frame_count", 0)
+        history["frame_count"] = frame_count + 1
+        
+        # Only capture if high quality and we haven't reached 30 yet
+        if is_high_quality and len(history["enrollment_embeddings"]) < 30:
+            if (frame_count - history["enrollment_last_capture"]) >= 3:
+                emb = _calculate_face_embedding(frame, landmarks)
+                history["enrollment_embeddings"].append(emb)
+                history["enrollment_last_capture"] = frame_count
+
     # 12. Face signature & matching
     t_identity_start = time.perf_counter()
     
@@ -2785,11 +2910,8 @@ def _process_demo_frame_inner(
     reason = None
     match_reason = ""
     current_signature = None
+    id_metrics = None
     
-    is_high_quality = True
-    if float(face_confidence) < 0.70: is_high_quality = False
-    if bbox and (bbox["h"] < 0.20 or bbox["h"] > 0.80): is_high_quality = False
-    if abs(yaw) > 25.0 or abs(pitch) > 20.0: is_high_quality = False
     
     active_enrollment = enrolled_embedding if enrolled_embedding is not None else enrolled_signature
     if active_enrollment and api_type == "enterprise":
@@ -2801,17 +2923,19 @@ def _process_demo_frame_inner(
             # Generate new embedding every 5 frames for performance, but ONLY if high quality
             if (frame_count % 5 == 0 and is_high_quality) or "cached_signature" not in session:
                 current_signature = _calculate_face_embedding(frame, landmarks)
-                raw_similarity, dist = _compute_cosine_similarity(current_signature, active_enrollment)
+                raw_similarity, dist, id_metrics = _compute_robust_similarity(current_signature, active_enrollment)
                 
                 # Cache the results
                 session["cached_signature"] = current_signature
                 session["cached_similarity"] = raw_similarity
                 session["cached_distance"] = dist
+                session["cached_id_metrics"] = id_metrics
             else:
                 # Use cached values for fast path
                 current_signature = session.get("cached_signature")
                 raw_similarity = session.get("cached_similarity", 0.0)
                 dist = session.get("cached_distance", 0.0)
+                id_metrics = session.get("cached_id_metrics", {})
                 
             similarity_score = raw_similarity
             embedding_distance = dist
@@ -2821,22 +2945,29 @@ def _process_demo_frame_inner(
             low_confidence_threshold = 0.75
             
             if similarity_score >= required_threshold:
-                enrolled_matched = True
-                match_reason = "PASS"
-                if history: history["wrong_person_frames"] = 0
+                # Temporal verification: require consistency before PASS
+                session["identity_history"] = session.get("identity_history", []) + [1]
+                if sum(session["identity_history"][-3:]) >= 2:
+                    enrolled_matched = True
+                    match_reason = "PASS"
+                    if history: history["wrong_person_frames"] = 0
+                else:
+                    enrolled_matched = False
+                    match_reason = "VERIFYING"
             elif similarity_score >= low_confidence_threshold:
+                session["identity_history"] = session.get("identity_history", []) + [0]
                 enrolled_matched = False
                 match_reason = "LOW CONFIDENCE"
                 if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
             else:
+                session["identity_history"] = session.get("identity_history", []) + [0]
                 enrolled_matched = False
                 match_reason = "FAIL"
-                if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
                 if history: history["wrong_person_frames"] = history.get("wrong_person_frames", 0) + 1
         else:
             # Fallback if no session
             current_signature = _calculate_face_embedding(frame, landmarks)
-            raw_similarity, dist = _compute_cosine_similarity(current_signature, active_enrollment)
+            raw_similarity, dist, id_metrics = _compute_robust_similarity(current_signature, active_enrollment)
             similarity_score = raw_similarity
             embedding_distance = dist
             
@@ -2867,7 +2998,8 @@ def _process_demo_frame_inner(
                 landmark_geometry={},
                 passive_liveness={},
                 session_id=session_id or "",
-                enrolled_matched=False
+                enrolled_matched=False,
+                id_metrics=id_metrics
             )
         return ret_early
 
@@ -2957,7 +3089,8 @@ def _process_demo_frame_inner(
             enrolled_matched=enrolled_matched,
             enterprise_confidence=ent_confidence,
             client_data={"device_fingerprint": "unknown", "browser_fingerprint": "unknown"},
-            eye_tracking=eye_tracking
+            eye_tracking=eye_tracking,
+            id_metrics=id_metrics
         )
 
     timings["identity_matching"] = (time.perf_counter() - t_identity_start) * 1000
@@ -3109,6 +3242,7 @@ def run_identity_verify(image_b64: str, subject_id: str | None = None, enrolled_
         "reason": match_reason,
         "spoof_score": result.get("spoof_score", 0.0),
         "deepfake_risk": result.get("deepfake_risk", 0.0),
+        "enrollment_signature": result.get("enrollment_signature")
     }
 
 def process_demo_frame(
