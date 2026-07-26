@@ -1,5 +1,6 @@
+
 from pydantic_settings import BaseSettings
-from typing import List
+
 
 class Settings(BaseSettings):
     SECRET_KEY: str = "mitra-verify-super-secret-jwt-key-change-in-production-2024"
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",")]
 
     class Config:

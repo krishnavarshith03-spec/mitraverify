@@ -1,21 +1,23 @@
+import traceback
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-from app.core.config import settings
-from app.core.database import init_db, AsyncSessionLocal
+from sqlalchemy import select
+
+from app.api.v1.admin.router import router as admin_router
+from app.api.v1.analytics.router import router as analytics_router
 from app.api.v1.auth.router import router as auth_router
+from app.api.v1.identity.router import router as identity_router
 from app.api.v1.keys.router import router as keys_router
 from app.api.v1.liveness.router import router as liveness_router
-from app.api.v1.identity.router import router as identity_router
-from app.api.v1.analytics.router import router as analytics_router
-from app.api.v1.admin.router import router as admin_router
-from app.models.models import User, SystemLog, AuditLog, UserRole
+from app.core.database import AsyncSessionLocal, init_db
 from app.core.security import hash_password
-from sqlalchemy import select
-from datetime import datetime, timedelta, timezone
-import uuid
-import traceback
+from app.models.models import AuditLog, SystemLog, User, UserRole
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -139,8 +141,13 @@ async def lifespan(app: FastAPI):
     print("[STARTUP] CV ENGINE DIAGNOSTICS")
     try:
         from app.services.cv.mediapipe_engine import (
-            MP_AVAILABLE, CV2_AVAILABLE, MP_INIT_ERROR, CV2_INIT_ERROR,
-            INSIGHTFACE_AVAILABLE, INSIGHTFACE_INIT_ERROR, global_face_mesh
+            CV2_AVAILABLE,
+            CV2_INIT_ERROR,
+            INSIGHTFACE_AVAILABLE,
+            INSIGHTFACE_INIT_ERROR,
+            MP_AVAILABLE,
+            MP_INIT_ERROR,
+            global_face_mesh,
         )
         print(f"  MP_AVAILABLE:         {MP_AVAILABLE}")
         print(f"  CV2_AVAILABLE:        {CV2_AVAILABLE}")
@@ -157,7 +164,6 @@ async def lifespan(app: FastAPI):
         # Quick FaceMesh smoke test with a synthetic image
         if MP_AVAILABLE and CV2_AVAILABLE and global_face_mesh is not None:
             import numpy as np
-            import cv2
             # Create a small test image (blank) just to confirm process() doesn't crash
             test_img = np.zeros((100, 100, 3), dtype=np.uint8)
             test_result = global_face_mesh.process(test_img)
@@ -200,9 +206,10 @@ app.include_router(identity_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
-from app.core.logging import logger
-from fastapi.responses import JSONResponse
 import time
+
+from app.core.logging import logger
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):

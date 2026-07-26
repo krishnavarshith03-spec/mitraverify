@@ -1,11 +1,23 @@
+import enum
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, ForeignKey, Text, Enum as SAEnum, JSON as JSONType
-from sqlalchemy.orm import relationship, backref
+
+from sqlalchemy import JSON as JSONType
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
+
 # Removed SQLite-specific JSON import; using generic JSONType
 from app.core.database import Base
-import enum
+
 
 class UserRole(str, enum.Enum):
     user = "user"

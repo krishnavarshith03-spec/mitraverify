@@ -1,13 +1,14 @@
 import hashlib
-import secrets
-import string
-import base64
 import json
+import secrets
 from datetime import datetime, timedelta, timezone
-from typing import cast, Any, Optional
-from jose import JWTError, jwt
+from typing import Any, cast
+
 import bcrypt
+from jose import JWTError, jwt
+
 from app.core.config import settings
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -20,7 +21,7 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode('utf-8')[:72], salt).decode('utf-8')
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire, "type": "access"})
@@ -32,13 +33,13 @@ def create_refresh_token(data: dict) -> str:
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def decode_token(token: str) -> Optional[dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]))
     except JWTError:
         return None
 
-def decode_supabase_token(token: str) -> Optional[dict[str, Any]]:
+def decode_supabase_token(token: str) -> dict[str, Any] | None:
     try:
         secret = settings.SUPABASE_JWT_SECRET
         if secret.strip().startswith("{"):

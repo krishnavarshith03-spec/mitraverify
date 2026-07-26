@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func
-from datetime import datetime, timezone
-from typing import Optional
-from app.core.database import get_db
-from app.core.security import generate_api_key, hash_api_key, get_key_prefix
-from app.models.models import ApiKey, User, AuditLog
-from app.schemas.schemas import ApiKeyCreate, ApiKeyOut
-from app.api.v1.auth.router import get_current_user
 import uuid
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.auth.router import get_current_user
+from app.core.database import get_db
+from app.core.security import generate_api_key, get_key_prefix, hash_api_key
+from app.models.models import ApiKey, AuditLog, User
+from app.schemas.schemas import ApiKeyCreate, ApiKeyOut
 
 router = APIRouter(prefix="/keys", tags=["API Keys"])
 
@@ -77,7 +78,7 @@ async def revoke_key(key_id: str, current_user: User = Depends(get_current_user)
     await db.commit()
     return {"message": "API key revoked"}
 
-async def get_api_key_from_header(x_api_key: Optional[str] = Header(None), db: AsyncSession = Depends(get_db)) -> ApiKey:
+async def get_api_key_from_header(x_api_key: str | None = Header(None), db: AsyncSession = Depends(get_db)) -> ApiKey:
     if not x_api_key:
         raise HTTPException(status_code=401, detail="X-API-Key header required")
     key_hash = hash_api_key(x_api_key)

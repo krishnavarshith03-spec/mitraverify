@@ -6,17 +6,17 @@ MediaPipe-based computer vision engine for MITRA VERIFY.
 Implements face liveness detection, anti-spoof, and identity verification.
 """
 import base64
-import time
-import uuid
 import math
-import sys
-import platform
-import traceback
 import os
-import numpy as np  # pyrefly: ignore [missing-import]
-from typing import Optional
+import platform
+import sys
+import time
+import traceback
+import uuid
 from datetime import datetime, timezone
 from io import BytesIO
+
+import numpy as np  # pyrefly: ignore [missing-import]
 from PIL import Image  # pyrefly: ignore [missing-import]
 
 # ─────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ try:
     import cv2  # pyrefly: ignore [missing-import]
     CV2_AVAILABLE = True
     print(f"[CV ENGINE] OpenCV loaded: {cv2.__version__}")
-except Exception as e:
+except Exception:
     CV2_INIT_ERROR = traceback.format_exc()
     print(f"[FATAL] OpenCV Import FAILED:\n{CV2_INIT_ERROR}")
 
@@ -72,7 +72,7 @@ try:
     )
     MP_AVAILABLE = True
     print("[CV ENGINE] ✓ FaceMesh singleton initialized successfully")
-except Exception as e:
+except Exception:
     MP_INIT_ERROR = traceback.format_exc()
     print(f"[FATAL] MediaPipe Import/Init FAILED:\n{MP_INIT_ERROR}")
     mp_face_mesh = None
@@ -89,7 +89,7 @@ try:
     import insightface  # pyrefly: ignore [missing-import]
     INSIGHTFACE_AVAILABLE = True
     print(f"[CV ENGINE] InsightFace loaded: {getattr(insightface, '__version__', 'unknown')}")
-except Exception as e:
+except Exception:
     INSIGHTFACE_INIT_ERROR = traceback.format_exc()
     print(f"[WARNING] InsightFace import failed:\n{INSIGHTFACE_INIT_ERROR}")
 
@@ -97,15 +97,15 @@ except Exception as e:
 # Summary
 # ─────────────────────────────────────────────────────────────
 print("=" * 60)
-print(f"[CV ENGINE] INIT SUMMARY:")
+print("[CV ENGINE] INIT SUMMARY:")
 print(f"  CV2_AVAILABLE:        {CV2_AVAILABLE}")
 print(f"  MP_AVAILABLE:         {MP_AVAILABLE}")
 print(f"  INSIGHTFACE_AVAILABLE:{INSIGHTFACE_AVAILABLE}")
 print(f"  global_face_mesh:     {global_face_mesh is not None}")
 if MP_INIT_ERROR:
-    print(f"  MP_INIT_ERROR:        YES (see above)")
+    print("  MP_INIT_ERROR:        YES (see above)")
 if CV2_INIT_ERROR:
-    print(f"  CV2_INIT_ERROR:       YES (see above)")
+    print("  CV2_INIT_ERROR:       YES (see above)")
 print("=" * 60)
 
 class FaceEngine:
@@ -155,7 +155,7 @@ RIGHT_MOUTH_CORNER = 291
 CHIN = 199
 
 
-def b64_to_numpy(image_b64: str) -> Optional[np.ndarray]:
+def b64_to_numpy(image_b64: str) -> np.ndarray | None:
     """Decode a base64 image string to a numpy BGR array."""
     try:
         print(f"[DIAGNOSTICS] b64_to_numpy called. Raw length: {len(image_b64)}")
@@ -324,7 +324,7 @@ def run_basic_liveness(image_b64: str) -> dict:
 # ─────────────────────────────────────────────────────────────
 # ADVANCED ANTI-SPOOF ENGINE
 # ─────────────────────────────────────────────────────────────
-def run_advanced_liveness(image_b64: str, challenge_type: Optional[str] = None) -> dict:
+def run_advanced_liveness(image_b64: str, challenge_type: str | None = None) -> dict:
     print("FACE_DETECTION_STARTED")
     start = time.time()
     session_id = str(uuid.uuid4())
@@ -676,10 +676,10 @@ def _evaluate_challenge(challenge_type: str, landmarks, w: int, h: int, history=
                 # Target moves in a circle or large pattern, check variance
                 if np.var(yaws[-15:]) > 10.0 and np.var(pitches[-15:]) > 10.0:
                     passed = True
-            detected = f"Following..."
+            detected = "Following..."
         else:
             passed = False
-            detected = f"Following..."
+            detected = "Following..."
     elif challenge_type == "hold_still":
         if history:
             yaws = history.get("yaw", [])
@@ -815,7 +815,7 @@ def _head_pose_3d(landmarks, w, h):
 # ─────────────────────────────────────────────────────────────
 SESSION_CACHE = {}
 
-def update_session_history(session_id: Optional[str], landmarks: list, ear: float, mar: float, yaw: float, pitch: float, roll: float, challenge_type: Optional[str] = None):
+def update_session_history(session_id: str | None, landmarks: list, ear: float, mar: float, yaw: float, pitch: float, roll: float, challenge_type: str | None = None):
     if not session_id:
         return None
     if session_id not in SESSION_CACHE:
@@ -943,7 +943,7 @@ def update_session_history(session_id: Optional[str], landmarks: list, ear: floa
     return cache
 
 
-def _compute_adaptive_thresholds(frame: np.ndarray, history: dict) -> dict:
+def _compute_adaptive_thresholds(frame: np.ndarray, history: dict | None = None) -> dict:
     if frame is None or not CV2_AVAILABLE:
         return {"quality_score": 1.0, "threshold_multiplier": 1.0, "blur_score": 500.0, "fps": 30.0}
         
@@ -954,8 +954,9 @@ def _compute_adaptive_thresholds(frame: np.ndarray, history: dict) -> dict:
     blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
     normalized_blur = min(1.0, blur_score / 500.0)
     
-    brightness = np.mean(gray)
-    contrast = np.std(gray)
+    mean_val, std_val = cv2.meanStdDev(gray)
+    brightness = float(mean_val[0][0])
+    contrast = float(std_val[0][0])
     
     brightness_score = 1.0 - abs(brightness - 127) / 127.0
     contrast_score = min(1.0, contrast / 60.0)
@@ -978,7 +979,7 @@ def _compute_adaptive_thresholds(frame: np.ndarray, history: dict) -> dict:
     }
 
 
-def _detect_behavior_anomalies(history: dict, landmarks, w: int, h: int) -> dict:
+def _detect_behavior_anomalies(history: dict | None, landmarks, w: int, h: int) -> dict:
     anomalies = {
         "teleporting_landmarks": False,
         "robotic_movement": False,
@@ -1986,13 +1987,13 @@ def _build_enterprise_report(
     passive_liveness: dict,
     session_id: str,
     enrolled_matched: bool,
-    enterprise_confidence: dict = None,
-    client_data: dict = None,
-    eye_tracking: dict = None
+    enterprise_confidence: dict | None = None,
+    client_data: dict | None = None,
+    eye_tracking: dict | None = None
 ) -> dict:
+    import hashlib
     import uuid
     from datetime import datetime, timezone
-    import hashlib
 
     if identity_match >= 0.80:
         identity_status = "VERIFIED" if liveness_score > 0.5 and spoof_score < 0.4 else "FAILED"
@@ -2123,12 +2124,12 @@ def map_verification_result(cv_result: dict, api_type: str) -> str:
 
 def _process_demo_frame_inner(
     image_b64: str,
-    frame_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    challenge_type: Optional[str] = None,
-    enrolled_signature: Optional[list[float]] = None,
-    enrolled_embedding: Optional[list[float]] = None,
-    api_type: Optional[str] = None
+    frame_id: str | None = None,
+    session_id: str | None = None,
+    challenge_type: str | None = None,
+    enrolled_signature: list[float] | None = None,
+    enrolled_embedding: list[float] | None = None,
+    api_type: str | None = None
 ) -> dict:
     if api_type is None:
         if frame_id in ["enterprise", "advanced"]:
@@ -3054,7 +3055,7 @@ def _process_demo_frame_inner(
 
     return ret
 
-def run_identity_verify(image_b64: str, subject_id: Optional[str] = None, enrolled_vector: Optional[list[float]] = None, session_id: Optional[str] = None) -> dict:
+def run_identity_verify(image_b64: str, subject_id: str | None = None, enrolled_vector: list[float] | None = None, session_id: str | None = None) -> dict:
     """Identity verification wrapper using process_demo_frame.
     """
     start = time.time()
@@ -3112,12 +3113,12 @@ def run_identity_verify(image_b64: str, subject_id: Optional[str] = None, enroll
 
 def process_demo_frame(
     image_b64: str,
-    frame_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    challenge_type: Optional[str] = None,
-    enrolled_signature: Optional[list[float]] = None,
-    enrolled_embedding: Optional[list[float]] = None,
-    api_type: Optional[str] = None
+    frame_id: str | None = None,
+    session_id: str | None = None,
+    challenge_type: str | None = None,
+    enrolled_signature: list[float] | None = None,
+    enrolled_embedding: list[float] | None = None,
+    api_type: str | None = None
 ) -> dict:
     t_start = time.perf_counter()
     try:

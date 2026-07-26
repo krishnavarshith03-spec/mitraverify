@@ -1,17 +1,27 @@
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, delete
-from datetime import datetime, timezone
 import os
 import uuid
-import psutil
-from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime, timezone
 
-from app.core.database import get_db
-from app.models.models import User, ApiKey, VerificationLog, SystemLog, AuditLog, LivenessLog, ApiUsage, Organization, Session
+import psutil
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.v1.auth.router import get_current_user
+from app.core.database import get_db
+from app.models.models import (
+    ApiKey,
+    ApiUsage,
+    AuditLog,
+    LivenessLog,
+    Organization,
+    Session,
+    SystemLog,
+    User,
+    VerificationLog,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -104,7 +114,7 @@ async def get_admin_stats(
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load admin stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load admin stats: {e!s}")
 
 @router.get("/users")
 async def get_all_users(
@@ -129,7 +139,7 @@ async def get_all_users(
             for u in users
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch users: {e!s}")
 
 @router.put("/users/{user_id}/role")
 async def update_user_role(
@@ -207,7 +217,7 @@ async def update_user_status(
 @router.get("/logs/system")
 async def get_system_logs(
     limit: int = 50,
-    level: Optional[str] = None,
+    level: str | None = None,
     current_admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -230,7 +240,7 @@ async def get_system_logs(
             for l in logs
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch system logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch system logs: {e!s}")
 
 @router.get("/logs/audit")
 async def get_audit_logs(
@@ -257,7 +267,7 @@ async def get_audit_logs(
             for row in rows
         ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch audit logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch audit logs: {e!s}")
 
 @router.delete("/logs/system")
 async def clear_system_logs(
@@ -280,7 +290,7 @@ async def clear_system_logs(
         return {"message": "System logs cleared successfully"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to clear system logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear system logs: {e!s}")
 
 @router.delete("/logs/audit")
 async def clear_audit_logs(
@@ -305,7 +315,7 @@ async def clear_audit_logs(
         return {"message": "Audit logs cleared successfully"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to clear audit logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear audit logs: {e!s}")
 
 @router.post("/reset-db")
 async def reset_database(
@@ -358,5 +368,5 @@ async def reset_database(
         return {"message": "Database reset completed successfully. All logs, API keys, organizations, and non-admin users have been cleared."}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to reset database: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to reset database: {e!s}")
 

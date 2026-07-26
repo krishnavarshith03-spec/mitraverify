@@ -113,15 +113,14 @@ export default function DashboardPage() {
   });
 
   const error = queryError ? (queryError as any).message : null;
-  const events = telemetry?.live_activity || [];
-
   const filteredEvents = useMemo(() => {
+    const events = telemetry?.live_activity || [];
     return events.filter(ev => {
       return ev.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
              (ev.user && ev.user.toLowerCase().includes(searchQuery.toLowerCase())) ||
              (ev.api || '').toLowerCase().includes(searchQuery.toLowerCase());
     }).slice(0, 15);
-  }, [events, searchQuery]);
+  }, [telemetry?.live_activity, searchQuery]);
 
   const { 
     executive_overview, 

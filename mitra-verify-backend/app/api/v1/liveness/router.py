@@ -1,19 +1,28 @@
 # pyrefly: ignore [missing-import]
+import uuid
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from datetime import datetime, timezone
-import uuid
-from typing import Optional
 from pydantic import BaseModel
-from app.core.database import get_db
-from app.models.models import ApiKey, VerificationLog, ApiUsage, User
-from app.schemas.schemas import BasicLivenessRequest, BasicLivenessResponse, AdvancedLivenessRequest, AdvancedLivenessResponse
-from app.api.v1.keys.router import get_api_key_from_header
-from app.api.v1.auth.router import get_current_user
-from app.services.cv.mediapipe_engine import run_basic_liveness, run_advanced_liveness, map_verification_result, SESSION_CACHE
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.auth.router import get_current_user
+from app.core.database import get_db
+from app.models.models import ApiKey, User, VerificationLog
+from app.schemas.schemas import (
+    AdvancedLivenessRequest,
+    AdvancedLivenessResponse,
+    BasicLivenessRequest,
+    BasicLivenessResponse,
+)
+from app.services.cv.mediapipe_engine import (
+    SESSION_CACHE,
+    map_verification_result,
+    run_advanced_liveness,
+    run_basic_liveness,
+)
 
 router = APIRouter(prefix="/liveness", tags=["Liveness Detection"])
 
@@ -197,7 +206,6 @@ async def enterprise_liveness(
     )
 
 
-from pydantic import BaseModel
 import secrets
 import time
 
@@ -229,25 +237,28 @@ class SessionStartRequest(BaseModel):
 
 class DemoProcessRequest(BaseModel):
     image: str
-    frame_id: Optional[str] = None
-    session_id: Optional[str] = None
-    challenge_type: Optional[str] = None
-    enrolled_signature: Optional[list[float]] = None
-    enrolled_embedding: Optional[list[float]] = None
-    api_type: Optional[str] = None
+    frame_id: str | None = None
+    session_id: str | None = None
+    challenge_type: str | None = None
+    enrolled_signature: list[float] | None = None
+    enrolled_embedding: list[float] | None = None
+    api_type: str | None = None
 
 @router.get("/debug_cv", tags=["Demo"])
 async def debug_cv():
     """Complete CV engine runtime diagnostics. Returns the exact state of every dependency,
     the complete init traceback if any failed, and a live FaceMesh test result."""
-    import sys
     import platform
+    import sys
     import traceback
+
     import numpy as np
-    
+
     from app.services.cv.mediapipe_engine import (
-        MP_AVAILABLE, CV2_AVAILABLE, MP_INIT_ERROR,
-        global_face_mesh
+        CV2_AVAILABLE,
+        MP_AVAILABLE,
+        MP_INIT_ERROR,
+        global_face_mesh,
     )
     # Also import the new CV2_INIT_ERROR if available
     try:
@@ -387,10 +398,10 @@ async def start_session(data: SessionStartRequest):
 async def demo_process(
     data: DemoProcessRequest,
     request: Request,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.services.cv.mediapipe_engine import process_demo_frame, SESSION_CACHE
+    from app.services.cv.mediapipe_engine import SESSION_CACHE, process_demo_frame
     
     cv_result = await run_in_threadpool(
         process_demo_frame,
@@ -427,10 +438,7 @@ async def demo_process(
             status = cv_result.get("status")
             reason = cv_result.get("reason")
             
-            if status in terminal_statuses:
-                is_terminal = True
-                cv_result["result"] = "fail"
-            elif status == "failed" and reason == "no_face_detected":
+            if status in terminal_statuses or status == "failed" and reason == "no_face_detected":
                 is_terminal = True
                 cv_result["result"] = "fail"
             
@@ -510,13 +518,13 @@ async def demo_process(
                     await db.refresh(log)
                     print(f"[VERIFICATION LOG] verification_id: {log.session_id}")
                     print(f"[VERIFICATION LOG] api_type: {log.api_type}")
-                    print(f"[VERIFICATION LOG] database INSERT success: True")
+                    print("[VERIFICATION LOG] database INSERT success: True")
                     print(f"[VERIFICATION LOG] row ID: {log.id}")
                     print(f"[VERIFICATION LOG] timestamp: {log.created_at}")
                     session["logged"] = True
-                except Exception as e:
+                except Exception:
                     await db.rollback()
-                    print(f"[VERIFICATION LOG ERROR] database INSERT success: False")
+                    print("[VERIFICATION LOG ERROR] database INSERT success: False")
                     raise
                     
     return cv_result
@@ -531,7 +539,7 @@ class LogEventRequest(BaseModel):
 async def demo_log_event(
     data: LogEventRequest,
     request: Request,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     if not current_user:

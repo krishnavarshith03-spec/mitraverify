@@ -1,7 +1,10 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from collections.abc import AsyncGenerator
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
 from app.core.config import settings
-from typing import AsyncGenerator, Any
 
 # If using PostgreSQL, configure robust connection pool settings to prevent disconnects
 if "sqlite" in settings.DATABASE_URL:
@@ -33,8 +36,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, Any]:
             await session.close()
 
 async def init_db():
+
     from sqlalchemy import text
-    import asyncio
     
     # First, detect if we need to stamp the DB
     users_exists = False
@@ -56,6 +59,7 @@ async def init_db():
         
         def run_migrations(connection):
             from alembic.config import Config
+
             from alembic import command
             alembic_cfg = Config("alembic.ini")
             alembic_cfg.attributes["connection"] = connection

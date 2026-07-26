@@ -1,12 +1,13 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel, EmailStr
+
 
 # ── Auth Schemas ──────────────────────────────────────────────
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -20,9 +21,9 @@ class TokenResponse(BaseModel):
 class UserOut(BaseModel):
     id: str
     email: str
-    full_name: Optional[str]
+    full_name: str | None
     role: str
-    email_verified: Optional[bool] = False
+    email_verified: bool | None = False
     created_at: datetime
 
     class Config:
@@ -41,9 +42,9 @@ class ApiKeyOut(BaseModel):
     is_active: bool
     request_count: int
     rate_limit: int
-    last_used_at: Optional[datetime]
+    last_used_at: datetime | None
     created_at: datetime
-    plaintext: Optional[str] = None  # only returned once on creation
+    plaintext: str | None = None  # only returned once on creation
 
     class Config:
         from_attributes = True
@@ -51,7 +52,7 @@ class ApiKeyOut(BaseModel):
 # ── Liveness / Verification Schemas ──────────────────────────
 class BasicLivenessRequest(BaseModel):
     image: str  # base64 encoded image
-    session_id: Optional[str] = None
+    session_id: str | None = None
 
 class BasicLivenessResponse(BaseModel):
     session_id: str
@@ -64,8 +65,8 @@ class BasicLivenessResponse(BaseModel):
 
 class AdvancedLivenessRequest(BaseModel):
     image: str
-    challenge_type: Optional[str] = None  # blink_twice | turn_left | turn_right | open_mouth
-    session_id: Optional[str] = None
+    challenge_type: str | None = None  # blink_twice | turn_left | turn_right | open_mouth
+    session_id: str | None = None
 
 class AdvancedLivenessResponse(BaseModel):
     session_id: str
@@ -74,14 +75,14 @@ class AdvancedLivenessResponse(BaseModel):
     processing_time: float
     spoof_score: float
     deepfake_risk: float
-    challenge_result: Optional[dict]
+    challenge_result: dict | None
     checks: dict
     timestamp: datetime
 
 class IdentityVerifyRequest(BaseModel):
     image: str
-    subject_id: Optional[str] = None
-    session_id: Optional[str] = None
+    subject_id: str | None = None
+    session_id: str | None = None
 
 class IdentityVerifyResponse(BaseModel):
     session_id: str
@@ -90,14 +91,14 @@ class IdentityVerifyResponse(BaseModel):
     processing_time: float
     identity: dict
     checks: dict
-    continuous_session: Optional[str]
+    continuous_session: str | None
     timestamp: datetime
 
 
 class IdentityEnrollRequest(BaseModel):
     image: str
-    subject_id: Optional[str] = None
-    session_id: Optional[str] = None
+    subject_id: str | None = None
+    session_id: str | None = None
 
 
 class IdentityEnrollResponse(BaseModel):
@@ -150,13 +151,13 @@ class DashboardApiStat(BaseModel):
     total_requests: int
     passed: int
     failed: int
-    spoof: Optional[int] = 0
-    face_lost: Optional[int] = 0
-    identity_mismatch: Optional[int] = 0
+    spoof: int | None = 0
+    face_lost: int | None = 0
+    identity_mismatch: int | None = 0
     avg_latency: float
     success_rate: float
-    avg_identity_match: Optional[float] = 0.0
-    avg_confidence: Optional[float] = 0.0
+    avg_identity_match: float | None = 0.0
+    avg_confidence: float | None = 0.0
 
 class DashboardApiStatistics(BaseModel):
     Basic: DashboardApiStat

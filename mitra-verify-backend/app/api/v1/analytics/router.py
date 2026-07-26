@@ -1,24 +1,24 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Optional
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from datetime import datetime, timedelta, timezone
+
+from app.api.v1.auth.router import get_current_user
 from app.core.database import get_db
-from app.models.models import VerificationLog, ApiKey, ApiUsage
+from app.models.models import ApiKey, User, VerificationLog
 from app.schemas.schemas import (
-    AnalyticsOverview, 
+    AnalyticsOverview,
     DashboardAnalyticsResponse,
-    DashboardExecutiveOverview,
-    DashboardVerificationSummary,
     DashboardApiStat,
     DashboardApiStatistics,
-    DashboardTimelineNode,
+    DashboardExecutiveOverview,
+    DashboardLiveActivity,
     DashboardThreatStatistics,
-    DashboardLiveActivity
+    DashboardTimelineNode,
+    DashboardVerificationSummary,
 )
-from app.api.v1.auth.router import get_current_user
-from app.models.models import User
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -36,8 +36,8 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
 
     # Fetch counts grouped by result and api_type to apply exact formulas
     print(f"[ANALYTICS LOG] SQL query executed: SELECT result, api_type, count(id) FROM verification_logs WHERE api_key_id IN ({key_ids}) GROUP BY result, api_type")
-    print(f"[ANALYTICS LOG] database name: PostgreSQL (production) or SQLite (local)")
-    print(f"[ANALYTICS LOG] schema: public")
+    print("[ANALYTICS LOG] database name: PostgreSQL (production) or SQLite (local)")
+    print("[ANALYTICS LOG] schema: public")
     
     stmt = (
         select(VerificationLog.result, VerificationLog.api_type, func.count(VerificationLog.id))
@@ -130,7 +130,7 @@ async def get_overview(current_user: User = Depends(get_current_user), db: Async
 
     print(f"[ANALYTICS LOG] total_verifications: {total_requests}")
     print(f"[ANALYTICS LOG] api1_count: {counts['SUCCESS']} (Basic/Total)")
-    print(f"[ANALYTICS LOG] api2_count: N/A")
+    print("[ANALYTICS LOG] api2_count: N/A")
     print(f"[ANALYTICS LOG] api3_count: {identity_matches} (Enterprise)")
 
     return AnalyticsOverview(
@@ -206,9 +206,9 @@ class EventPayload(BaseModel):
     spoofFlag: bool
     faceDetectedFlag: bool
     identityMatchedFlag: bool
-    attentionScore: Optional[float] = None
-    user: Optional[str] = None
-    device: Optional[str] = None
+    attentionScore: float | None = None
+    user: str | None = None
+    device: str | None = None
 
 @router.get("/dashboard", response_model=DashboardAnalyticsResponse)
 async def get_dashboard(
@@ -254,9 +254,9 @@ async def get_dashboard(
     # Data structures for aggregation
     summary = {"passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "multiple_faces": 0, "identity_mismatch": 0, "timeout": 0, "cancelled": 0}
     api_stats = {
-        "Basic": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0},
-        "Advanced": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0},
-        "Enterprise": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0, "confidence_sum": 0, "id_score_sum": 0}
+        "Basic": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0.0, "confidence_sum": 0.0, "id_score_sum": 0.0},
+        "Advanced": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0.0, "confidence_sum": 0.0, "id_score_sum": 0.0},
+        "Enterprise": {"requests": 0, "passed": 0, "failed": 0, "spoof": 0, "face_lost": 0, "identity_mismatch": 0, "latency_sum": 0.0, "confidence_sum": 0.0, "id_score_sum": 0.0}
     }
     
     threats = {"spoof_attempts": 0, "photo_attack": 0, "replay_attack": 0, "face_lost": 0, "multiple_faces": 0, "identity_change": 0, "timeout": 0, "liveness_failure": 0, "identity_failure": 0}

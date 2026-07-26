@@ -1,13 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-from datetime import datetime, timedelta, timezone
-from app.core.database import get_db
-from app.core.security import verify_password, hash_password, create_access_token, create_refresh_token, decode_token, decode_supabase_token
-from app.models.models import User, Session as UserSession, AuditLog
-from app.schemas.schemas import UserRegister, UserLogin, TokenResponse, UserOut
 import uuid
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_supabase_token,
+    decode_token,
+    hash_password,
+    verify_password,
+)
+from app.models.models import AuditLog, User
+from app.models.models import Session as UserSession
+from app.schemas.schemas import TokenResponse, UserLogin, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
