@@ -2,7 +2,7 @@ import urllib.request
 import json
 import ssl
 
-PRODUCTION_API_URL = "https://mitra-vrify-production.up.railway.app/api/v1"
+PRODUCTION_API_URL = "http://localhost:8000/api/v1"
 
 # Bypass SSL errors if certificates are missing locally
 ctx = ssl.create_default_context()
@@ -50,7 +50,7 @@ def main():
         method="POST"
     )
     
-    print("\nSending database purge command to Railway server...")
+    print("\nSending database purge command to server...")
     try:
         with urllib.request.urlopen(req_reset, context=ctx) as response:
             res_data = json.loads(response.read().decode("utf-8"))

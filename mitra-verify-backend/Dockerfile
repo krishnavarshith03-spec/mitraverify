@@ -17,9 +17,15 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Set up a new user named "user" with user ID 1000 for Hugging Face Spaces compatibility
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
-COPY mitra-verify-backend/requirements.txt .
+WORKDIR $HOME/app
+
+COPY --chown=user mitra-verify-backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download buffalo_sc model during build so it's baked into the image and prevents startup downloads
@@ -41,10 +47,11 @@ fm.close(); \
 print('BUILD VERIFICATION PASSED') \
 "
 
-COPY mitra-verify-backend/ .
+COPY --chown=user mitra-verify-backend/ .
 
-# Expose a default port (Railway will override this internally, but it's good practice)
-EXPOSE 8000
+# Expose a default port (Hugging Face Spaces uses 7860)
+EXPOSE 7860
 
-# Use Railway's injected PORT, fallback to 8000 for local dev
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+# Use injected PORT (HF sets this to 7860), fallback to 7860
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860} --workers 1
+

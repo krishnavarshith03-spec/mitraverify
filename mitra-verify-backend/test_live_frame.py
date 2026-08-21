@@ -3,7 +3,7 @@ import requests, json, base64
 with open("lena.jpg", "rb") as f:
     img_str = base64.b64encode(f.read()).decode("utf-8")
 
-BASE = "https://mitraverify-production.up.railway.app/api/v1"
+BASE = "http://localhost:8000/api/v1"
 
 print("Registering...")
 requests.post(f"{BASE}/auth/register", json={"email": "test2@test.com", "password": "password", "full_name": "Test"})

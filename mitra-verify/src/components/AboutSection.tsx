@@ -217,7 +217,7 @@ export default function AboutSection() {
               { category: 'Backend', icon: Server, items: ['FastAPI', 'Python'] },
               { category: 'AI & Vision', icon: ScanFace, items: ['MediaPipe', 'Face Landmark Detection', 'Liveness Analysis'] },
               { category: 'Database', icon: Database, items: ['PostgreSQL'] },
-              { category: 'Deployment', icon: Globe, items: ['Vercel', 'Railway'] },
+              { category: 'Deployment', icon: Globe, items: ['Vercel', 'Render'] },
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
             ].map((stack, _i) => (
               <motion.div key={stack.category} variants={itemVariants} className="glass card-hover p-6 rounded-2xl border border-slate-800/50 bg-slate-900/30 flex flex-col items-center text-center">

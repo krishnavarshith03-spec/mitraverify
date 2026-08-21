@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from './supabase';
 
 // Read API URL from environment variable
-let API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://mitraverify-production.up.railway.app';
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 if (API_BASE && !API_BASE.startsWith('http://') && !API_BASE.startsWith('https://')) {
   API_BASE = 'https://' + API_BASE;

@@ -14,6 +14,7 @@ from app.api.v1.auth.router import router as auth_router
 from app.api.v1.identity.router import router as identity_router
 from app.api.v1.keys.router import router as keys_router
 from app.api.v1.liveness.router import router as liveness_router
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal, init_db
 from app.core.security import hash_password
 from app.models.models import AuditLog, SystemLog, User, UserRole
@@ -189,11 +190,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://mitraverify.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:3005"
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
