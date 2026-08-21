@@ -39,9 +39,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
                 result = await db.execute(select(User).where(User.id == user_id))
                 user = result.scalar_one_or_none()
                 if not user:
-                    # Create the user on the fly and auto-promote to admin for system provisioning
+                    # Check if email already exists with a different ID
                     email = supabase_payload.get("email", "unknown@supabase.com")
-                    user = User(
+                    result = await db.execute(select(User).where(User.email == email))
+                    user_by_email = result.scalar_one_or_none()
+                    
+                    if user_by_email:
+                        user = user_by_email
+                    else:
+                        # Create the user on the fly and auto-promote to admin for system provisioning
+                        user = User(
                         id=user_id,
                         email=email,
                         password_hash="supabase_managed",

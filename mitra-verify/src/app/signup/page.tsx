@@ -41,6 +41,17 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [signinUrl, setSigninUrl] = useState('/signin');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect');
+      if (redirect) {
+        setSigninUrl(`/signin?redirect=${encodeURIComponent(redirect)}`);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -387,7 +398,7 @@ export default function SignupPage() {
 
         <motion.p variants={itemVariants} style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "#475569" }}>
           Already have an account?{" "}
-          <Link href={`/signin${typeof window !== "undefined" && new URLSearchParams(window.location.search).get("redirect") ? `?redirect=${encodeURIComponent(new URLSearchParams(window.location.search).get("redirect")!)}` : ""}`} style={{ color: "#00d4ff", textDecoration: "none", fontWeight: 600 }}>
+          <Link href={signinUrl} style={{ color: "#00d4ff", textDecoration: "none", fontWeight: 600 }}>
             Sign In
           </Link>
         </motion.p>

@@ -86,7 +86,9 @@ api.interceptors.response.use(
     }
 
     // Only retry on network errors or 5xx — never on 4xx
-    const isRetryable = !err.response || status >= 500;
+    // DO NOT retry on high-frequency biometric frame endpoints
+    const isHighFrequencyBiometric = url.includes('/liveness/demo/process');
+    const isRetryable = (!err.response || status >= 500) && !isHighFrequencyBiometric;
     const retryCount = config?.__retryCount ?? 0;
 
     if (isRetryable && config && retryCount < 3) {
@@ -160,7 +162,7 @@ export const analyticsAPI = {
     attentionScore?: number;
     user?: string;
     device?: string;
-  }) => api.post('/analytics/events', data),
+  }) => api.post('/analytics/events', { ...data, processingTimeMs: Math.round(data.processingTimeMs) }),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

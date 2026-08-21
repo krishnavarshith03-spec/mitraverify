@@ -917,7 +917,10 @@ export default function AdvancedDemoPage() {
                             color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 24,
                             letterSpacing: '0.05em', textTransform: 'uppercase'
                           }}>
-                            {overallResult === 'spoof' ? 'SPOOF DETECTED' : 'CHALLENGE TIMEOUT'}
+                            {noFaceTimeoutError ? 'FACE NOT DETECTED' :
+                             (backendStatus === 'ERROR' ? 'PROCESSING ERROR' :
+                             (backendStatus === 'OFFLINE' || backendStatus === 'TIMEOUT' ? 'VERIFICATION UNAVAILABLE' :
+                             (overallResult === 'spoof' ? 'SPOOF DETECTED' : 'CHALLENGE TIMEOUT')))}
                           </div>
                         </>
                       )}
@@ -1001,7 +1004,7 @@ export default function AdvancedDemoPage() {
                 ) : overallResult === 'spoof' ? (
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: '#ff3366', marginBottom: 4 }}>
-                      SPOOF DETECTED
+                      {noFaceTimeoutError ? 'FACE NOT DETECTED' : (backendStatus === 'ERROR' ? 'PROCESSING ERROR' : (backendStatus === 'OFFLINE' || backendStatus === 'TIMEOUT' ? 'VERIFICATION UNAVAILABLE' : 'SPOOF DETECTED'))}
                     </div>
                     <div style={{ fontSize: 11, color: '#94a3b8' }}>
                       Verification failed due to high-risk spoof signatures.

@@ -1122,7 +1122,12 @@ Result: ${data.result || 'pending'}
               {result ? (
                 <ResultCard
                   result={result}
-                  reason={apiResponse?.reason?.replace(/_/g, ' ') || apiResponse?.status?.replace(/_/g, ' ') || 'SPOOF DETECTED'}
+                  reason={
+                    noFaceTimeoutError ? 'FACE NOT DETECTED' :
+                    (backendStatus === 'ERROR' ? 'PROCESSING ERROR' :
+                    (backendStatus === 'OFFLINE' || backendStatus === 'TIMEOUT' ? 'VERIFICATION UNAVAILABLE' :
+                    (apiResponse?.reason?.replace(/_/g, ' ') || apiResponse?.status?.replace(/_/g, ' ') || 'SPOOF DETECTED')))
+                  }
                   confidence={confidence}
                   processingTime={processingTime}
                   onRestart={() => {
